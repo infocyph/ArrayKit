@@ -138,7 +138,7 @@ $hashedPassword = $config->get('db.password');
 ### 5. Hooked Collection
 
 ```php
-use Infocyph\ArrayKit\Functional\HookedCollection;
+use Infocyph\ArrayKit\Collection\HookedCollection;
 
 $hooked = new HookedCollection(['name' => 'Alice']);
 

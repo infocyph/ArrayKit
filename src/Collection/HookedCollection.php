@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Infocyph\ArrayKit\Functional;
+namespace Infocyph\ArrayKit\Collection;
 
 use ArrayAccess;
 use Countable;

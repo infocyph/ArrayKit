@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Infocyph\ArrayKit\Functional\HookedCollection;
+use Infocyph\ArrayKit\Collection\HookedCollection;
 
 it('applies on get hook for a specific offset', function () {
     $collection = new HookedCollection(['title' => 'Hello']);

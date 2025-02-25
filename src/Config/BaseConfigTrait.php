@@ -6,12 +6,6 @@ namespace Infocyph\ArrayKit\Config;
 
 use Infocyph\ArrayKit\Array\DotNotation;
 
-/**
- * Trait BaseConfigTrait
- *
- * Provides shared methods for loading and managing configuration items,
- * including checking if keys exist, retrieving values, and setting values.
- */
 trait BaseConfigTrait
 {
     /**
@@ -60,7 +54,7 @@ trait BaseConfigTrait
     }
 
     /**
-     * Check if one or multiple keys exist in the configuration.
+     * Check if one or multiple keys exist in the configuration (no wildcard).
      *
      * @param string|array $keys Dot-notation key(s)
      * @return bool True if the key(s) exist
@@ -71,9 +65,21 @@ trait BaseConfigTrait
     }
 
     /**
-     * Get one or multiple items from the configuration.
+     * Check if *any* of the given keys exist (no wildcard).
      *
-     * @param string|int|array|null $key    Dot-notation key(s) or null for entire config
+     * @param string|array $keys Dot-notation key(s)
+     * @return bool True if at least one key exists
+     */
+    public function hasAny(string|array $keys): bool
+    {
+        return DotNotation::hasAny($this->items, $keys);
+    }
+
+    /**
+     * Get one or multiple items from the configuration.
+     * Includes wildcard support (e.g. '*'), {first}, {last}, etc.
+     *
+     * @param string|int|array|null $key Dot-notation key(s) or null for entire config
      * @param mixed|null            $default Default value if key not found
      * @return mixed The value(s) found or default
      */
@@ -83,21 +89,49 @@ trait BaseConfigTrait
     }
 
     /**
-     * Set a configuration value by dot-notation key.
+     * Set a configuration value by dot-notation key (wildcard support),
+     * optionally controlling overwrite vs. fill-like behavior.
      *
      * If no key is provided, replaces the entire config array with $value.
      *
      * @param string|array|null $key   Dot-notation key or [key => value] array
-     * @param mixed|null        $value  The value to set
+     * @param mixed|null        $value The value to set
+     * @param bool              $overwrite Overwrite existing? Default true.
      * @return bool True on success
      */
-    public function set(string|array|null $key = null, mixed $value = null): bool
+    public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
-        return DotNotation::set($this->items, $key, $value);
+        return DotNotation::set($this->items, $key, $value, $overwrite);
+    }
+
+    /**
+     * "Fill" config data where it's missing, i.e. DotNotation's fill logic.
+     *
+     * @param string|array $key Dot-notation key or multiple [key => value]
+     * @param mixed|null   $value The value to set if missing
+     * @return bool
+     */
+    public function fill(string|array $key, mixed $value = null): bool
+    {
+        DotNotation::fill($this->items, $key, $value);
+        return true;
+    }
+
+    /**
+     * Remove/unset a key (or keys) from configuration using dot notation + wildcard expansions.
+     *
+     * @param string|int|array $key
+     * @return bool
+     */
+    public function forget(string|int|array $key): bool
+    {
+        DotNotation::forget($this->items, $key);
+        return true;
     }
 
     /**
      * Prepend a value to a configuration array at the specified key.
+     * (No direct wildcard usage, though underlying DotNotation can handle it if needed.)
      *
      * @param string $key   The dot-notation key referencing an array
      * @param mixed  $value The value to prepend

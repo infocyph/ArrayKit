@@ -7,48 +7,54 @@ namespace Infocyph\ArrayKit\Config;
 use Infocyph\ArrayKit\Array\DotNotation;
 use Infocyph\ArrayKit\traits\HookTrait;
 
-/**
- * Class DynamicConfig
- *
- * Provides dynamic configuration handling with hooks for
- * "on get" and "on set" value transformations.
- * Inherits base config operations from BaseConfigTrait
- * and advanced multi-config features from the Multi trait.
- */
 class DynamicConfig
 {
     use BaseConfigTrait;
     use HookTrait;
 
+
     /**
-     * Retrieve a configuration value by dot-notation key, applying any "on get" hooks.
+     * Retrieves a configuration value by dot-notation key, applying any "on get" hooks.
      *
-     * @param int|string|null $key     Dot-notation key (or null for entire config)
-     * @param mixed|null      $default Default value if key not found
-     * @return mixed
+     * @param int|string|null $key The key to retrieve (supports dot notation)
+     * @param mixed $default The default value to return if the key is not found
+     * @return mixed The retrieved value
      */
     public function get(int|string $key = null, mixed $default = null): mixed
     {
-        // First retrieve from the config array
         $value = DotNotation::get($this->items, $key, $default);
-
-        // Then apply any "on get" hook transformations
         return $this->processValue($key, $value, 'get');
     }
 
+
     /**
-     * Set a configuration value by dot-notation key, applying any "on set" hooks.
+     * Sets a configuration value by dot-notation key, applying any "on set" hooks.
      *
-     * @param string|null $key   Dot-notation key (null replaces entire config)
-     * @param mixed|null  $value The value to set
+     * @param string|null $key The key to set (supports dot notation)
+     * @param mixed $value The value to set
+     * @param bool $overwrite If true, overwrite existing values; otherwise, fill in missing (default true)
      * @return bool True on success
      */
-    public function set(?string $key = null, mixed $value = null): bool
+    public function set(?string $key = null, mixed $value = null, bool $overwrite = true): bool
     {
-        // Apply "on set" hook transformations
+        // The user might want the dynamic config to also accept $overwrite param for fill-like usage
         $processedValue = $this->processValue($key, $value, 'set');
+        return DotNotation::set($this->items, $key, $processedValue, $overwrite);
+    }
 
-        // Update the config array using DotNotation
-        return DotNotation::set($this->items, $key, $processedValue);
+
+    /**
+     * "Fill" config data where it's missing, i.e. DotNotation's fill logic,
+     * applying any "on set" hooks to the value.
+     *
+     * @param string|array $key Dot-notation key or multiple [key => value]
+     * @param mixed|null   $value The value to set if missing
+     * @return bool True on success
+     */
+    public function fill(string|array $key, mixed $value = null): bool
+    {
+        $processed = $this->processValue($key, $value, 'set');
+        DotNotation::fill($this->items, $key, $processed);
+        return true;
     }
 }
