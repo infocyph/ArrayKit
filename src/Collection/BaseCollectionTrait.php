@@ -82,30 +82,11 @@ trait BaseCollectionTrait
     }
 
     /**
-     * Set the underlying array data for the collection.
-     * This method is chainable.
-     *
-     * @param  array  $data  The new data to set.
-     * @return static The current collection instance, for chaining.
+     * Magic getter to retrieve an item via property access: $collection->key
      */
-    public function setData(array $data): static
+    public function get(string $key): mixed
     {
-        $this->data = $data;
-
-        return $this;
-    }
-
-    /**
-     * Retrieve the current collection instance.
-     *
-     * This method returns the current collection object itself, allowing
-     * for further method chaining or operations on the existing collection.
-     *
-     * @return static The current collection instance.
-     */
-    public function get(): static
-    {
-        return $this;
+        return $this->offsetGet($key);
     }
 
     /**
@@ -151,6 +132,14 @@ trait BaseCollectionTrait
             $items instanceof Traversable => iterator_to_array($items),
             default => (array) $items,
         };
+    }
+
+    /**
+     * Return the raw array of items in this collection.
+     */
+    public function all(): array
+    {
+        return $this->data;
     }
 
     /**
