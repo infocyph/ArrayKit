@@ -14,21 +14,9 @@ class Pipeline
      * Construct with an initial array.
      */
     public function __construct(
-        /**
-         * Internal array to be transformed.
-         */
-        protected array $working,
+        protected array &$working,
         private readonly Collection $collection
     ) {
-    }
-
-    /**
-     * Finalize and return a DataCollection with the pipeline's current array.
-     * This is how the user ends the chain to get a real collection.
-     */
-    public function get(): Collection
-    {
-        return $this->collection->setData($this->working);
     }
 
     /*
@@ -41,145 +29,145 @@ class Pipeline
      * Keep only certain keys in the array, using ArraySingle::only.
      * (Typically relevant if the array is associative 1D.)
      */
-    public function only(array|string $keys): static
+    public function only(array|string $keys): Collection
     {
         $this->working = ArraySingle::only($this->working, $keys);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Return every n-th element, using ArraySingle::nth.
      */
-    public function nth(int $step, int $offset = 0): static
+    public function nth(int $step, int $offset = 0): Collection
     {
         $this->working = ArraySingle::nth($this->working, $step, $offset);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Keep only duplicate values, using ArraySingle::duplicates.
      * (Typically this means setting $this->working to the *list of duplicates*.)
      */
-    public function duplicates(): static
+    public function duplicates(): Collection
     {
         // If you want to *replace* the original array with only duplicates:
         $dupes = ArraySingle::duplicates($this->working);
         // This means our collection now becomes an array of those duplicated values.
         // Possibly you might want to keep them in a "counts" structure, but let's do direct.
         $this->working = $dupes;
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Slice the array (like array_slice) using ArraySingle::slice.
      */
-    public function slice(int $offset, ?int $length = null): static
+    public function slice(int $offset, ?int $length = null): Collection
     {
         $this->working = ArraySingle::slice($this->working, $offset, $length);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * "Paginate" the array by slicing it into a smaller segment, using ArraySingle::paginate.
      */
-    public function paginate(int $page, int $perPage): static
+    public function paginate(int $page, int $perPage): Collection
     {
         $this->working = ArraySingle::paginate($this->working, $page, $perPage);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Combine the current array with a second array of values, using ArraySingle::combine.
      * (We treat $this->working as the *keys*, user passes an array of values.)
      */
-    public function combine(array $values): static
+    public function combine(array $values): Collection
     {
         $combined = ArraySingle::combine($this->working, $values);
         // Replacing the entire array with the combined result
         $this->working = $combined;
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Map each element, updating $this->working. (From prior example)
      */
-    public function map(callable $callback): static
+    public function map(callable $callback): Collection
     {
         $this->working = ArraySingle::map($this->working, $callback);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Filter the array using a callback, same as your prior "filter" example.
      */
-    public function filter(callable $callback): static
+    public function filter(callable $callback): Collection
     {
         // We use "where(...)" or direct array_filter:
         $this->working = ArraySingle::where($this->working, $callback);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * chunk the array (single-dim).
      */
-    public function chunk(int $size, bool $preserveKeys = false): static
+    public function chunk(int $size, bool $preserveKeys = false): Collection
     {
         $this->working = ArraySingle::chunk($this->working, $size, $preserveKeys);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Return only unique values using ArraySingle::unique.
      */
-    public function unique(bool $strict = false): static
+    public function unique(bool $strict = false): Collection
     {
         $this->working = ArraySingle::unique($this->working, $strict);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Reject certain items (inverse of filter), using ArraySingle::reject
      */
-    public function reject(mixed $callback = true): static
+    public function reject(mixed $callback = true): Collection
     {
         $this->working = ArraySingle::reject($this->working, $callback);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Skip the first N items.
      */
-    public function skip(int $count): static
+    public function skip(int $count): Collection
     {
         $this->working = ArraySingle::skip($this->working, $count);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Skip items while callback returns true; once false, keep remainder.
      */
-    public function skipWhile(callable $callback): static
+    public function skipWhile(callable $callback): Collection
     {
         $this->working = ArraySingle::skipWhile($this->working, $callback);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Skip items until callback returns true, then keep remainder.
      */
-    public function skipUntil(callable $callback): static
+    public function skipUntil(callable $callback): Collection
     {
         $this->working = ArraySingle::skipUntil($this->working, $callback);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Partition [passed, failed].
      */
-    public function partition(callable $callback): static
+    public function partition(callable $callback): Collection
     {
         $this->working = ArraySingle::partition($this->working, $callback);
-        return $this;
+        return $this->collection;
     }
 
     /*
@@ -191,118 +179,118 @@ class Pipeline
     /**
      * Flatten the array using ArrayMulti::flatten.
      */
-    public function flatten(float|int $depth = \INF): static
+    public function flatten(float|int $depth = \INF): Collection
     {
         $this->working = ArrayMulti::flatten($this->working, $depth);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Flatten the array into a single level but preserve keys, using flattenByKey.
      */
-    public function flattenByKey(): static
+    public function flattenByKey(): Collection
     {
         $this->working = ArrayMulti::flattenByKey($this->working);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Recursively sort the array by keys/values, using ArrayMulti::sortRecursive.
      */
-    public function sortRecursive(int $options = SORT_REGULAR, bool $descending = false): static
+    public function sortRecursive(int $options = SORT_REGULAR, bool $descending = false): Collection
     {
         $this->working = ArrayMulti::sortRecursive($this->working, $options, $descending);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Collapses an array of arrays into a single (1D) array (2D -> 1D).
      */
-    public function collapse(): static
+    public function collapse(): Collection
     {
         $this->working = ArrayMulti::collapse($this->working);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Group a 2D array by a given column or callback, using ArrayMulti::groupBy.
      */
-    public function groupBy(string|callable $groupBy, bool $preserveKeys = false): static
+    public function groupBy(string|callable $groupBy, bool $preserveKeys = false): Collection
     {
         $this->working = ArrayMulti::groupBy($this->working, $groupBy, $preserveKeys);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Filter rows where a certain key is between two values, using ArrayMulti::between.
      */
-    public function between(string $key, float|int $from, float|int $to): static
+    public function between(string $key, float|int $from, float|int $to): Collection
     {
         $this->working = ArrayMulti::between($this->working, $key, $from, $to);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Filter using a custom callback on each row, using ArrayMulti::whereCallback.
      */
-    public function whereCallback(?callable $callback = null, mixed $default = null): static
+    public function whereCallback(?callable $callback = null, mixed $default = null): Collection
     {
         $this->working = ArrayMulti::whereCallback($this->working, $callback, $default);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Filter rows by a single key's comparison (like ->where('age', '>', 18)).
      */
-    public function where(string $key, mixed $operator = null, mixed $value = null): static
+    public function where(string $key, mixed $operator = null, mixed $value = null): Collection
     {
         $this->working = ArrayMulti::where($this->working, $key, $operator, $value);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Filter rows where "column" matches one of the given values.
      */
-    public function whereIn(string $key, array $values, bool $strict = false): static
+    public function whereIn(string $key, array $values, bool $strict = false): Collection
     {
         $this->working = ArrayMulti::whereIn($this->working, $key, $values, $strict);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Filter rows where "column" is not in the given values.
      */
-    public function whereNotIn(string $key, array $values, bool $strict = false): static
+    public function whereNotIn(string $key, array $values, bool $strict = false): Collection
     {
         $this->working = ArrayMulti::whereNotIn($this->working, $key, $values, $strict);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Filter rows where a column is null, using ArrayMulti::whereNull.
      */
-    public function whereNull(string $key): static
+    public function whereNull(string $key): Collection
     {
         $this->working = ArrayMulti::whereNull($this->working, $key);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Filter rows where a column is NOT null, using ArrayMulti::whereNotNull.
      */
-    public function whereNotNull(string $key): static
+    public function whereNotNull(string $key): Collection
     {
         $this->working = ArrayMulti::whereNotNull($this->working, $key);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Sort by a column or callback in ascending/descending order.
      */
-    public function sortBy(string|callable $by, bool $desc = false, int $options = SORT_REGULAR): static
+    public function sortBy(string|callable $by, bool $desc = false, int $options = SORT_REGULAR): Collection
     {
         $this->working = ArrayMulti::sortBy($this->working, $by, $desc, $options);
-        return $this;
+        return $this->collection;
     }
 
     /*
@@ -322,31 +310,31 @@ class Pipeline
     /**
      * Wrap the entire array if it's not already an array, from BaseArrayHelper::wrap
      */
-    public function wrap(): static
+    public function wrap(): Collection
     {
         $this->working = BaseArrayHelper::wrap($this->working);
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Example: Unwrap an array if it has exactly one element, from BaseArrayHelper::unWrap.
      */
-    public function unWrap(): static
+    public function unWrap(): Collection
     {
         // Might produce a non-array, so up to you if you want to store that as $working...
         $unwrapped = BaseArrayHelper::unWrap($this->working);
         // If $unwrapped is not array, we store it as a single-element array to keep chain consistent
         $this->working = is_array($unwrapped) ? $unwrapped : [$unwrapped];
-        return $this;
+        return $this->collection;
     }
 
     /**
      * Shuffle the array in place, from ArraySingle::shuffle or BaseArrayHelper logic.
      */
-    public function shuffle(?int $seed = null): static
+    public function shuffle(?int $seed = null): Collection
     {
         $this->working = ArraySingle::shuffle($this->working, $seed);
-        return $this;
+        return $this->collection;
     }
 
     /*

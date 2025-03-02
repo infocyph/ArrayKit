@@ -34,6 +34,6 @@ it('supports iteration', function () {
 
 it('can filter and return a new collection', function () {
     $collection = new Collection([1, 2, 3, 4]);
-    $even       = $collection->filter(fn($val) => $val % 2 === 0);
-    expect($even->get()->items())->toBe([1 => 2, 3 => 4]);
+    $even       = $collection->filter(fn ($val) => $val % 2 === 0);
+    expect($even->all())->toBe([1 => 2, 3 => 4]);
 });
