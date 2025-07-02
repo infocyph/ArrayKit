@@ -15,7 +15,7 @@ class Pipeline
      */
     public function __construct(
         protected array &$working,
-        private readonly Collection $collection
+        private readonly Collection $collection,
     ) {
     }
 
@@ -384,5 +384,38 @@ class Pipeline
     public function any(callable $callback): bool
     {
         return ArraySingle::some($this->working, $callback);
+    }
+
+    /** Remove keys (inverse of only) */
+    public function except(array|string $keys): Collection
+    {
+        $this->working = ArraySingle::except($this->working, $keys);
+        return $this->collection;
+    }
+
+    /** Return the statistical median – TERMINATES chain (scalar) */
+    public function median(): float|int
+    {
+        return ArraySingle::median($this->working);
+    }
+
+    /** Return the statistical mode(s) – TERMINATES chain (array) */
+    public function mode(): array
+    {
+        return ArraySingle::mode($this->working);
+    }
+
+    /** Extract a column (optionally re-index) */
+    public function pluck(string $column, ?string $indexBy = null): Collection
+    {
+        $this->working = ArrayMulti::pluck($this->working, $column, $indexBy);
+        return $this->collection;
+    }
+
+    /** Matrix transpose (rows ↔ columns) */
+    public function transpose(): Collection
+    {
+        $this->working = ArrayMulti::transpose($this->working);
+        return $this->collection;
     }
 }
