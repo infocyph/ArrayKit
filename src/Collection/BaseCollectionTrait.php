@@ -29,6 +29,21 @@ trait BaseCollectionTrait
         $this->data = $data;
     }
 
+    /**
+     * Create a new instance of the collection from the given data.
+     *
+     * This method acts as a wrapper around the `make` method,
+     * allowing for the creation of a collection instance using
+     * the provided data. The data is processed to ensure it is
+     * in an array format suitable for the collection.
+     *
+     * @param mixed $data The data to initialize the collection with.
+     * @return static A new instance of the collection.
+     */
+    public static function from(mixed $data): static
+    {
+        return static::make($data);
+    }
 
     /**
      * Create a new instance of the collection with the given data.
@@ -45,7 +60,6 @@ trait BaseCollectionTrait
 
         return $instance;
     }
-
 
     /**
      * Dynamically handle calls to methods on the collection.
