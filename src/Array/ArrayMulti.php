@@ -31,7 +31,6 @@ class ArrayMulti
         return $result;
     }
 
-
     /**
      * Collapses a multidimensional array into a single-dimensional array.
      *
@@ -48,12 +47,11 @@ class ArrayMulti
         $results = [];
         foreach ($array as $values) {
             if (is_array($values)) {
-                $results = array_merge($results, $values);
+                array_push($results, ...$values);
             }
         }
         return $results;
     }
-
 
     /**
      * Determine the depth of a multidimensional array.
@@ -80,7 +78,6 @@ class ArrayMulti
         }
         return $depth + 1;  // zero-based => plus one
     }
-
 
     /**
      * Recursively flatten a multidimensional array to a specified depth.
@@ -112,7 +109,6 @@ class ArrayMulti
         return $result;
     }
 
-
     /**
      * Flatten the array into a single level but preserve keys.
      *
@@ -131,7 +127,6 @@ class ArrayMulti
             false,
         );
     }
-
 
     /**
      * Recursively sort a multidimensional array by keys/values.
@@ -165,7 +160,6 @@ class ArrayMulti
         return $array;
     }
 
-
     /**
      * Return the first item in a 2D array, or single-dim array, depending on usage.
      * If a callback is provided, return the first item that matches the callback.
@@ -190,7 +184,6 @@ class ArrayMulti
         return $default;
     }
 
-
     /**
      * Return the last item in a 2D array or single-dim array, depending on usage.
      * If a callback is provided, return the last item that matches the callback.
@@ -210,7 +203,6 @@ class ArrayMulti
         return static::first(array_reverse($array, true), $callback, $default);
     }
 
-
     /**
      * Filter a 2D array by a single key's comparison (like "where 'age' between 18 and 65").
      *
@@ -226,7 +218,6 @@ class ArrayMulti
             && compare($item[$key], $from, '>=')
             && compare($item[$key], $to, '<='));
     }
-
 
     /**
      * Filter a 2D array by a custom callback function on each row.
@@ -247,7 +238,6 @@ class ArrayMulti
         }
         return array_filter($array, fn ($item, $index) => $callback($item, $index), \ARRAY_FILTER_USE_BOTH);
     }
-
 
     /**
      * Filter a 2D array by a single key's comparison (like "where 'age' > 18").
@@ -293,7 +283,6 @@ class ArrayMulti
         return array_chunk($array, $size, $preserveKeys);
     }
 
-
     /**
      * Apply a callback to each row in the array, optionally preserving keys.
      *
@@ -314,7 +303,6 @@ class ArrayMulti
         }
         return $results;
     }
-
 
     /**
      * Execute a callback on each item in the array, returning the original array.
@@ -339,7 +327,6 @@ class ArrayMulti
         return $array;
     }
 
-
     /**
      * Reduce an array to a single value using a callback function.
      *
@@ -361,7 +348,6 @@ class ArrayMulti
         return $accumulator;
     }
 
-
     /**
      * Check if the array (of rows) contains at least one row matching a condition
      *
@@ -378,7 +364,6 @@ class ArrayMulti
         }
         return false;
     }
-
 
     /**
      * Determine if all rows in a 2D array pass the given truth test.
@@ -399,7 +384,6 @@ class ArrayMulti
         }
         return true;
     }
-
 
     /**
      * Determine if the array contains a given value or if a callback function
@@ -425,7 +409,6 @@ class ArrayMulti
         }
         return in_array($valueOrCallback, $array, $strict);
     }
-
 
     /**
      * Return a new array with all duplicate rows removed.
@@ -459,7 +442,6 @@ class ArrayMulti
         return $results;
     }
 
-
     /**
      * Return an array with all values that do not pass the given callback.
      *
@@ -486,7 +468,6 @@ class ArrayMulti
         }
         return array_filter($array, fn ($row) => $row != $callback);
     }
-
 
     /**
      * Partition the array into two arrays [passed, failed] based on a callback.
@@ -516,7 +497,6 @@ class ArrayMulti
         return [$passed, $failed];
     }
 
-
     /**
      * Skip the first $count items of the array and return the remainder.
      *
@@ -531,7 +511,6 @@ class ArrayMulti
     {
         return array_slice($array, $count, null, true);
     }
-
 
     /**
      * Skip rows while the callback returns true; once false, keep the remainder.
@@ -562,7 +541,6 @@ class ArrayMulti
         return $result;
     }
 
-
     /**
      * Skip rows until the callback returns true, then keep the remainder.
      *
@@ -581,7 +559,6 @@ class ArrayMulti
     {
         return static::skipWhile($array, fn ($row, $key) => !$callback($row, $key));
     }
-
 
     /**
      * Calculate the sum of an array of values, optionally using a key or callback to extract the values to sum.
@@ -613,7 +590,6 @@ class ArrayMulti
         return $total;
     }
 
-
     /**
      * Filter rows where "column" matches one of the given values.
      *
@@ -632,7 +608,6 @@ class ArrayMulti
         );
     }
 
-
     /**
      * Filter rows where "column" does NOT match one of the given values.
      *
@@ -650,7 +625,6 @@ class ArrayMulti
             => !isset($row[$key]) || !in_array($row[$key], $values, $strict),
         );
     }
-
 
     /**
      * Filter rows where a column is null.
@@ -671,7 +645,6 @@ class ArrayMulti
         );
     }
 
-
     /**
      * Filter rows where a column is not null.
      *
@@ -686,7 +659,6 @@ class ArrayMulti
     {
         return array_filter($array, fn ($row) => isset($row[$key]));
     }
-
 
     /**
      * Group a 2D array by a given column or callback.
@@ -728,7 +700,6 @@ class ArrayMulti
         return $results;
     }
 
-
     /**
      * Sort a 2D array by a specified column or using a callback function.
      *
@@ -761,7 +732,6 @@ class ArrayMulti
         return $array;
     }
 
-
     /**
      * Sort a 2D array by a specified column or using a callback function, in descending order.
      *
@@ -775,5 +745,48 @@ class ArrayMulti
     public static function sortByDesc(array $array, string|callable $by, int $options = \SORT_REGULAR): array
     {
         return static::sortBy($array, $by, true, $options);
+    }
+
+    /**
+     * Transpose a 2D array (matrix).
+     *
+     * This method takes a matrix (2D array) and returns a new matrix where the
+     * rows are converted into columns and vice versa. If the input matrix is empty,
+     * it returns an empty array.
+     *
+     * @param array $matrix The matrix to transpose.
+     * @return array The transposed matrix.
+     */
+    public static function transpose(array $matrix): array
+    {
+        if (empty($matrix)) {
+            return [];
+        }
+        $keys = array_keys(current($matrix));
+        $results = array_fill_keys($keys, []);
+
+        foreach ($matrix as $row) {
+            foreach ($row as $col => $value) {
+                $results[$col][] = $value;
+            }
+        }
+        return $results;
+    }
+
+    public static function pluck(array $array, string $column, ?string $indexBy = null): array
+    {
+        $results = [];
+        foreach ($array as $row) {
+            if (!is_array($row) || !array_key_exists($column, $row)) {
+                continue;
+            }
+            $value = $row[$column];
+            if ($indexBy !== null && array_key_exists($indexBy, $row)) {
+                $results[$row[$indexBy]] = $value;
+            } else {
+                $results[] = $value;
+            }
+        }
+        return $results;
     }
 }

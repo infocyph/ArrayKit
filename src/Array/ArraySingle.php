@@ -22,7 +22,6 @@ class ArraySingle
         return isset($array[$key]) || array_key_exists($key, $array);
     }
 
-
     /**
      * Select only certain keys from a single-dimensional array.
      *
@@ -34,9 +33,8 @@ class ArraySingle
      */
     public static function only(array $array, array|string $keys): array
     {
-        return array_intersect_key($array, array_flip((array) $keys));
+        return array_intersect_key($array, array_flip((array)$keys));
     }
-
 
     /**
      * Split an array into separate arrays of keys and values.
@@ -53,11 +51,10 @@ class ArraySingle
     public static function separate(array $array): array
     {
         return [
-            'keys'   => array_keys($array),
+            'keys' => array_keys($array),
             'values' => array_values($array),
         ];
     }
-
 
     /**
      * Determine if an array is a strict list (i.e., has no string keys).
@@ -74,7 +71,6 @@ class ArraySingle
             && array_keys($array) === range(0, count($array) - 1);
     }
 
-
     /**
      * Determine if an array is an associative array (i.e., has string keys).
      *
@@ -87,7 +83,6 @@ class ArraySingle
     {
         return array_keys($array) !== range(0, count($array) - 1);
     }
-
 
     /**
      * Prepend a value to the beginning of an array.
@@ -111,7 +106,6 @@ class ArraySingle
         return $array;
     }
 
-
     /**
      * Determine if all values in the array are positive numbers.
      *
@@ -123,7 +117,6 @@ class ArraySingle
         return !empty($array) && min($array) > 0;
     }
 
-
     /**
      * Determine if all values in the array are negative numbers.
      *
@@ -134,7 +127,6 @@ class ArraySingle
     {
         return !empty($array) && max($array) < 0;
     }
-
 
     /**
      * Randomly shuffles the elements in the given array.
@@ -160,7 +152,6 @@ class ArraySingle
         return $array;
     }
 
-
     /**
      * Check if all values in the array are integers.
      *
@@ -169,9 +160,13 @@ class ArraySingle
      */
     public static function isInt(array $array): bool
     {
-        return $array === static::where($array, 'is_int');
+        foreach ($array as $v) {
+            if (!is_int($v)) {
+                return false;
+            }
+        }
+        return true;
     }
-
 
     /**
      * Get only the non-empty values from the array.
@@ -185,7 +180,6 @@ class ArraySingle
     {
         return array_values(static::where($array, 'strlen'));
     }
-
 
     /**
      * Calculate the average of an array of numbers.
@@ -201,7 +195,6 @@ class ArraySingle
         return array_sum($array) / count($array);
     }
 
-
     /**
      * Determine if all values in the array are unique.
      *
@@ -212,7 +205,6 @@ class ArraySingle
     {
         return count($array) === count(array_flip($array));
     }
-
 
     /**
      * Get only the positive numeric values from the array.
@@ -225,7 +217,6 @@ class ArraySingle
         return static::where($array, static fn ($value) => is_numeric($value) && $value > 0);
     }
 
-
     /**
      * Get only the negative numeric values from the array.
      *
@@ -236,7 +227,6 @@ class ArraySingle
     {
         return static::where($array, static fn ($value) => is_numeric($value) && $value < 0);
     }
-
 
     /**
      * Get every n-th element from the array
@@ -249,7 +239,7 @@ class ArraySingle
      */
     public static function nth(array $array, int $step, int $offset = 0): array
     {
-        $results  = [];
+        $results = [];
         $position = 0;
 
         foreach ($array as $item) {
@@ -261,7 +251,6 @@ class ArraySingle
 
         return $results;
     }
-
 
     /**
      * Retrieve duplicate values from an array.
@@ -282,7 +271,6 @@ class ArraySingle
         return $duplicates;
     }
 
-
     /**
      * "Paginate" the array by slicing it into a smaller segment.
      *
@@ -298,10 +286,9 @@ class ArraySingle
             $array,
             max(0, ($page - 1) * $perPage),
             $perPage,
-            true
+            true,
         );
     }
-
 
     /**
      * Combine two arrays into one array with corresponding key-value pairs.
@@ -317,18 +304,17 @@ class ArraySingle
      */
     public static function combine(array $keys, array $values): array
     {
-        $keyCount   = count($keys);
+        $keyCount = count($keys);
         $valueCount = count($values);
 
         if ($keyCount !== $valueCount) {
-            $size   = ($keyCount > $valueCount) ? $valueCount : $keyCount;
-            $keys   = array_slice($keys, 0, $size);
+            $size = ($keyCount > $valueCount) ? $valueCount : $keyCount;
+            $keys = array_slice($keys, 0, $size);
             $values = array_slice($values, 0, $size);
         }
 
         return array_combine($keys, $values) ?: [];
     }
-
 
     /**
      * Filter the array using a callback function.
@@ -347,9 +333,8 @@ class ArraySingle
     public static function where(array $array, ?callable $callback = null): array
     {
         $flag = ($callback !== null) ? \ARRAY_FILTER_USE_BOTH : 0;
-        return array_filter($array, $callback ?? fn ($val) => (bool) $val, $flag);
+        return array_filter($array, $callback ?? fn ($val) => (bool)$val, $flag);
     }
-
 
     /**
      * Search the array for a given value and return its key if found.
@@ -380,7 +365,6 @@ class ArraySingle
         return $foundKey === false ? null : $foundKey;
     }
 
-
     /**
      * Break an array into smaller chunks of a specified size.
      *
@@ -402,7 +386,6 @@ class ArraySingle
         return array_chunk($array, $size, $preserveKeys);
     }
 
-
     /**
      * Apply a callback to each item in the array, optionally preserving keys.
      *
@@ -423,7 +406,6 @@ class ArraySingle
         }
         return $results;
     }
-
 
     /**
      * Execute a callback on each item in the array, returning the original array.
@@ -448,7 +430,6 @@ class ArraySingle
         return $array;
     }
 
-
     /**
      * Reduce an array to a single value using a callback function.
      *
@@ -470,7 +451,6 @@ class ArraySingle
         return $accumulator;
     }
 
-
     /**
      * Determine if at least one element in the array passes the given truth test.
      *
@@ -488,7 +468,6 @@ class ArraySingle
         return false;
     }
 
-
     /**
      * Determine if all elements in the array pass the given truth test.
      *
@@ -505,7 +484,6 @@ class ArraySingle
         }
         return true;
     }
-
 
     /**
      * Determine if the array contains a given value or if a callback function
@@ -532,7 +510,6 @@ class ArraySingle
         return in_array($valueOrCallback, $array, $strict);
     }
 
-
     /**
      * Return the sum of all the elements in the array.
      *
@@ -555,7 +532,6 @@ class ArraySingle
         }
         return $total;
     }
-
 
     /**
      * Return an array with all duplicate values removed.
@@ -586,7 +562,6 @@ class ArraySingle
         return $result;
     }
 
-
     /**
      * Return an array with all values that do not pass the given callback.
      *
@@ -609,7 +584,6 @@ class ArraySingle
         return BaseArrayHelper::doReject($array, $callback);
     }
 
-
     /**
      * Return a slice of the array, starting from the given offset and with the given length.
      *
@@ -630,7 +604,6 @@ class ArraySingle
         return array_slice($array, $offset, $length, true);
     }
 
-
     /**
      * Skip the first $count items of the array and return the remainder.
      *
@@ -644,7 +617,6 @@ class ArraySingle
     {
         return static::slice($array, $count);
     }
-
 
     /**
      * Skip items while the callback returns true; once false, keep the remainder.
@@ -676,7 +648,6 @@ class ArraySingle
         return $result;
     }
 
-
     /**
      * Skip items until the callback returns true, then keep the remainder.
      *
@@ -695,7 +666,6 @@ class ArraySingle
     {
         return static::skipWhile($array, fn ($value, $key) => !$callback($value, $key));
     }
-
 
     /**
      * Partition the array into two arrays [passed, failed] based on a callback.
@@ -724,5 +694,61 @@ class ArraySingle
             }
         }
         return [$passed, $failed];
+    }
+
+    /**
+     * Find the mode(s) of the array.
+     *
+     * The mode is the value that appears most frequently in the array.
+     * If there are multiple modes, all of them are returned.
+     *
+     * @param array $array The array to find the mode(s) of.
+     * @return array The mode(s) of the array.
+     */
+    public static function mode(array $array): array
+    {
+        if ($array === []) {
+            return [];
+        }
+        $freq = array_count_values($array);
+        $max = max($freq);
+        return array_keys(array_filter($freq, fn ($c) => $c === $max));
+    }
+
+    /**
+     * Calculate the median of an array of numbers.
+     *
+     * The median is the middle value in a sorted list of numbers. If the list has an
+     * odd number of elements, the median is the element at the middle index. If the list
+     * has an even number of elements, the median is the average of the two middle elements.
+     *
+     * @param array $array The array of numbers to find the median of.
+     * @return float|int The median of the numbers in the array. If the array is empty, 0 is returned.
+     */
+    public static function median(array $array): float|int
+    {
+        if ($array === []) {
+            return 0;
+        }
+        $values = $array;
+        sort($values, SORT_NUMERIC);
+        $count = count($values);
+        $mid   = intdiv($count, 2);
+
+        return ($count % 2)
+            ? $values[$mid]
+            : ($values[$mid - 1] + $values[$mid]) / 2;
+    }
+
+    /**
+     * Get all items from the array except for those with the specified keys.
+     *
+     * @param array $array The array to select from.
+     * @param array|string $keys The keys to exclude.
+     * @return array A new array with all items except for those with the specified keys.
+     */
+    public static function except(array $array, array|string $keys): array
+    {
+        return array_diff_key($array, array_flip((array) $keys));
     }
 }
