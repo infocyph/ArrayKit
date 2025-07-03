@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 
 use Infocyph\ArrayKit\Collection\Collection;
+use Infocyph\ArrayKit\Collection\Pipeline;
 
 if (!function_exists('compare')) {
     /**
@@ -94,5 +95,17 @@ if (!function_exists('collect')) {
     function collect(mixed $data = []): Collection
     {
         return Collection::make($data);
+    }
+}
+if (! function_exists('chain')) {
+    /**
+     * Start a chainable pipeline on any “array-able” value.
+     *
+     * @param mixed $data  Array, Traversable, scalar, etc.
+     * @return Pipeline
+     */
+    function chain(mixed $data): Pipeline
+    {
+        return Collection::make($data)->process();
     }
 }

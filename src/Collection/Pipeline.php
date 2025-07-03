@@ -418,4 +418,60 @@ class Pipeline
         $this->working = ArrayMulti::transpose($this->working);
         return $this->collection;
     }
+
+    /**
+     * Tap into the current working array for side-effects (debug/log), then continue.
+     *
+     * @param callable $callback  fn(array $working): void
+     * @return Collection
+     */
+    public function tap(callable $callback): Collection
+    {
+        $callback($this->working);
+        return $this->collection;
+    }
+
+    /**
+     * Pipe the working array through a callback, replacing it with whatever you return.
+     *
+     * @param callable $callback  fn(array $working): array
+     * @return Collection
+     */
+    public function pipe(callable $callback): Collection
+    {
+        $this->working = $callback($this->working);
+        return $this->collection;
+    }
+
+    /**
+     * Conditionally apply one of two callbacks based on $condition.
+     *
+     * @param bool          $condition
+     * @param callable      $callback  fn(array $working): array
+     * @param callable|null $default   fn(array $working): array
+     * @return Collection
+     */
+    public function when(bool $condition, callable $callback, ?callable $default = null): Collection
+    {
+        if ($condition) {
+            $this->working = $callback($this->working);
+        } elseif ($default) {
+            $this->working = $default($this->working);
+        }
+        return $this->collection;
+    }
+
+    /**
+     * Inverse of when(): only run if $condition is false.
+     *
+     * @param bool          $condition
+     * @param callable      $callback
+     * @param callable|null $default
+     * @return Collection
+     */
+    public function unless(bool $condition, callable $callback, ?callable $default = null): Collection
+    {
+        return $this->when(! $condition, $callback, $default);
+    }
+
 }
