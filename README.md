@@ -1,8 +1,3 @@
-Here’s a **clean, complete, updated** `README.md` draft for your **ArrayKit** that accurately reflects your full current
-structure, highlights *all modules* and *traits*, and demonstrates its scope in a clear, developer-friendly way:
-
----
-
 # ArrayKit
 
 [![Security & Standards](https://github.com/infocyph/arraykit/actions/workflows/build.yml/badge.svg)](https://github.com/infocyph/arraykit/actions/workflows/build.yml)
@@ -236,7 +231,3 @@ Have a bug or feature idea? Please [open an issue](https://github.com/infocyph/a
 
 Licensed under the **MIT License** — use it freely for personal or commercial projects. See [LICENSE](LICENSE) for
 details.
-
----
-
-Let me know if you’d like me to wrap this into your repo as a `README.md` file or adjust tone/style further!
