@@ -13,20 +13,16 @@ utilities**, **dynamic configuration**, **hookable collections**, and more.
 From shallow single arrays to deeply nested data structures — **ArrayKit** provides a fluent, reliable toolkit for
 real-world PHP projects.
 
----
-
 ## 📦 Features at a Glance
 
-✅ **Single-Dimensional Helpers**
-✅ **Multi-Dimensional Helpers**
-✅ **Dot Notation Get/Set/Flatten**
-✅ **Dynamic Config with Hooks**
-✅ **Collection & Hooked Collection**
-✅ **Traits for DTO & Hooking**
-✅ **Pipeline for Collection Ops**
-✅ **Global Helpers (`functions.php`)**
-
----
+- **Single-Dimensional Helpers**
+- **Multi-Dimensional Helpers**
+- **Dot Notation Get/Set/Flatten**
+- **Dynamic Config with Hooks**
+- **Collection & Hooked Collection**
+- **Traits for DTO & Hooking**
+- **Pipeline for Collection Ops**
+- **Global Helpers (`functions.php`)**
 
 ## 📚 Modules
 
@@ -39,8 +35,6 @@ real-world PHP projects.
 | **DotNotation**     | Get/set/remove values using dot keys; flatten & expand nested arrays with dot keys.                |
 | **BaseArrayHelper** | Internal shared base for consistent API across helpers.                                            |
 
----
-
 ### ➤ Config System
 
 | Class               | Description                                                                                                         |
@@ -49,7 +43,6 @@ real-world PHP projects.
 | **DynamicConfig**   | Extends `Config` with **on-get/on-set hooks** to transform values dynamically (e.g., encrypt/decrypt, auto-format). |
 | **BaseConfigTrait** | Shared config logic.                                                                                                |
 
----
 
 ### ➤ Collections
 
@@ -60,7 +53,6 @@ real-world PHP projects.
 | **Pipeline**            | Functional-style pipeline for chaining operations on collections.                          |
 | **BaseCollectionTrait** | Shared collection behavior.                                                                |
 
----
 
 ### ➤ Traits
 
@@ -69,7 +61,6 @@ real-world PHP projects.
 | **HookTrait** | Generic hook system for on-get/on-set callbacks. Used by `DynamicConfig` & `HookedCollection`. |
 | **DTOTrait**  | Utility trait for DTO-like behavior: populate, extract, cast arrays/objects easily.            |
 
----
 
 ### ➤ Global Helpers
 
@@ -77,21 +68,17 @@ real-world PHP projects.
 |-------------------|------------------------------------------------------------|
 | **functions.php** | Global shortcut functions for frequent array/config tasks. |
 
----
 
 ## ✅ Requirements
 
 * **PHP 8.2** or higher
 
----
 
 ## ⚡ Installation
 
 ```bash
 composer require infocyph/arraykit
 ```
-
----
 
 ## 🚀 Quick Examples
 
@@ -111,8 +98,6 @@ $dupes = ArraySingle::duplicates($list); // [2]
 // Pagination
 $page = ArraySingle::paginate($list, page:1, perPage:2); // [1, 2]
 ```
-
----
 
 ### 🔹 Multi-Dimensional Helpers
 
@@ -134,8 +119,6 @@ $depth = ArrayMulti::depth($data); // 3
 $sorted = ArrayMulti::sortRecursive($data);
 ```
 
----
-
 ### 🔹 Dot Notation
 
 ```php
@@ -155,8 +138,6 @@ DotNotation::set($user, 'profile.email', 'alice@example.com');
 $flat = DotNotation::flatten($user);
 // [ 'profile.name' => 'Alice', 'profile.email' => 'alice@example.com' ]
 ```
-
----
 
 ### 🔹 Dynamic Config with Hooks
 
@@ -179,8 +160,6 @@ $config->set('auth.password', 'secret123');
 $hashed = $config->get('auth.password');
 ```
 
----
-
 ### 🔹 Hooked Collection
 
 ```php
@@ -200,8 +179,6 @@ $collection['role'] = 'admin';
 echo $collection['role']; // Role: admin
 ```
 
----
-
 ### 🔹 DTO Trait Example
 
 ```php
@@ -219,13 +196,9 @@ $user->fromArray(['name' => 'Alice', 'email' => 'alice@example.com']);
 $array = $user->toArray();
 ```
 
----
-
 ## 🤝 Support
 
 Have a bug or feature idea? Please [open an issue](https://github.com/infocyph/arraykit/issues).
-
----
 
 ## 📄 License
 
