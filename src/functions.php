@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 
+use Infocyph\ArrayKit\Collection\Collection;
+
 if (!function_exists('compare')) {
     /**
      * Compare two values using a specified operator.
@@ -57,7 +59,7 @@ if (!function_exists('array_get')) {
      * @param mixed $default The default value to return if the key is not found.
      * @return mixed The retrieved value(s).
      */
-    function array_get(array $array, int|string|array $key = null, mixed $default = null): mixed
+    function array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed
     {
         return Infocyph\ArrayKit\Array\DotNotation::get($array, $key, $default);
     }
@@ -80,5 +82,17 @@ if (!function_exists('array_set')) {
     function array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
     {
         return Infocyph\ArrayKit\Array\DotNotation::set($array, $key, $value, $overwrite);
+    }
+}
+if (!function_exists('collect')) {
+    /**
+     * Wrap the given value in an {@see Collection}.
+     *
+     * @param mixed $data  Anything “array-able”: array, Traversable, scalar, etc.
+     * @return Collection
+     */
+    function collect(mixed $data = []): Collection
+    {
+        return Collection::make($data);
     }
 }
