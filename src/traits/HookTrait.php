@@ -71,6 +71,18 @@ trait HookTrait
     }
 
     /**
+     * Construct the internal key for hooking, e.g. "offset-get" or "offset-set".
+     *
+     * @param string $hook       The offset or key
+     * @param string $direction  Either "get" or "set"
+     * @return string
+     */
+    protected function getHookName(string $hook, string $direction): string
+    {
+        return $hook . '-' . $direction;
+    }
+
+    /**
      * Apply any relevant hooks to a value before returning or storing it.
      *
      * @param mixed  $offset    The key or offset
@@ -88,17 +100,5 @@ trait HookTrait
         }
 
         return $value;
-    }
-
-    /**
-     * Construct the internal key for hooking, e.g. "offset-get" or "offset-set".
-     *
-     * @param string $hook       The offset or key
-     * @param string $direction  Either "get" or "set"
-     * @return string
-     */
-    protected function getHookName(string $hook, string $direction): string
-    {
-        return $hook . '-' . $direction;
     }
 }

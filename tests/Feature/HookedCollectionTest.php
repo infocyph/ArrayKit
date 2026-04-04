@@ -29,3 +29,24 @@ it('still behaves like a normal collection otherwise', function () {
     $collection['test'] = 123;
     expect($collection['test'])->toBe(123);
 });
+
+it('supports hooks for dot-notation keys', function () {
+    $collection = new HookedCollection(['user' => ['name' => 'alice']]);
+    $collection->onGet('user.name', fn ($value) => strtoupper((string) $value));
+    $collection->onSet('user.role', fn ($value) => "Role: $value");
+
+    $collection['user.role'] = 'admin';
+
+    expect($collection['user.name'])
+        ->toBe('ALICE')
+        ->and($collection['user.role'])->toBe('Role: admin');
+});
+
+it('can run pipeline operations without type errors', function () {
+    $collection = new HookedCollection([1, 2, 3, 4]);
+    $filtered = $collection->filter(fn ($value) => $value % 2 === 0);
+
+    expect($filtered)
+        ->toBeInstanceOf(HookedCollection::class)
+        ->and($filtered->all())->toBe([1 => 2, 3 => 4]);
+});

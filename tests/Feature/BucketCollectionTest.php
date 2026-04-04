@@ -24,16 +24,22 @@ it('supports iteration', function () {
     expect($keys)->toBe(['a', 'b']);
 });
 
-//it('provides a merge method', function () {
-//    $c1 = new Collection(['a' => 1]);
-//    $c2 = new Collection(['b' => 2]);
-//
-//    $c1->merge($c2);
-//    expect($c1->items())->toBe(['a' => 1, 'b' => 2]);
-//});
+it('provides a merge method', function () {
+    $c1 = new Collection(['a' => 1]);
+    $c2 = new Collection(['b' => 2]);
+
+    $c1->merge($c2);
+    expect($c1->items())->toBe(['a' => 1, 'b' => 2]);
+});
 
 it('can filter and return a new collection', function () {
     $collection = new Collection([1, 2, 3, 4]);
     $even       = $collection->filter(fn ($val) => $val % 2 === 0);
     expect($even->all())->toBe([1 => 2, 3 => 4]);
+});
+
+it('considers null-valued keys as existing', function () {
+    $collection = new Collection(['nullable' => null]);
+
+    expect(isset($collection['nullable']))->toBeTrue();
 });

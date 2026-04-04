@@ -1,0 +1,79 @@
+Quick Usage
+===========
+
+This page shows copy-paste examples for common ArrayKit operations.
+
+ArraySingle Example
+-------------------
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Array\ArraySingle;
+
+    $list = [1, 2, 3, 2];
+    $isList = ArraySingle::isList($list);      // true
+    $dupes  = ArraySingle::duplicates($list);  // [2]
+    $page   = ArraySingle::paginate($list, 1, 2); // [1, 2]
+
+ArrayMulti Example
+------------------
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Array\ArrayMulti;
+
+    $data = [[1, 2], [3, [4, 5]]];
+    $flat = ArrayMulti::flatten($data);     // [1, 2, 3, 4, 5]
+    $depth = ArrayMulti::depth($data);      // 3
+    $sorted = ArrayMulti::sortRecursive($data);
+
+DotNotation Example
+-------------------
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Array\DotNotation;
+
+    $user = ['profile' => ['name' => 'Alice']];
+    $name = DotNotation::get($user, 'profile.name'); // Alice
+    DotNotation::set($user, 'profile.email', 'alice@example.com');
+    DotNotation::forget($user, 'profile.name');
+
+Collection + Pipeline Example
+-----------------------------
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Collection\Collection;
+
+    $collection = new Collection([1, 2, 3, 4]);
+    $evens = $collection->filter(fn ($v) => $v % 2 === 0)->all(); // [1 => 2, 3 => 4]
+    $sum = $collection->process()->sum(); // 10
+
+Config + Hooks Example
+----------------------
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Config\DynamicConfig;
+
+    $config = new DynamicConfig();
+    $config->set('auth.password', 'secret');
+    $config->onGet('auth.password', fn ($v) => strtoupper((string) $v));
+    echo $config->get('auth.password'); // SECRET
+
+Global Helper Example
+---------------------
+
+.. code-block:: php
+
+    <?php
+    $data = ['user' => ['name' => 'Alice']];
+    $name = array_get($data, 'user.name');
+    array_set($data, 'user.email', 'alice@example.com');
+    $c = collect([1, 2, 3]);

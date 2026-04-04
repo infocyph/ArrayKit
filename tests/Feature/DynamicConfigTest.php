@@ -28,3 +28,31 @@ it('allows hooking on set operations', function () {
     // The stored value should be uppercase
     expect($this->dynamic->get('user.name'))->toBe('JOHN');
 });
+
+it('supports hooks with bulk set/get operations', function () {
+    $this->dynamic->onSet('user.name', fn ($value) => strtoupper($value));
+    $this->dynamic->onGet('user.name', fn ($value) => strtolower($value));
+
+    $this->dynamic->set([
+        'user.name' => 'alice',
+        'user.email' => 'alice@example.com',
+    ]);
+
+    expect($this->dynamic->get(['user.name', 'user.email']))->toBe([
+        'user.name' => 'alice',
+        'user.email' => 'alice@example.com',
+    ]);
+});
+
+it('supports bulk fill operations without overwriting existing keys', function () {
+    $this->dynamic->set('app.name', 'ArrayKit');
+
+    $this->dynamic->fill([
+        'app.name' => 'ShouldNotReplace',
+        'app.env' => 'local',
+    ]);
+
+    expect($this->dynamic->get('app.name'))
+        ->toBe('ArrayKit')
+        ->and($this->dynamic->get('app.env'))->toBe('local');
+});

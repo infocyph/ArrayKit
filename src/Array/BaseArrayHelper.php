@@ -10,92 +10,74 @@ use InvalidArgumentException;
 class BaseArrayHelper
 {
     /**
-     * Check if an array is multi-dimensional.
+     * Check if the given value is an array or an instance of ArrayAccess.
      *
-     * This method is a shortcut for checking if an array is multi-dimensional.
-     * It checks if the array is an array and if the count of the array is not
-     * equal to the count of the array with the COUNT_RECURSIVE flag.
-     *
-     * @param mixed $array The array to check.
-     * @return bool True if the array is multi-dimensional, false otherwise.
+     * @param mixed $value The value to check.
+     * @return bool True if the value is accessible, false otherwise.
      */
-    public static function isMultiDimensional(mixed $array): bool
+    public static function accessible(mixed $value): bool
     {
-        return is_array($array)
-            && count($array) !== count($array, COUNT_RECURSIVE);
+        return is_array($value) || $value instanceof ArrayAccess;
     }
 
 
     /**
-     * Wrap a value in an array if it's not already an array; otherwise return the array as is.
+     * Check if all elements in the array pass the given truth test.
      *
-     * If the value is empty, an empty array is returned.
+     * This function applies a callback to each element of the array.
+     * If the callback returns true for all elements, the function returns true.
+     * Otherwise, it returns false.
      *
-     * @param mixed $value The value to wrap.
-     * @return array The wrapped value.
+     * @param array $array The array to be evaluated.
+     * @param callable $callback The callback function to apply to each element.
+     * @return bool True if all elements pass the truth test, false otherwise.
      */
-    public static function wrap(mixed $value): array
+    public static function all(array $array, callable $callback): bool
     {
-        if (empty($value)) {
-            return [];
-        }
-        return is_array($value) ? $value : [$value];
+        return static::isAll($array, $callback);
     }
 
 
     /**
-     * Unwrap a value from an array if it contains exactly one element.
+     * Check if at least one element in the array passes a given truth test.
      *
-     * This method checks if the given value is an array. If it is not,
-     * the value is returned as is. If the value is an array with exactly
-     * one element, that element is returned. Otherwise, the array itself
-     * is returned.
+     * This function is an alias for haveAny, which is a more descriptive name.
+     * It is provided for syntactic sugar, as it is very common to want to
+     * check if at least one item in an array matches a given criteria.
      *
-     * @param mixed $value The value to potentially unwrap.
-     * @return mixed The unwrapped value or the original array.
+     * @param array $array The array to check.
+     * @param callable $callback The callback to apply to each element.
+     * @return bool True if at least one element passes the test, false otherwise.
      */
-    public static function unWrap(mixed $value): mixed
+    public static function any(array $array, callable $callback): bool
     {
-        if (!is_array($value)) {
-            return $value;
-        }
-        return (count($value) === 1) ? reset($value) : $value;
+        return static::haveAny($array, $callback);
     }
 
 
     /**
-     * Determine if at least one element in the array passes the given truth test.
+     * Filter an array by rejecting elements based on a callback function or value.
      *
-     * @param array $array The array to search.
-     * @param callable $callback The callback to use for searching.
-     * @return bool Whether at least one element passed the truth test.
-     */
-    public static function haveAny(array $array, callable $callback): bool
-    {
-        foreach ($array as $key => $value) {
-            if ($callback($value, $key) === true) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-
-    /**
-     * Determine if all elements in the array pass the given truth test.
+     * This function takes an array and a callback or value as parameters.
+     * If the callback is callable, it applies the callback to each element of the array.
+     * Elements for which the callback returns false are kept.
+     * If the callback is a value, elements equal to this value are rejected.
+     * The function returns an array with the same type of indices as the input array.
      *
-     * @param array $array The array to search.
-     * @param callable $callback The callback to use for searching.
-     * @return bool Whether all elements passed the truth test.
+     * @param array $array The array to be filtered.
+     * @param mixed $callback The callback function or value for filtering.
+     * @return array The array with elements rejected based on the callback or value.
      */
-    public static function isAll(array $array, callable $callback): bool
+    public static function doReject(array $array, mixed $callback): array
     {
-        foreach ($array as $key => $value) {
-            if ($callback($value, $key) === false) {
-                return false;
-            }
+        if (is_callable($callback)) {
+            return array_filter(
+                $array,
+                fn ($val, $key) => !$callback($val, $key),
+                ARRAY_FILTER_USE_BOTH
+            );
         }
-        return true;
+        return array_filter($array, fn ($val) => $val != $callback);
     }
 
 
@@ -119,14 +101,20 @@ class BaseArrayHelper
 
 
     /**
-     * Check if the given value is an array or an instance of ArrayAccess.
+     * Remove one or multiple array items from an array.
      *
-     * @param mixed $value The value to check.
-     * @return bool True if the value is accessible, false otherwise.
+     * This function takes an array and a key or array of keys as parameters.
+     * It then iterates over the given keys, and unsets the corresponding
+     * items from the array.
+     *
+     * @param array $array The array from which to remove items.
+     * @param int|string|array $keys The key or array of keys to be removed.
      */
-    public static function accessible(mixed $value): bool
+    public static function forget(array &$array, int|string|array $keys): void
     {
-        return is_array($value) || $value instanceof ArrayAccess;
+        foreach ((array) $keys as $key) {
+            unset($array[$key]);
+        }
     }
 
 
@@ -183,6 +171,98 @@ class BaseArrayHelper
 
 
     /**
+     * Determine if at least one element in the array passes the given truth test.
+     *
+     * @param array $array The array to search.
+     * @param callable $callback The callback to use for searching.
+     * @return bool Whether at least one element passed the truth test.
+     */
+    public static function haveAny(array $array, callable $callback): bool
+    {
+        foreach ($array as $key => $value) {
+            if ($callback($value, $key) === true) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    /**
+     * Determine if all elements in the array pass the given truth test.
+     *
+     * @param array $array The array to search.
+     * @param callable $callback The callback to use for searching.
+     * @return bool Whether all elements passed the truth test.
+     */
+    public static function isAll(array $array, callable $callback): bool
+    {
+        foreach ($array as $key => $value) {
+            if ($callback($value, $key) === false) {
+                return false;
+            }
+        }
+        return true;
+    }
+    /**
+     * Check if an array is multi-dimensional.
+     *
+     * This method is a shortcut for checking if an array is multi-dimensional.
+     * It checks if the array is an array and if the count of the array is not
+     * equal to the count of the array with the COUNT_RECURSIVE flag.
+     *
+     * @param mixed $array The array to check.
+     * @return bool True if the array is multi-dimensional, false otherwise.
+     */
+    public static function isMultiDimensional(mixed $array): bool
+    {
+        return is_array($array)
+            && count($array) !== count($array, COUNT_RECURSIVE);
+    }
+
+
+    /**
+     * Retrieve one or multiple random items from an array.
+     *
+     * By default, this function returns a single item from the array.
+     * If you pass a number as the second argument, it will return that
+     * number of items. If you set the third argument to `true`, the
+     * keys from the original array are preserved in the returned array.
+     *
+     * @param array $array The array from which to retrieve random items.
+     * @param int|null $number The number of items to retrieve. If null, a single item is returned.
+     * @param bool $preserveKeys Whether to preserve the keys from the original array.
+     *
+     * @return mixed The retrieved item(s) from the array.
+     *
+     * @throws InvalidArgumentException If the user requested more items than the array contains.
+     */
+    public static function random(array $array, ?int $number = null, bool $preserveKeys = false): mixed
+    {
+        $count = count($array);
+        if ($count === 0 || ($number !== null && $number <= 0)) {
+            return ($number === null) ? null : [];
+        }
+
+        if ($number === null) {
+            $randKey = array_rand($array);
+            return $array[$randKey];
+        }
+
+        if ($number > $count) {
+            throw new InvalidArgumentException("You requested $number items, but array only has $count.");
+        }
+
+        $keys = (array) array_rand($array, $number);
+
+        // intersect is ~30 % faster than manual loop for large n
+        $picked = array_intersect_key($array, array_flip($keys));
+
+        return $preserveKeys ? $picked : array_values($picked);
+    }
+
+
+    /**
      * Generate an array containing a sequence of numbers.
      *
      * This function creates an array of numbers starting from $start up to $end,
@@ -200,6 +280,26 @@ class BaseArrayHelper
             return [];
         }
         return range($start, $end, $step);
+    }
+
+    /* ------------------------------------------------------------------------
+     |                     Additional "Sugar" Methods (Point 1)
+       ---------------------------------------------------------------------- */
+
+
+    /**
+     * Pass the array to the given callback and return it.
+     *
+     * Useful for tapping into a fluent method chain for debugging.
+     *
+     * @param array $array The array to be tapped.
+     * @param callable $callback The callback to apply to the array.
+     * @return array The original array.
+     */
+    public static function tap(array $array, callable $callback): array
+    {
+        $callback($array);
+        return $array;
     }
 
 
@@ -234,140 +334,38 @@ class BaseArrayHelper
 
 
     /**
-     * Check if at least one element in the array passes a given truth test.
+     * Unwrap a value from an array if it contains exactly one element.
      *
-     * This function is an alias for haveAny, which is a more descriptive name.
-     * It is provided for syntactic sugar, as it is very common to want to
-     * check if at least one item in an array matches a given criteria.
+     * This method checks if the given value is an array. If it is not,
+     * the value is returned as is. If the value is an array with exactly
+     * one element, that element is returned. Otherwise, the array itself
+     * is returned.
      *
-     * @param array $array The array to check.
-     * @param callable $callback The callback to apply to each element.
-     * @return bool True if at least one element passes the test, false otherwise.
+     * @param mixed $value The value to potentially unwrap.
+     * @return mixed The unwrapped value or the original array.
      */
-    public static function any(array $array, callable $callback): bool
+    public static function unWrap(mixed $value): mixed
     {
-        return static::haveAny($array, $callback);
+        if (!is_array($value)) {
+            return $value;
+        }
+        return (count($value) === 1) ? reset($value) : $value;
     }
 
 
     /**
-     * Check if all elements in the array pass the given truth test.
+     * Wrap a value in an array if it's not already an array; otherwise return the array as is.
      *
-     * This function applies a callback to each element of the array.
-     * If the callback returns true for all elements, the function returns true.
-     * Otherwise, it returns false.
+     * If the value is empty, an empty array is returned.
      *
-     * @param array $array The array to be evaluated.
-     * @param callable $callback The callback function to apply to each element.
-     * @return bool True if all elements pass the truth test, false otherwise.
+     * @param mixed $value The value to wrap.
+     * @return array The wrapped value.
      */
-    public static function all(array $array, callable $callback): bool
+    public static function wrap(mixed $value): array
     {
-        return static::isAll($array, $callback);
-    }
-
-    /* ------------------------------------------------------------------------
-     |                     Additional "Sugar" Methods (Point 1)
-       ---------------------------------------------------------------------- */
-
-
-    /**
-     * Pass the array to the given callback and return it.
-     *
-     * Useful for tapping into a fluent method chain for debugging.
-     *
-     * @param array $array The array to be tapped.
-     * @param callable $callback The callback to apply to the array.
-     * @return array The original array.
-     */
-    public static function tap(array $array, callable $callback): array
-    {
-        $callback($array);
-        return $array;
-    }
-
-
-    /**
-     * Remove one or multiple array items from an array.
-     *
-     * This function takes an array and a key or array of keys as parameters.
-     * It then iterates over the given keys, and unsets the corresponding
-     * items from the array.
-     *
-     * @param array $array The array from which to remove items.
-     * @param int|string|array $keys The key or array of keys to be removed.
-     */
-    public static function forget(array &$array, int|string|array $keys): void
-    {
-        foreach ((array) $keys as $key) {
-            unset($array[$key]);
+        if (empty($value)) {
+            return [];
         }
-    }
-
-
-    /**
-     * Retrieve one or multiple random items from an array.
-     *
-     * By default, this function returns a single item from the array.
-     * If you pass a number as the second argument, it will return that
-     * number of items. If you set the third argument to `true`, the
-     * keys from the original array are preserved in the returned array.
-     *
-     * @param array $array The array from which to retrieve random items.
-     * @param int|null $number The number of items to retrieve. If null, a single item is returned.
-     * @param bool $preserveKeys Whether to preserve the keys from the original array.
-     *
-     * @return mixed The retrieved item(s) from the array.
-     *
-     * @throws InvalidArgumentException If the user requested more items than the array contains.
-     */
-    public static function random(array $array, int $number = null, bool $preserveKeys = false): mixed
-    {
-        $count = count($array);
-        if ($count === 0 || ($number !== null && $number <= 0)) {
-            return ($number === null) ? null : [];
-        }
-
-        if ($number === null) {
-            $randKey = array_rand($array);
-            return $array[$randKey];
-        }
-
-        if ($number > $count) {
-            throw new InvalidArgumentException("You requested $number items, but array only has $count.");
-        }
-
-        $keys = (array) array_rand($array, $number);
-
-        // intersect is ~30 % faster than manual loop for large n
-        $picked = array_intersect_key($array, array_flip($keys));
-
-        return $preserveKeys ? $picked : array_values($picked);
-    }
-
-
-    /**
-     * Filter an array by rejecting elements based on a callback function or value.
-     *
-     * This function takes an array and a callback or value as parameters.
-     * If the callback is callable, it applies the callback to each element of the array.
-     * Elements for which the callback returns false are kept.
-     * If the callback is a value, elements equal to this value are rejected.
-     * The function returns an array with the same type of indices as the input array.
-     *
-     * @param array $array The array to be filtered.
-     * @param mixed $callback The callback function or value for filtering.
-     * @return array The array with elements rejected based on the callback or value.
-     */
-    public static function doReject(array $array, mixed $callback): array
-    {
-        if (is_callable($callback)) {
-            return array_filter(
-                $array,
-                fn ($val, $key) => !$callback($val, $key),
-                ARRAY_FILTER_USE_BOTH
-            );
-        }
-        return array_filter($array, fn ($val) => $val != $callback);
+        return is_array($value) ? $value : [$value];
     }
 }

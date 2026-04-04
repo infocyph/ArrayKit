@@ -30,6 +30,122 @@ trait BaseCollectionTrait
     }
 
     /**
+     * Dynamically handle calls to methods on the collection.
+     *
+     * This magic method allows for dynamic method calls to be
+     * processed through the collection's pipeline. If the
+     * method exists on the pipeline, it will be invoked with
+     * the provided arguments. An exception is thrown if the
+     * method does not exist.
+     *
+     * @param string $method The name of the method being called.
+     * @param array $arguments The arguments to pass to the method.
+     * @return mixed The result of the method call.
+     * @throws BadMethodCallException If the method does not exist.
+     */
+    public function __call(string $method, array $arguments): mixed
+    {
+        $pipeline = $this->process();
+        if (method_exists($pipeline, $method)) {
+            return $pipeline->$method(...$arguments);
+        }
+        throw new BadMethodCallException("Method $method does not exist in ".static::class);
+    }
+
+    /**
+     * Provide custom debug information.
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'data' => $this->data,
+            'count' => $this->count(),
+        ];
+    }
+
+    /**
+     * Magic getter to retrieve an item via property access: $collection->key
+     *
+     * This method allows for accessing collection items using property syntax.
+     * It internally calls the offsetGet method to retrieve the value.
+     *
+     * @param string $key The key of the item to retrieve.
+     * @return mixed The value associated with the given key.
+     */
+    public function __get(string $key): mixed
+    {
+        return $this->offsetGet($key);
+    }
+
+
+    /**
+     * Invokes the collection and returns the underlying array data.
+     *
+     * When the collection is invoked as a function (e.g. `$collection()`),
+     * the underlying array data is returned directly.
+     *
+     * @return array The array data of this collection.
+     */
+    public function __invoke(): array
+    {
+        return $this->data;
+    }
+
+
+    /**
+     * Magic isset to check for existence of an item via property access: isset($collection->key)
+     *
+     * This method allows for checking if an item exists using property syntax.
+     * It internally calls the offsetExists method to check for existence.
+     *
+     * @param string $key The key of the item to check for existence.
+     * @return bool True if the item exists, false otherwise.
+     */
+    public function __isset(string $key): bool
+    {
+        return $this->offsetExists($key);
+    }
+
+
+    /**
+     * Magic setter to set an item via property access: $collection->key = $value
+     *
+     * This method allows for setting collection items using property syntax.
+     * It internally calls the offsetSet method to set the value.
+     *
+     * @param string $key The key of the item to set.
+     * @param mixed $value The value to set.
+     * @return void
+     */
+    public function __set(string $key, mixed $value): void
+    {
+        $this->offsetSet($key, $value);
+    }
+
+    /**
+     * Convert the collection to a JSON string when treated as a string.
+     */
+    public function __toString(): string
+    {
+        return $this->toJson();
+    }
+
+
+    /**
+     * Magic unset to remove an item via property access: unset($collection->key)
+     *
+     * This method allows for removing collection items using property syntax.
+     * It internally calls the offsetUnset method to remove the value.
+     *
+     * @param string $key The key of the item to remove.
+     * @return void
+     */
+    public function __unset(string $key): void
+    {
+        $this->offsetUnset($key);
+    }
+
+    /**
      * Create a new instance of the collection from the given data.
      *
      * This method acts as a wrapper around the `make` method,
@@ -61,54 +177,53 @@ trait BaseCollectionTrait
         return $instance;
     }
 
-    /**
-     * Dynamically handle calls to methods on the collection.
-     *
-     * This magic method allows for dynamic method calls to be
-     * processed through the collection's pipeline. If the
-     * method exists on the pipeline, it will be invoked with
-     * the provided arguments. An exception is thrown if the
-     * method does not exist.
-     *
-     * @param string $method The name of the method being called.
-     * @param array $arguments The arguments to pass to the method.
-     * @return mixed The result of the method call.
-     * @throws BadMethodCallException If the method does not exist.
-     */
-    public function __call(string $method, array $arguments): mixed
-    {
-        $pipeline = $this->process();
-        if (method_exists($pipeline, $method)) {
-            return $pipeline->$method(...$arguments);
-        }
-        throw new BadMethodCallException("Method $method does not exist in ".static::class);
-    }
-
 
     /**
-     * Invokes the collection and returns the underlying array data.
+     * Returns the entire array of items in this collection.
      *
-     * When the collection is invoked as a function (e.g. `$collection()`),
-     * the underlying array data is returned directly.
+     * This is an alias for the `items()` method.
      *
-     * @return array The array data of this collection.
+     * @return array The entire array of items in this collection.
      */
-    public function __invoke(): array
+    public function all(): array
     {
         return $this->data;
     }
 
     /**
-     * Create and return a new Pipeline instance using the current collection's data.
-     *
-     * This method initializes a processing pipeline, allowing method chaining
-     * for array transformations or operations.
-     *
-     * @return Pipeline A new pipeline instance for further processing.
+     * Clear all items from the collection.
      */
-    public function process(): Pipeline
+    public function clear(): void
     {
-        return $this->pipeline ??= new Pipeline($this->data, $this);
+        $this->data = [];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Countable Interface
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Returns the number of items in the collection.
+     *
+     * @return int The number of items in the collection.
+     */
+    public function count(): int
+    {
+        return count($this->data);
+    }
+
+    /**
+     * Returns the current element in the collection.
+     *
+     * This is part of the Iterator interface.
+     *
+     * @return mixed The current element in the collection.
+     */
+    public function current(): mixed
+    {
+        return current($this->data);
     }
 
 
@@ -126,6 +241,49 @@ trait BaseCollectionTrait
     public function get(string|array $keys): mixed
     {
         return DotNotation::get($this->data, $keys);
+    }
+
+
+    /**
+     * Normalizes the given items to an array.
+     *
+     * If the $items is an instance of {@see self}, it will call the `items()` method on it.
+     * If the $items is an instance of {@see JsonSerializable}, it will call the `jsonSerialize()` method on it.
+     * If the $items is a traversable, it will convert it to an array using the `iterator_to_array()` function.
+     * Otherwise, it will cast the $items to an array.
+     *
+     * @param mixed $items The items to normalize.
+     * @return array The normalized items.
+     */
+    public function getArrayableItems(mixed $items): array
+    {
+        return match (true) {
+            $items instanceof self => $items->items(),
+            $items instanceof JsonSerializable => $items->jsonSerialize(),
+            $items instanceof Traversable => iterator_to_array($items),
+            default => (array) $items,
+        };
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Iterator Interface
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Retrieve an external iterator.
+     *
+     * This method returns an instance of ArrayIterator that can be used
+     * to iterate over the collection's data. It is part of the IteratorAggregate
+     * interface, allowing for external iteration of the collection.
+     *
+     * @return Traversable An iterator for the collection's data.
+     */
+    public function getIterator(): Traversable
+    {
+        return new ArrayIterator($this->data);
     }
 
 
@@ -156,116 +314,12 @@ trait BaseCollectionTrait
         return DotNotation::hasAny($this->data, $keys);
     }
 
-
     /**
-     * Set one or multiple items in the collection using dot notation.
-     *
-     * If no key is provided, the entire collection is replaced with $value.
-     * If an array of key-value pairs is provided, each value is set.
-     * If a single key is provided, the value is set directly.
-     *
-     * @param array|string|null $keys The key(s) to set.
-     * @param mixed $value The value to set.
-     * @return bool True on success.
+     * Determine if the collection is empty.
      */
-    public function set(array|string|null $keys = null, mixed $value = null): bool
+    public function isEmpty(): bool
     {
-        return DotNotation::set($this->data, $keys, $value);
-    }
-
-    /**
-     * Magic getter to retrieve an item via property access: $collection->key
-     *
-     * This method allows for accessing collection items using property syntax.
-     * It internally calls the offsetGet method to retrieve the value.
-     *
-     * @param string $key The key of the item to retrieve.
-     * @return mixed The value associated with the given key.
-     */
-    public function __get(string $key): mixed
-    {
-        return $this->offsetGet($key);
-    }
-
-
-    /**
-     * Magic setter to set an item via property access: $collection->key = $value
-     *
-     * This method allows for setting collection items using property syntax.
-     * It internally calls the offsetSet method to set the value.
-     *
-     * @param string $key The key of the item to set.
-     * @param mixed $value The value to set.
-     * @return void
-     */
-    public function __set(string $key, mixed $value): void
-    {
-        $this->offsetSet($key, $value);
-    }
-
-
-    /**
-     * Magic isset to check for existence of an item via property access: isset($collection->key)
-     *
-     * This method allows for checking if an item exists using property syntax.
-     * It internally calls the offsetExists method to check for existence.
-     *
-     * @param string $key The key of the item to check for existence.
-     * @return bool True if the item exists, false otherwise.
-     */
-    public function __isset(string $key): bool
-    {
-        return $this->offsetExists($key);
-    }
-
-
-    /**
-     * Magic unset to remove an item via property access: unset($collection->key)
-     *
-     * This method allows for removing collection items using property syntax.
-     * It internally calls the offsetUnset method to remove the value.
-     *
-     * @param string $key The key of the item to remove.
-     * @return void
-     */
-    public function __unset(string $key): void
-    {
-        $this->offsetUnset($key);
-    }
-
-
-    /**
-     * Normalizes the given items to an array.
-     *
-     * If the $items is an instance of {@see self}, it will call the `items()` method on it.
-     * If the $items is an instance of {@see JsonSerializable}, it will call the `jsonSerialize()` method on it.
-     * If the $items is a traversable, it will convert it to an array using the `iterator_to_array()` function.
-     * Otherwise, it will cast the $items to an array.
-     *
-     * @param mixed $items The items to normalize.
-     * @return array The normalized items.
-     */
-    public function getArrayableItems(mixed $items): array
-    {
-        return match (true) {
-            $items instanceof self => $items->items(),
-            $items instanceof JsonSerializable => $items->jsonSerialize(),
-            $items instanceof Traversable => iterator_to_array($items),
-            default => (array) $items,
-        };
-    }
-
-
-    /**
-     * Returns the entire array of items in this collection.
-     *
-     * This is an alias for the `items()` method.
-     *
-     * @return array The entire array of items in this collection.
-     */
-    public function all(): array
-    {
-        return $this->data;
+        return empty($this->data);
     }
 
     /**
@@ -276,38 +330,40 @@ trait BaseCollectionTrait
         return $this->data;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | JsonSerializable Interface
+    |--------------------------------------------------------------------------
+    */
+
     /**
-     * Get the collection of items as a JSON string.
+     * Convert the collection of items to an array suitable for JSON serialization.
      *
-     * @param  int  $options  JSON encoding options
+     * This method ensures that each item within the collection is converted
+     * to an array representation if it implements the JsonSerializable interface.
+     * Non-serializable items are returned as-is.
+     *
+     * @return array The array representation of the collection, ready for JSON serialization.
      */
-    public function toJson(int $options = 0): string
+    public function jsonSerialize(): array
     {
-        return json_encode($this->data, $options);
+        return array_map(
+            static fn ($value) => $value instanceof JsonSerializable ? $value->jsonSerialize() : $value,
+            $this->data,
+        );
     }
 
     /**
-     * Determine if the collection is empty.
+     * Return the key of the current element.
+     *
+     * This is part of the Iterator interface.
+     *
+     * @return string|int|null The key of the current element, or null if the
+     *                         internal pointer is not valid.
      */
-    public function isEmpty(): bool
+    public function key(): string|int|null
     {
-        return empty($this->data);
-    }
-
-    /**
-     * Convert the collection to a JSON string when treated as a string.
-     */
-    public function __toString(): string
-    {
-        return $this->toJson();
-    }
-
-    /**
-     * Get the collection of items as a plain array.
-     */
-    public function toArray(): array
-    {
-        return $this->data;
+        return key($this->data);
     }
 
     /**
@@ -319,22 +375,28 @@ trait BaseCollectionTrait
     }
 
     /**
-     * Provide custom debug information.
+     * Merge additional items into the collection.
+     *
+     * Numeric keys are appended; string keys are overwritten by incoming items.
+     *
+     * @param mixed $items
+     * @return static
      */
-    public function __debugInfo(): array
+    public function merge(mixed $items): static
     {
-        return [
-            'data' => $this->data,
-            'count' => $this->count(),
-        ];
+        $this->data = array_merge($this->data, $this->getArrayableItems($items));
+
+        return $this;
     }
 
     /**
-     * Clear all items from the collection.
+     * Advances the internal pointer to the next element.
+     *
+     * This is part of the Iterator interface.
      */
-    public function clear(): void
+    public function next(): void
     {
-        $this->data = [];
+        next($this->data);
     }
 
     /*
@@ -358,7 +420,10 @@ trait BaseCollectionTrait
         if (is_string($offset) && str_contains($offset, '.')) {
             return DotNotation::offsetExists($this->data, $offset);
         }
-        return isset($this->data[$offset]);
+        if (!is_int($offset) && !is_string($offset)) {
+            return false;
+        }
+        return array_key_exists($offset, $this->data);
     }
 
     /**
@@ -422,72 +487,17 @@ trait BaseCollectionTrait
         unset($this->data[$offset]);
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Iterator Interface
-    |--------------------------------------------------------------------------
-    */
-
     /**
-     * Retrieve an external iterator.
+     * Create and return a new Pipeline instance using the current collection's data.
      *
-     * This method returns an instance of ArrayIterator that can be used
-     * to iterate over the collection's data. It is part of the IteratorAggregate
-     * interface, allowing for external iteration of the collection.
+     * This method initializes a processing pipeline, allowing method chaining
+     * for array transformations or operations.
      *
-     * @return Traversable An iterator for the collection's data.
+     * @return Pipeline A new pipeline instance for further processing.
      */
-    public function getIterator(): Traversable
+    public function process(): Pipeline
     {
-        return new ArrayIterator($this->data);
-    }
-
-    /**
-     * Returns the current element in the collection.
-     *
-     * This is part of the Iterator interface.
-     *
-     * @return mixed The current element in the collection.
-     */
-    public function current(): mixed
-    {
-        return current($this->data);
-    }
-
-    /**
-     * Return the key of the current element.
-     *
-     * This is part of the Iterator interface.
-     *
-     * @return string|int|null The key of the current element, or null if the
-     *                         internal pointer is not valid.
-     */
-    public function key(): string|int|null
-    {
-        return key($this->data);
-    }
-
-    /**
-     * Advances the internal pointer to the next element.
-     *
-     * This is part of the Iterator interface.
-     */
-    public function next(): void
-    {
-        next($this->data);
-    }
-
-    /**
-     * Checks if the current element is valid.
-     *
-     * This is part of the Iterator interface.
-     *
-     * @return bool True if the current element is valid, false otherwise.
-     */
-    public function valid(): bool
-    {
-        return key($this->data) !== null;
+        return $this->pipeline ??= new Pipeline($this->data, $this);
     }
 
     /**
@@ -500,42 +510,52 @@ trait BaseCollectionTrait
         reset($this->data);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Countable Interface
-    |--------------------------------------------------------------------------
-    */
 
     /**
-     * Returns the number of items in the collection.
+     * Set one or multiple items in the collection using dot notation.
      *
-     * @return int The number of items in the collection.
+     * If no key is provided, the entire collection is replaced with $value.
+     * If an array of key-value pairs is provided, each value is set.
+     * If a single key is provided, the value is set directly.
+     *
+     * @param array|string|null $keys The key(s) to set.
+     * @param mixed $value The value to set.
+     * @return bool True on success.
      */
-    public function count(): int
+    public function set(array|string|null $keys = null, mixed $value = null): bool
     {
-        return count($this->data);
+        return DotNotation::set($this->data, $keys, $value);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | JsonSerializable Interface
-    |--------------------------------------------------------------------------
-    */
+    /**
+     * Get the collection of items as a plain array.
+     */
+    public function toArray(): array
+    {
+        return $this->data;
+    }
 
     /**
-     * Convert the collection of items to an array suitable for JSON serialization.
+     * Get the collection of items as a JSON string.
      *
-     * This method ensures that each item within the collection is converted
-     * to an array representation if it implements the JsonSerializable interface.
-     * Non-serializable items are returned as-is.
-     *
-     * @return array The array representation of the collection, ready for JSON serialization.
+     * @param  int  $options  JSON encoding options
      */
-    public function jsonSerialize(): array
+    public function toJson(int $options = 0): string
     {
-        return array_map(
-            static fn ($value) => $value instanceof JsonSerializable ? $value->jsonSerialize() : $value,
-            $this->data,
-        );
+        $json = json_encode($this->data, $options);
+
+        return $json === false ? 'null' : $json;
+    }
+
+    /**
+     * Checks if the current element is valid.
+     *
+     * This is part of the Iterator interface.
+     *
+     * @return bool True if the current element is valid, false otherwise.
+     */
+    public function valid(): bool
+    {
+        return key($this->data) !== null;
     }
 }

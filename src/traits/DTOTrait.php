@@ -34,15 +34,26 @@ trait DTOTrait
      */
     public static function create(array $values): static
     {
-        $instance = new static();
+        return (new static())->fromArray($values);
+    }
 
+    /**
+     * Populate the current object from an array of values.
+     *
+     * Unknown keys are ignored.
+     *
+     * @param array $values Key-value pairs matching property names
+     * @return static
+     */
+    public function fromArray(array $values): static
+    {
         foreach ($values as $key => $value) {
-            if (property_exists($instance, $key)) {
-                $instance->{$key} = $value;
+            if (property_exists($this, $key)) {
+                $this->{$key} = $value;
             }
         }
 
-        return $instance;
+        return $this;
     }
 
     /**

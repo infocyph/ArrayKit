@@ -7,8 +7,9 @@
 ![Packagist Version](https://img.shields.io/packagist/v/infocyph/arraykit)
 ![Packagist PHP Version](https://img.shields.io/packagist/dependency-v/infocyph/arraykit/php)
 ![GitHub Code Size](https://img.shields.io/github/languages/code-size/infocyph/arraykit)
+[![Documentation](https://img.shields.io/badge/Documentation-ArrayKit-blue?logo=readthedocs&logoColor=white)](https://docs.infocyph.com/projects/arraykit/)
 
-**ArrayKit** is a modern **PHP 8.2+** library for elegant, high-performance **array manipulation**, **dot notation
+**ArrayKit** is a modern **PHP 8.4+** library for elegant, high-performance **array manipulation**, **dot notation
 utilities**, **dynamic configuration**, **hookable collections**, and more.
 From shallow single arrays to deeply nested data structures — **ArrayKit** provides a fluent, reliable toolkit for
 real-world PHP projects.
@@ -39,7 +40,7 @@ real-world PHP projects.
 
 | Class               | Description                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------|
-| **Config**          | Immutable dot-access configuration loader.                                                                          |
+| **Config**          | Dot-access configuration loader.                                                                                   |
 | **DynamicConfig**   | Extends `Config` with **on-get/on-set hooks** to transform values dynamically (e.g., encrypt/decrypt, auto-format). |
 | **BaseConfigTrait** | Shared config logic.                                                                                                |
 
@@ -71,7 +72,7 @@ real-world PHP projects.
 
 ## ✅ Requirements
 
-* **PHP 8.2** or higher
+* **PHP 8.4** or higher
 
 
 ## ⚡ Installation

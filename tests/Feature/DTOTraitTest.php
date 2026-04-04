@@ -21,3 +21,18 @@ it('can create a DTO from an array', function () {
         'age'  => 30,
     ]);
 });
+
+it('can hydrate an existing DTO instance from an array', function () {
+    $dto = new class {
+        use DTOTrait;
+        public string $name = '';
+        public int $age = 0;
+    };
+
+    $dto->fromArray(['name' => 'Bob', 'age' => 28, 'ignored' => true]);
+
+    expect($dto->toArray())->toBe([
+        'name' => 'Bob',
+        'age' => 28,
+    ]);
+});
