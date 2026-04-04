@@ -16,13 +16,13 @@ Contents
     :includehidden:
 
     installation
+    quick-usage
     array-helpers
     dot-notation
     collection
     config
     traits-and-helpers
-    quick-usage
     rule-reference
 
 The feature pages above are guide-style usage docs.
-Use ``API Reference (1:1)`` for the full signature catalog.
+Use ``Usage Reference`` for task routing and the exact API signature appendix.

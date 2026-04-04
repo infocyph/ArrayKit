@@ -1,7 +1,87 @@
-API Reference (1:1)
+Usage Reference
 ===================
 
-This page maps the current public API surface in ``src/`` one-to-one.
+This page is usage-first.
+Use it to pick the right feature quickly, then go deeper in the dedicated guide pages.
+
+If you need exact method signatures, see the ``Exact API Signatures`` section at the end of this page.
+
+How To Use This Page
+--------------------
+
+1. Start from the feature that matches your task.
+2. Open the linked guide for full examples and behavior notes.
+3. Use the signature appendix only when you need exact parameter and return types.
+
+Feature Entry Points
+--------------------
+
+Array helpers (list/map/nested array operations):
+    :doc:`array-helpers`
+
+Dot-notation read/write for nested data:
+    :doc:`dot-notation`
+
+Object-style data pipeline and fluent transformations:
+    :doc:`collection`
+
+Configuration storage with optional get/set hooks:
+    :doc:`config`
+
+DTO and hook traits plus global helper functions:
+    :doc:`traits-and-helpers`
+
+Common Workflows
+----------------
+
+Nested data access (read/write with fallback):
+
+.. code-block:: php
+
+    <?php
+    $user = ['profile' => ['name' => 'Alice']];
+    $name = array_get($user, 'profile.name', 'Guest');
+    array_set($user, 'profile.email', 'alice@example.com');
+
+Collection transformation pipeline:
+
+.. code-block:: php
+
+    <?php
+    $result = collect([1, 2, 3, 4])
+        ->filter(fn ($v) => $v % 2 === 0)
+        ->map(fn ($v) => $v * 10)
+        ->all(); // [1 => 20, 3 => 40]
+
+Runtime configuration with hooks:
+
+.. code-block:: php
+
+    <?php
+    $config = new \Infocyph\ArrayKit\Config\DynamicConfig();
+    $config->onSet('app.name', fn ($v) => trim((string) $v));
+    $config->set('app.name', '  ArrayKit  ');
+    echo $config->get('app.name'); // ArrayKit
+
+Static array utilities for data shaping:
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Array\ArrayMulti;
+
+    $rows = [
+        ['team' => 'A', 'score' => 10],
+        ['team' => 'B', 'score' => 30],
+    ];
+
+    $sorted = ArrayMulti::sortBy($rows, 'score', true);
+    $scores = ArrayMulti::pluck($rows, 'score');
+
+Exact API Signatures
+--------------------
+
+This appendix maps the current public API surface in ``src/`` one-to-one.
 
 Global Helper Functions
 -----------------------
@@ -15,7 +95,7 @@ Global Helper Functions
     function collect(mixed $data = []): Collection
     function chain(mixed $data): Pipeline
 
-Infocyph\ArrayKit\Array\BaseArrayHelper
+BaseArrayHelper
 ---------------------------------------
 
 .. code-block:: php
@@ -35,10 +115,10 @@ Infocyph\ArrayKit\Array\BaseArrayHelper
     public static function all(array $array, callable $callback): bool
     public static function tap(array $array, callable $callback): array
     public static function forget(array &$array, int|string|array $keys): void
-    public static function random(array $array, int $number = null, bool $preserveKeys = false): mixed
+    public static function random(array $array, ?int $number = null, bool $preserveKeys = false): mixed
     public static function doReject(array $array, mixed $callback): array
 
-Infocyph\ArrayKit\Array\ArraySingle
+ArraySingle
 -----------------------------------
 
 .. code-block:: php
@@ -83,7 +163,7 @@ Infocyph\ArrayKit\Array\ArraySingle
     public static function median(array $array): float|int
     public static function except(array $array, array|string $keys): array
 
-Infocyph\ArrayKit\Array\ArrayMulti
+ArrayMulti
 ----------------------------------
 
 .. code-block:: php
@@ -123,7 +203,7 @@ Infocyph\ArrayKit\Array\ArrayMulti
     public static function transpose(array $matrix): array
     public static function pluck(array $array, string $column, ?string $indexBy = null): array
 
-Infocyph\ArrayKit\Array\DotNotation
+DotNotation
 -----------------------------------
 
 .. code-block:: php
@@ -149,7 +229,7 @@ Infocyph\ArrayKit\Array\DotNotation
     public static function offsetSet(array &$array, string $key, mixed $value): void
     public static function offsetUnset(array &$array, string $key): void
 
-Infocyph\ArrayKit\Collection\Collection
+Collection
 ---------------------------------------
 
 Collection uses ``BaseCollectionTrait``. Public API:
@@ -194,7 +274,7 @@ Collection uses ``BaseCollectionTrait``. Public API:
     public function count(): int
     public function jsonSerialize(): array
 
-Infocyph\ArrayKit\Collection\HookedCollection
+HookedCollection
 ---------------------------------------------
 
 HookedCollection extends ``Collection`` and adds hook behavior (from ``HookTrait``):
@@ -206,7 +286,7 @@ HookedCollection extends ``Collection`` and adds hook behavior (from ``HookTrait
     public function onGet(string $offset, callable $callback): static
     public function onSet(string $offset, callable $callback): static
 
-Infocyph\ArrayKit\Collection\Pipeline
+Pipeline
 -------------------------------------
 
 .. code-block:: php
@@ -259,7 +339,7 @@ Infocyph\ArrayKit\Collection\Pipeline
     public function when(bool $condition, callable $callback, ?callable $default = null): Collection
     public function unless(bool $condition, callable $callback, ?callable $default = null): Collection
 
-Infocyph\ArrayKit\Config\Config
+Config
 -------------------------------
 
 Config uses ``BaseConfigTrait``. Public API:
@@ -271,14 +351,14 @@ Config uses ``BaseConfigTrait``. Public API:
     public function all(): array
     public function has(string|array $keys): bool
     public function hasAny(string|array $keys): bool
-    public function get(string|int|array $key = null, mixed $default = null): mixed
+    public function get(string|int|array|null $key = null, mixed $default = null): mixed
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     public function fill(string|array $key, mixed $value = null): bool
     public function forget(string|int|array $key): bool
     public function prepend(string $key, mixed $value): bool
     public function append(string $key, mixed $value): bool
 
-Infocyph\ArrayKit\Config\DynamicConfig
+DynamicConfig
 --------------------------------------
 
 DynamicConfig extends Config behavior with hooks and overrides:
@@ -291,7 +371,7 @@ DynamicConfig extends Config behavior with hooks and overrides:
     public function onGet(string $offset, callable $callback): static
     public function onSet(string $offset, callable $callback): static
 
-Infocyph\ArrayKit\traits\DTOTrait
+DTOTrait
 ---------------------------------
 
 .. code-block:: php
@@ -300,7 +380,7 @@ Infocyph\ArrayKit\traits\DTOTrait
     public function fromArray(array $values): static
     public function toArray(): array
 
-Infocyph\ArrayKit\traits\HookTrait
+HookTrait
 ----------------------------------
 
 .. code-block:: php
