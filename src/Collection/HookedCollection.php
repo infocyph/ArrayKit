@@ -4,21 +4,16 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\Collection;
 
-use ArrayAccess;
-use Countable;
-use Iterator;
-use JsonSerializable;
+use Infocyph\ArrayKit\Array\DotNotation;
 use Infocyph\ArrayKit\traits\HookTrait;
 
 /**
  * Class HookedCollection
  *
- * An array-based collection (implements ArrayAccess, Iterator, Countable,
- * and JsonSerializable) that supports get/set hooks for dynamic transformations.
+ * A collection that supports get/set hooks for dynamic transformations.
  */
-class HookedCollection implements ArrayAccess, Iterator, Countable, JsonSerializable
+class HookedCollection extends Collection
 {
-    use BaseCollectionTrait;
     use HookTrait;
 
     /**
@@ -29,13 +24,18 @@ class HookedCollection implements ArrayAccess, Iterator, Countable, JsonSerializ
      * @param mixed $offset The array key
      * @return mixed The transformed value or null if not found
      */
+    #[\Override]
     public function offsetGet(mixed $offset): mixed
     {
         if (!$this->offsetExists($offset)) {
             return null;
         }
 
-        return $this->processValue($offset, $this->data[$offset], 'get');
+        $value = is_string($offset) && str_contains($offset, '.')
+            ? DotNotation::get($this->data, $offset)
+            : parent::offsetGet($offset);
+
+        return $this->processValue($offset, $value, 'get');
     }
 
     /**
@@ -46,13 +46,16 @@ class HookedCollection implements ArrayAccess, Iterator, Countable, JsonSerializ
      * @param mixed $offset The array key
      * @param mixed $value  The value to set
      */
+    #[\Override]
     public function offsetSet(mixed $offset, mixed $value): void
     {
-        // If offset is null, append to the array.
-        if ($offset === null) {
-            $this->data[] = $this->processValue($offset, $value, 'set');
-        } else {
-            $this->data[$offset] = $this->processValue($offset, $value, 'set');
+        $processed = $this->processValue($offset, $value, 'set');
+
+        if (is_string($offset) && str_contains($offset, '.')) {
+            DotNotation::set($this->data, $offset, $processed);
+            return;
         }
+
+        parent::offsetSet($offset, $processed);
     }
 }

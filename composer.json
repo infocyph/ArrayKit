@@ -1,72 +1,77 @@
 {
-  "name": "infocyph/arraykit",
-  "description": "A Collection of useful PHP array functions.",
-  "type": "library",
-  "license": "MIT",
-  "keywords": [
-    "collection",
-    "array",
-    "config"
-  ],
-  "authors": [
-    {
-      "name": "abmmhasan",
-      "email": "abmmhasan@gmail.com"
-    }
-  ],
-  "autoload": {
-    "files": [
-      "src/functions.php"
+    "name": "infocyph/arraykit",
+    "description": "A Collection of useful PHP array functions.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "collection",
+        "array",
+        "config"
     ],
-    "psr-4": {
-      "Infocyph\\ArrayKit\\": "src/"
-    }
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "Infocyph\\ArrayKit\\Tests\\": "tests/"
-    }
-  },
-  "require": {
-    "php": ">=8.2"
-  },
-  "minimum-stability": "stable",
-  "prefer-stable": true,
-  "config": {
-    "sort-packages": true,
-    "optimize-autoloader": true,
-    "allow-plugins": {
-      "pestphp/pest-plugin": true
-    }
-  },
-  "scripts": {
-    "test:code": "pest --parallel --processes=10",
-    "test:refactor": "rector process --dry-run",
-    "test:lint": "pint --test",
-    "test:hook": [
-      "captainhook hook:post-checkout",
-      "captainhook hook:pre-commit",
-      "captainhook hook:post-commit",
-      "captainhook hook:post-merge",
-      "captainhook hook:post-rewrite",
-      "captainhook hook:pre-push"
+    "authors": [
+        {
+            "name": "abmmhasan",
+            "email": "abmmhasan@gmail.com"
+        }
     ],
-    "tests": [
-      "@test:code",
-      "@test:lint",
-      "@test:refactor"
-    ],
-    "git:hook": "captainhook install --only-enabled -nf",
-    "test": "pest",
-    "refactor": "rector process",
-    "lint": "pint",
-    "post-autoload-dump": "@git:hook"
-  },
-  "require-dev": {
-    "captainhook/captainhook": "^5.24",
-    "laravel/pint": "^1.20",
-    "pestphp/pest": "^3.7",
-    "rector/rector": "^2.0",
-    "symfony/var-dumper": "^7.2"
-  }
+    "autoload": {
+        "files": [
+            "src/functions.php"
+        ],
+        "psr-4": {
+            "Infocyph\\ArrayKit\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Infocyph\\ArrayKit\\Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "php": ">=8.3"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "test:code": "@php vendor/bin/pest --parallel --processes=10",
+        "test:security": "@php vendor/bin/psalm --config=psalm.xml --security-analysis --show-info=false --no-progress --threads=1",
+        "test:refactor": "@php vendor/bin/rector process --dry-run",
+        "test:lint": "@php vendor/bin/pint --test",
+        "test:hook": [
+            "captainhook hook:post-checkout",
+            "captainhook hook:pre-commit",
+            "captainhook hook:post-commit",
+            "captainhook hook:post-merge",
+            "captainhook hook:post-rewrite",
+            "captainhook hook:pre-push"
+        ],
+        "tests": [
+            "@test:code",
+            "@test:lint",
+            "@test:refactor",
+            "@test:security"
+        ],
+        "git:hook": "captainhook install --only-enabled -nf",
+        "test": "@php vendor/bin/pest",
+        "refactor": "@php vendor/bin/rector process",
+        "lint": "@php vendor/bin/pint",
+        "security:scan": "@test:security",
+        "post-autoload-dump": "captainhook install --only-enabled -nf"
+    },
+    "require-dev": {
+        "captainhook/captainhook": "^5.29.2",
+        "laravel/pint": "^1.29",
+        "pestphp/pest": "^4.4.3",
+        "pestphp/pest-plugin-drift": "^4.1",
+        "rector/rector": "^2.3.9",
+        "symfony/var-dumper": "^7.3 || ^8.0.8",
+        "vimeo/psalm": "^6.16.1"
+    }
 }

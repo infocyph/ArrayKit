@@ -25,6 +25,10 @@ it('can detect if array is a list', function () {
         ->and(ArraySingle::isList($assoc))->toBeFalse();
 });
 
+it('treats an empty array as a list', function () {
+    expect(ArraySingle::isList([]))->toBeTrue();
+});
+
 it('calculates average of numeric values', function () {
     $nums = [2, 4, 6, 8];
     expect(ArraySingle::avg($nums))->toBe(5);
