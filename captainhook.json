@@ -19,10 +19,6 @@
                 "options": []
             },
             {
-                "action": "composer test:security",
-                "options": []
-            },
-            {
                 "action": "composer tests",
                 "options": []
             }

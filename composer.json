@@ -40,21 +40,15 @@
         }
     },
     "scripts": {
-        "test:code": "@php vendor/bin/pest --parallel --processes=10",
-        "test:security": "@php vendor/bin/psalm --config=psalm.xml --security-analysis --show-info=false --no-progress --threads=1",
-        "test:refactor": "@php vendor/bin/rector process --dry-run",
-        "test:lint": "@php vendor/bin/pint --test",
-        "test:hook": [
-            "captainhook hook:post-checkout",
-            "captainhook hook:pre-commit",
-            "captainhook hook:post-commit",
-            "captainhook hook:post-merge",
-            "captainhook hook:post-rewrite",
-            "captainhook hook:pre-push"
-        ],
+        "test:code": "@php -d error_reporting=24575 vendor/bin/pest --parallel --processes=10",
+        "test:security": "@php -d error_reporting=24575 vendor/bin/psalm --config=psalm.xml --security-analysis --show-info=false --no-progress --threads=1",
+        "test:static": "@php -d error_reporting=24575 vendor/bin/phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G --no-progress",
+        "test:refactor": "@php -d error_reporting=24575 vendor/bin/rector process --dry-run",
+        "test:lint": "@php -d error_reporting=24575 vendor/bin/pint --test",
         "tests": [
             "@test:code",
             "@test:lint",
+            "@test:static",
             "@test:refactor",
             "@test:security"
         ],
@@ -72,6 +66,7 @@
         "pestphp/pest-plugin-drift": "^4.1",
         "rector/rector": "^2.3.9",
         "symfony/var-dumper": "^7.3 || ^8.0.8",
-        "vimeo/psalm": "^6.16.1"
+        "vimeo/psalm": "^6.16.1",
+        "tomasvotruba/cognitive-complexity": "^1.1"
     }
 }
