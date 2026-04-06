@@ -4,7 +4,6 @@
     xmlns="https://getpsalm.org/schema/config"
     xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
     errorLevel="3"
-    cacheDirectory=".psalm-cache"
 >
     <projectFiles>
         <directory name="src" />

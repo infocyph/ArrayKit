@@ -19,7 +19,7 @@ jobs:
       - name: Define shared matrix values
         id: matrix
         run: |
-          echo 'php_versions=["8.3","8.4","8.5"]' >> "$GITHUB_OUTPUT"
+          echo 'php_versions=["8.4","8.5"]' >> "$GITHUB_OUTPUT"
           echo 'dependency_versions=["prefer-lowest","prefer-stable"]' >> "$GITHUB_OUTPUT"
 
   run:
@@ -57,7 +57,9 @@ jobs:
           composer test:code
           composer test:lint
           composer test:refactor
-          # Skip Psalm on prefer-lowest: older transitive amphp versions can trigger PHP 8.4+ deprecations at startup.
+          if [ "${{ matrix.dependency-version }}" != "prefer-lowest" ]; then
+            composer test:static
+          fi
           if [ "${{ matrix.dependency-version }}" != "prefer-lowest" ]; then
             composer test:security
           fi

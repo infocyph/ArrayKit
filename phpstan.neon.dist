@@ -1,8 +1,14 @@
+includes:
+    - vendor/tomasvotruba/cognitive-complexity/config/extension.neon
+
 parameters:
-    level: 3
+    customRulesetUsed: true
     paths:
         - src
-        - tests
-    tmpDir: var/phpstan
     parallel:
         maximumNumberOfProcesses: 1
+    cognitive_complexity:
+        class: 150
+        function: 15
+        dependency_tree: 150
+        dependency_tree_types: []

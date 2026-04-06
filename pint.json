@@ -1,8 +1,7 @@
 {
     "preset": "psr12",
     "exclude": [
-        "tests",
-        "var"
+        "tests"
     ],
     "notPath": [
         "rector.php"
