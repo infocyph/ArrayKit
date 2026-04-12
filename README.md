@@ -39,9 +39,8 @@ real-world PHP projects.
 
 | Class               | Description                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------|
-| **Config**          | Dot-access configuration loader.                                                                                   |
+| **Config**          | Dot-access configuration loader with explicit hook-aware variants (`getWithHooks`, `setWithHooks`, `fillWithHooks`). |
 | **LazyFileConfig**  | First-segment lazy loader (`db.host` loads `db.php` on demand) for lower memory usage on large config trees.      |
-| **DynamicConfig**   | Extends `Config` with **on-get/on-set hooks** to transform values dynamically (e.g., encrypt/decrypt, auto-format). |
 | **BaseConfigTrait** | Shared config logic.                                                                                                |
 
 
@@ -59,7 +58,7 @@ real-world PHP projects.
 
 | Trait         | Description                                                                                    |
 |---------------|------------------------------------------------------------------------------------------------|
-| **HookTrait** | Generic hook system for on-get/on-set callbacks. Used by `DynamicConfig` & `HookedCollection`. |
+| **HookTrait** | Generic hook system for on-get/on-set callbacks. Used by `Config`, `LazyFileConfig`, and `HookedCollection`. |
 | **DTOTrait**  | Utility trait for DTO-like behavior: populate, extract, cast arrays/objects easily.            |
 
 
@@ -140,12 +139,12 @@ $flat = DotNotation::flatten($user);
 // [ 'profile.name' => 'Alice', 'profile.email' => 'alice@example.com' ]
 ```
 
-### 🔹 Dynamic Config with Hooks
+### 🔹 Config Hooks (Explicit)
 
 ```php
-use Infocyph\ArrayKit\Config\DynamicConfig;
+use Infocyph\ArrayKit\Config\Config;
 
-$config = new DynamicConfig();
+$config = new Config();
 
 // Load from file
 $config->loadFile(__DIR__.'/config.php');
@@ -157,8 +156,8 @@ $config->onSet('auth.password', fn($v) => password_hash($v, PASSWORD_BCRYPT));
 $config->onGet('secure.key', fn($v) => decrypt($v));
 
 // Use it
-$config->set('auth.password', 'secret123');
-$hashed = $config->get('auth.password');
+$config->setWithHooks('auth.password', 'secret123');
+$hashed = $config->getWithHooks('auth.password');
 ```
 
 ### 🔹 Hooked Collection

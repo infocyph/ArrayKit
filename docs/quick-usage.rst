@@ -60,12 +60,12 @@ Config + Hooks Example
 .. code-block:: php
 
     <?php
-    use Infocyph\ArrayKit\Config\DynamicConfig;
+    use Infocyph\ArrayKit\Config\Config;
 
-    $config = new DynamicConfig();
+    $config = new Config();
     $config->set('auth.password', 'secret');
     $config->onGet('auth.password', fn ($v) => strtoupper((string) $v));
-    echo $config->get('auth.password'); // SECRET
+    echo $config->getWithHooks('auth.password'); // SECRET
 
 Global Helper Example
 ---------------------

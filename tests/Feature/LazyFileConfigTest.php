@@ -178,3 +178,34 @@ it('throws for invalid preload namespaces', function () {
 
     expect(fn () => $config->preload('invalid.namespace'))->toThrow(InvalidArgumentException::class);
 });
+
+it('supports hook-aware lazy get and set variants', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost']);
+
+    $config = new LazyFileConfig($this->configPath);
+    $config->onSet('db.host', fn($value) => strtoupper((string) $value));
+    $config->onGet('db.host', fn($value) => strtolower((string) $value));
+
+    $config->setWithHooks('db.host', 'INTERNAL');
+
+    expect($config->get('db.host'))->toBe('INTERNAL')
+        ->and($config->getWithHooks('db.host'))->toBe('internal');
+});
+
+it('supports hook-aware lazy bulk operations', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost', 'port' => 3306]);
+
+    $config = new LazyFileConfig($this->configPath);
+    $config->onSet('db.host', fn($value) => strtoupper((string) $value));
+    $config->onGet('db.host', fn($value) => strtolower((string) $value));
+
+    $config->setWithHooks([
+        'db.host' => 'INTERNAL',
+        'db.port' => 5432,
+    ]);
+
+    expect($config->getWithHooks(['db.host', 'db.port']))->toBe([
+        'db.host' => 'internal',
+        'db.port' => 5432,
+    ]);
+});
