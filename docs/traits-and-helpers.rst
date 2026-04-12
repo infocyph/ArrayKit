@@ -81,7 +81,8 @@ Main methods:
 ``HookTrait`` is used internally by:
 
 - ``Infocyph\ArrayKit\Collection\HookedCollection``
-- ``Infocyph\ArrayKit\Config\DynamicConfig``
+- ``Infocyph\ArrayKit\Config\Config``
+- ``Infocyph\ArrayKit\Config\LazyFileConfig``
 
 HookedCollection Integration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -103,20 +104,20 @@ HookedCollection Integration
     $c['role'] = 'admin';
     echo $c['role']; // Role: admin
 
-DynamicConfig Integration
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Config Integration
+~~~~~~~~~~~~~~~~~~
 
 .. code-block:: php
 
     <?php
-    use Infocyph\ArrayKit\Config\DynamicConfig;
+    use Infocyph\ArrayKit\Config\Config;
 
-    $config = new DynamicConfig();
+    $config = new Config();
     $config->onSet('user.email', fn ($v) => trim((string) $v));
     $config->onGet('user.email', fn ($v) => strtolower((string) $v));
 
-    $config->set('user.email', '  ALICE@EXAMPLE.COM  ');
-    echo $config->get('user.email'); // alice@example.com
+    $config->setWithHooks('user.email', '  ALICE@EXAMPLE.COM  ');
+    echo $config->getWithHooks('user.email'); // alice@example.com
 
 Multiple Hooks on Same Key
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -129,7 +130,7 @@ Hooks run in registration order:
     $config->onSet('username', fn ($v) => trim((string) $v));
     $config->onSet('username', fn ($v) => strtolower((string) $v));
 
-    $config->set('username', '  ALICE  '); // becomes "alice"
+    $config->setWithHooks('username', '  ALICE  '); // becomes "alice"
 
 Global Helper Functions
 -----------------------

@@ -58,10 +58,10 @@ Runtime configuration with hooks:
 .. code-block:: php
 
     <?php
-    $config = new \Infocyph\ArrayKit\Config\DynamicConfig();
+    $config = new \Infocyph\ArrayKit\Config\Config();
     $config->onSet('app.name', fn ($v) => trim((string) $v));
-    $config->set('app.name', '  ArrayKit  ');
-    echo $config->get('app.name'); // ArrayKit
+    $config->setWithHooks('app.name', '  ArrayKit  ');
+    echo $config->getWithHooks('app.name'); // ArrayKit
 
 Static array utilities for data shaping:
 
@@ -376,16 +376,16 @@ LazyFileConfig loads top-level config files on first keyed access:
     public function loadedNamespaces(): array
     public function all(): array // throws (design choice)
 
-DynamicConfig
+Config Hook-Aware Variants
 --------------------------------------
 
-DynamicConfig extends Config behavior with hooks and overrides:
+Both Config and LazyFileConfig expose explicit hook-aware methods:
 
 .. code-block:: php
 
-    public function get(int|string|array|null $key = null, mixed $default = null): mixed
-    public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
-    public function fill(string|array $key, mixed $value = null): bool
+    public function getWithHooks(int|string|array|null $key = null, mixed $default = null): mixed
+    public function setWithHooks(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
+    public function fillWithHooks(string|array $key, mixed $value = null): bool
     public function onGet(string $offset, callable $callback): static
     public function onSet(string $offset, callable $callback): static
 

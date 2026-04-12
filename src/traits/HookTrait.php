@@ -11,8 +11,8 @@ namespace Infocyph\ArrayKit\traits;
  * Each hook is a callable that transforms the value at runtime.
  *
  * Example usage:
- *   $this->onGet('username', fn($value) => strtolower($value));
- *   $this->onSet('password', fn($plain) => password_hash($plain, PASSWORD_BCRYPT));
+ *   $this->onGet('username', fn($value) => strtolower((string) $value));
+ *   $this->onSet('password', fn($plain) => password_hash((string) $plain, PASSWORD_BCRYPT));
  */
 trait HookTrait
 {

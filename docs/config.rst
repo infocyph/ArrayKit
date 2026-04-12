@@ -7,9 +7,9 @@ Classes:
 
 - ``Infocyph\ArrayKit\Config\Config``
 - ``Infocyph\ArrayKit\Config\LazyFileConfig``
-- ``Infocyph\ArrayKit\Config\DynamicConfig``
 
-``DynamicConfig`` extends ``Config`` by adding value hooks.
+``Config`` supports optional hooks via explicit ``getWithHooks()``,
+``setWithHooks()``, and ``fillWithHooks()`` methods.
 ``LazyFileConfig`` loads namespace files only on first keyed access.
 
 Loading Configuration
@@ -129,23 +129,24 @@ Array-Value Helpers
     // ['cors', 'auth', 'throttle']
     $middleware = $config->get('middleware');
 
-DynamicConfig Hooks
--------------------
+Config Hooks (Explicit)
+-----------------------
 
-``DynamicConfig`` allows per-key transformation on read/write.
+``Config`` allows per-key transformation on read/write, while keeping
+``get()/set()/fill()`` hook-free for maximum base-path performance.
 
 .. code-block:: php
 
     <?php
-    use Infocyph\ArrayKit\Config\DynamicConfig;
+    use Infocyph\ArrayKit\Config\Config;
 
-    $config = new DynamicConfig();
+    $config = new Config();
 
     $config->onSet('user.name', fn ($v) => strtoupper((string) $v));
     $config->onGet('user.name', fn ($v) => strtolower((string) $v));
 
-    $config->set('user.name', 'Alice');
-    echo $config->get('user.name'); // alice
+    $config->setWithHooks('user.name', 'Alice');
+    echo $config->getWithHooks('user.name'); // alice
 
 Bulk operations with hooks:
 
@@ -154,12 +155,12 @@ Bulk operations with hooks:
     <?php
     $config->onSet('user.email', fn ($v) => trim((string) $v));
 
-    $config->set([
+    $config->setWithHooks([
         'user.name' => 'JOHN',
         'user.email' => ' john@example.com ',
     ]);
 
-    $vals = $config->get(['user.name', 'user.email']);
+    $vals = $config->getWithHooks(['user.name', 'user.email']);
 
 Practical Pattern
 -----------------
@@ -169,15 +170,15 @@ Use config as a mutable runtime container for app setup:
 .. code-block:: php
 
     <?php
-    $config = new DynamicConfig();
+    $config = new Config();
     $config->loadFile(__DIR__.'/config.php');
 
     // Normalize selected runtime values
     $config->onSet('app.timezone', fn ($v) => trim((string) $v));
     $config->onGet('app.timezone', fn ($v) => strtoupper((string) $v));
 
-    $config->set('app.timezone', ' utc ');
-    $tz = $config->get('app.timezone'); // UTC
+    $config->setWithHooks('app.timezone', ' utc ');
+    $tz = $config->getWithHooks('app.timezone'); // UTC
 
 LazyFileConfig
 --------------
@@ -231,9 +232,9 @@ LazyFileConfig methods:
 - ``preload()``, ``isLoaded()``, ``loadedNamespaces()``
 - ``all()`` (throws by design)
 
-DynamicConfig methods:
+Hook-aware methods (Config and LazyFileConfig):
 
-- ``get()`` (hook-aware override)
-- ``set()`` (hook-aware override)
-- ``fill()`` (hook-aware override)
+- ``getWithHooks()``
+- ``setWithHooks()``
+- ``fillWithHooks()``
 - ``onGet()``, ``onSet()``
