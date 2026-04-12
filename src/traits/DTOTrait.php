@@ -33,7 +33,7 @@ trait DTOTrait
      */
     public static function create(array $values): static
     {
-        return (new static())->fromArray($values);
+        return new static()->fromArray($values);
     }
 
     /**

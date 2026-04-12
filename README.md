@@ -40,6 +40,7 @@ real-world PHP projects.
 | Class               | Description                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------|
 | **Config**          | Dot-access configuration loader.                                                                                   |
+| **LazyFileConfig**  | First-segment lazy loader (`db.host` loads `db.php` on demand) for lower memory usage on large config trees.      |
 | **DynamicConfig**   | Extends `Config` with **on-get/on-set hooks** to transform values dynamically (e.g., encrypt/decrypt, auto-format). |
 | **BaseConfigTrait** | Shared config logic.                                                                                                |
 

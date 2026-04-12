@@ -28,7 +28,7 @@
         }
     },
     "require": {
-        "php": ">=8.3"
+        "php": ">=8.4"
     },
     "require-dev": {
         "captainhook/captainhook": "^5.29.2",
@@ -66,9 +66,9 @@
             "@php vendor/bin/pest --parallel --processes=10",
             "@php vendor/bin/pint --test",
             "@php vendor/bin/phpcs --standard=phpcs.xml.dist --report=summary",
-            "@php vendor/bin/phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G --no-progress",
-            "@php vendor/bin/psalm --config=psalm.xml --show-info=false --security-analysis --no-progress --no-cache",
-            "@php vendor/bin/rector process --dry-run"
+            "@php vendor/bin/phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G --no-progress --debug",
+            "@php vendor/bin/psalm --config=psalm.xml --show-info=false --security-analysis --threads=1 --no-progress --no-cache",
+            "@php vendor/bin/rector process --dry-run --debug"
         ],
         "release:audit": "@php .github/scripts/composer-audit-guard.php",
         "release:guard": [

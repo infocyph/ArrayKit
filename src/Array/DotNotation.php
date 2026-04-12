@@ -264,13 +264,7 @@ class DotNotation
         }
 
         $keys = (array) $keys;
-        foreach ($keys as $key) {
-            if (static::has($array, $key)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($keys, fn($key) => static::has($array, $key));
     }
 
     /**
@@ -852,6 +846,6 @@ class DotNotation
      */
     private static function value(mixed $val): mixed
     {
-        return is_callable($val) ? $val() : $val;
+        return \isCallable($val) ? $val() : $val;
     }
 }

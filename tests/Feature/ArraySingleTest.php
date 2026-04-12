@@ -39,12 +39,37 @@ it('searches an array for a callback condition', function () {
     $key  = ArraySingle::search($data, fn ($value) => $value === 3);
     expect($key)->toBe(2);
 });
+
+it('checks containsAll and containsAny with strict and loose modes', function () {
+    $data = [1, 2, 3, '3'];
+
+    expect(ArraySingle::containsAll($data, [1, '2']))
+        ->toBeTrue()
+        ->and(ArraySingle::containsAll($data, [1, '2'], true))->toBeFalse()
+        ->and(ArraySingle::containsAny($data, ['x', 2]))->toBeTrue()
+        ->and(ArraySingle::containsAny($data, ['x', '2'], true))->toBeFalse();
+});
+
 it('sums the array using sum()', function () {
     $arr = [1, 2, 3];
     expect(ArraySingle::sum($arr))
         ->toBe(6)
         ->and(ArraySingle::sum($arr, fn ($v) => $v * 2))
         ->toBe(12);
+});
+
+it('filters non-empty values without crashing on mixed data', function () {
+    $arr = [1, '', 0, '0', null, false, 'hello'];
+
+    expect(ArraySingle::nonEmpty($arr))->toBe([1, 0, '0', null, false, 'hello'])
+        ->and(ArraySingle::nonEmpty($arr, true))->toBe([
+            0 => 1,
+            2 => 0,
+            3 => '0',
+            4 => null,
+            5 => false,
+            6 => 'hello',
+        ]);
 });
 it('removes duplicates from the array using unique()', function () {
     $arr = [1, 2, 2, 3, 3, 4];
@@ -84,4 +109,8 @@ it('skips items while the callback returns true using skipWhile()', function () 
 it('skips items until the callback returns true using skipUntil()', function () {
     $arr = [1, 2, 3, 4, 5];
     expect(array_values(ArraySingle::skipUntil($arr, fn ($v) => $v === 3)))->toBe([3, 4, 5]);
+});
+
+it('throws for invalid nth step values', function () {
+    expect(fn () => ArraySingle::nth([1, 2, 3], 0))->toThrow(InvalidArgumentException::class);
 });

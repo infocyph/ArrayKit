@@ -154,12 +154,7 @@ class ArrayMulti
      */
     public static function every(array $array, callable $callback): bool
     {
-        foreach ($array as $key => $row) {
-            if (!$callback($row, $key)) {
-                return false;
-            }
-        }
-        return true;
+        return array_all($array, fn($row, $key) => $callback($row, $key));
     }
 
     /**
@@ -501,12 +496,7 @@ class ArrayMulti
      */
     public static function some(array $array, callable $callback): bool
     {
-        foreach ($array as $key => $row) {
-            if ($callback($row, $key)) {
-                return true;
-            }
-        }
-        return false;
+        return array_any($array, fn($row, $key) => $callback($row, $key));
     }
 
     /**
@@ -528,14 +518,12 @@ class ArrayMulti
         bool $desc = false,
         int $options = \SORT_REGULAR,
     ): array {
-        uasort($array, function ($a, $b) use ($by, $desc) {
+        uasort($array, function ($a, $b) use ($by, $desc, $options) {
             $valA = is_callable($by) ? $by($a) : ($a[$by] ?? null);
             $valB = is_callable($by) ? $by($b) : ($b[$by] ?? null);
 
-            if ($valA === $valB) {
-                return 0;
-            }
-            $comparison = ($valA < $valB) ? -1 : 1;
+            $comparison = static::compareSortValues($valA, $valB, $options);
+
             return $desc ? -$comparison : $comparison;
         });
         return $array;
@@ -787,5 +775,33 @@ class ArrayMulti
             fn($row)
             => !empty($row) && array_key_exists($key, $row) && $row[$key] === null,
         );
+    }
+
+    /**
+     * Compare two values according to PHP sort options.
+     *
+     * Supports SORT_REGULAR, SORT_NUMERIC, SORT_STRING, SORT_NATURAL,
+     * SORT_LOCALE_STRING, and SORT_FLAG_CASE (for string/natural sorts).
+     */
+    private static function compareSortValues(mixed $left, mixed $right, int $options): int
+    {
+        if ($left === $right) {
+            return 0;
+        }
+
+        $caseInsensitive = (bool) ($options & \SORT_FLAG_CASE);
+        $baseOption = $options & ~\SORT_FLAG_CASE;
+
+        return match ($baseOption) {
+            \SORT_NUMERIC => (float) $left <=> (float) $right,
+            \SORT_STRING => $caseInsensitive
+                ? strcasecmp((string) $left, (string) $right)
+                : strcmp((string) $left, (string) $right),
+            \SORT_NATURAL => $caseInsensitive
+                ? strnatcasecmp((string) $left, (string) $right)
+                : strnatcmp((string) $left, (string) $right),
+            \SORT_LOCALE_STRING => strcoll((string) $left, (string) $right),
+            default => $left <=> $right,
+        };
     }
 }
