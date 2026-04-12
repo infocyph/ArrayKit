@@ -119,20 +119,32 @@ it('recursively sorts a multidimensional associative array ascending', function 
     expect($result)->toBe($expected);
 });
 
+it('sorts by column using numeric sort options', function () {
+    $data = [
+        ['score' => '10'],
+        ['score' => '2'],
+        ['score' => '1'],
+    ];
+
+    $sorted = ArrayMulti::sortBy($data, 'score', false, SORT_NUMERIC);
+
+    expect(array_values(array_column($sorted, 'score')))->toBe(['1', '2', '10']);
+});
+
 // sortRecursive() descending
-//it('recursively sorts a multidimensional array descending', function () {
-//    $data = [
-//        'a' => [1, 3, 2],
-//        'b' => [4, 6, 5],
-//    ];
-//    $result = ArrayMulti::sortRecursive($data, SORT_REGULAR, true);
-//    // For sequential arrays, descending sort is used:
-//    $expected = [
-//        'a' => [3, 2, 1],
-//        'b' => [6, 5, 4],
-//    ];
-//    expect($result)->toBe($expected);
-//});
+it('recursively sorts a multidimensional array descending', function () {
+    $data = [
+        'a' => [1, 3, 2],
+        'b' => [4, 6, 5],
+    ];
+    $result = ArrayMulti::sortRecursive($data, SORT_REGULAR, true);
+    // For sequential arrays, descending sort is used:
+    $expected = [
+        'b' => [6, 5, 4],
+        'a' => [3, 2, 1],
+    ];
+    expect($result)->toBe($expected);
+});
 
 // first()
 it('returns the first item from an array without callback', function () {

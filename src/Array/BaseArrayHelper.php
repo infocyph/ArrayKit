@@ -73,11 +73,11 @@ class BaseArrayHelper
         if (is_callable($callback)) {
             return array_filter(
                 $array,
-                fn ($val, $key) => !$callback($val, $key),
-                ARRAY_FILTER_USE_BOTH
+                fn($val, $key) => !$callback($val, $key),
+                ARRAY_FILTER_USE_BOTH,
             );
         }
-        return array_filter($array, fn ($val) => $val != $callback);
+        return array_filter($array, fn($val) => $val != $callback);
     }
 
 
@@ -132,13 +132,7 @@ class BaseArrayHelper
         if (empty($keys)) {
             return false;
         }
-
-        foreach ($keys as $key) {
-            if (!array_key_exists($key, $array)) {
-                return false;
-            }
-        }
-        return true;
+        return array_all($keys, fn($key) => array_key_exists($key, $array));
     }
 
 
@@ -160,13 +154,7 @@ class BaseArrayHelper
         if (empty($keys)) {
             return false;
         }
-
-        foreach ($keys as $key) {
-            if (array_key_exists($key, $array)) {
-                return true;
-            }
-        }
-        return false;
+        return array_any($keys, fn($key) => array_key_exists($key, $array));
     }
 
 
@@ -179,12 +167,7 @@ class BaseArrayHelper
      */
     public static function haveAny(array $array, callable $callback): bool
     {
-        foreach ($array as $key => $value) {
-            if ($callback($value, $key) === true) {
-                return true;
-            }
-        }
-        return false;
+        return array_any($array, fn($value, $key) => $callback($value, $key) === true);
     }
 
 
@@ -197,12 +180,7 @@ class BaseArrayHelper
      */
     public static function isAll(array $array, callable $callback): bool
     {
-        foreach ($array as $key => $value) {
-            if ($callback($value, $key) === false) {
-                return false;
-            }
-        }
-        return true;
+        return array_all($array, fn($value, $key) => !($callback($value, $key) === false));
     }
     /**
      * Check if an array is multi-dimensional.

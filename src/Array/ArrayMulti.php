@@ -20,7 +20,7 @@ class ArrayMulti
      */
     public static function between(array $array, string $key, float|int $from, float|int $to): array
     {
-        return array_filter($array, fn ($item) => ArraySingle::exists($item, $key)
+        return array_filter($array, fn($item) => ArraySingle::exists($item, $key)
             && compare($item[$key], $from, '>=')
             && compare($item[$key], $to, '<='));
     }
@@ -154,12 +154,7 @@ class ArrayMulti
      */
     public static function every(array $array, callable $callback): bool
     {
-        foreach ($array as $key => $row) {
-            if (!$callback($row, $key)) {
-                return false;
-            }
-        }
-        return true;
+        return array_all($array, fn($row, $key) => $callback($row, $key));
     }
 
     /**
@@ -326,7 +321,7 @@ class ArrayMulti
     public static function only(array $array, array|string $keys): array
     {
         $result = [];
-        $pick = array_flip((array)$keys);
+        $pick = array_flip((array) $keys);
 
         foreach ($array as $item) {
             if (is_array($item)) {
@@ -424,9 +419,9 @@ class ArrayMulti
         // Could unify via BaseArrayHelper::doReject($array, $callback).
         // Or keep local logic:
         if (is_callable($callback)) {
-            return array_filter($array, fn ($row, $key) => !$callback($row, $key), \ARRAY_FILTER_USE_BOTH);
+            return array_filter($array, fn($row, $key) => !$callback($row, $key), \ARRAY_FILTER_USE_BOTH);
         }
-        return array_filter($array, fn ($row) => $row != $callback);
+        return array_filter($array, fn($row) => $row != $callback);
     }
 
     /**
@@ -460,7 +455,7 @@ class ArrayMulti
      */
     public static function skipUntil(array $array, callable $callback): array
     {
-        return static::skipWhile($array, fn ($row, $key) => !$callback($row, $key));
+        return static::skipWhile($array, fn($row, $key) => !$callback($row, $key));
     }
 
     /**
@@ -501,12 +496,7 @@ class ArrayMulti
      */
     public static function some(array $array, callable $callback): bool
     {
-        foreach ($array as $key => $row) {
-            if ($callback($row, $key)) {
-                return true;
-            }
-        }
-        return false;
+        return array_any($array, fn($row, $key) => $callback($row, $key));
     }
 
     /**
@@ -532,10 +522,8 @@ class ArrayMulti
             $valA = is_callable($by) ? $by($a) : ($a[$by] ?? null);
             $valB = is_callable($by) ? $by($b) : ($b[$by] ?? null);
 
-            if ($valA === $valB) {
-                return 0;
-            }
-            $comparison = ($valA < $valB) ? -1 : 1;
+            $comparison = static::compareSortValues($valA, $valB, $options);
+
             return $desc ? -$comparison : $comparison;
         });
         return $array;
@@ -696,7 +684,7 @@ class ArrayMulti
             $operator = null;
         }
 
-        return array_filter($array, fn ($item) => ArraySingle::exists($item, $key) && compare($item[$key], $value, $operator));
+        return array_filter($array, fn($item) => ArraySingle::exists($item, $key) && compare($item[$key], $value, $operator));
     }
 
     /**
@@ -716,7 +704,7 @@ class ArrayMulti
         if ($callback === null) {
             return empty($array) ? $default : $array;
         }
-        return array_filter($array, fn ($item, $index) => $callback($item, $index), \ARRAY_FILTER_USE_BOTH);
+        return array_filter($array, fn($item, $index) => $callback($item, $index), \ARRAY_FILTER_USE_BOTH);
     }
 
     /**
@@ -732,7 +720,7 @@ class ArrayMulti
     {
         return array_filter(
             $array,
-            fn ($row)
+            fn($row)
             => isset($row[$key]) && in_array($row[$key], $values, $strict),
         );
     }
@@ -750,7 +738,7 @@ class ArrayMulti
     {
         return array_filter(
             $array,
-            fn ($row)
+            fn($row)
             => !isset($row[$key]) || !in_array($row[$key], $values, $strict),
         );
     }
@@ -767,7 +755,7 @@ class ArrayMulti
      */
     public static function whereNotNull(array $array, string $key): array
     {
-        return array_filter($array, fn ($row) => isset($row[$key]));
+        return array_filter($array, fn($row) => isset($row[$key]));
     }
 
     /**
@@ -784,8 +772,36 @@ class ArrayMulti
     {
         return array_filter(
             $array,
-            fn ($row)
+            fn($row)
             => !empty($row) && array_key_exists($key, $row) && $row[$key] === null,
         );
+    }
+
+    /**
+     * Compare two values according to PHP sort options.
+     *
+     * Supports SORT_REGULAR, SORT_NUMERIC, SORT_STRING, SORT_NATURAL,
+     * SORT_LOCALE_STRING, and SORT_FLAG_CASE (for string/natural sorts).
+     */
+    private static function compareSortValues(mixed $left, mixed $right, int $options): int
+    {
+        if ($left === $right) {
+            return 0;
+        }
+
+        $caseInsensitive = (bool) ($options & \SORT_FLAG_CASE);
+        $baseOption = $options & ~\SORT_FLAG_CASE;
+
+        return match ($baseOption) {
+            \SORT_NUMERIC => (float) $left <=> (float) $right,
+            \SORT_STRING => $caseInsensitive
+                ? strcasecmp((string) $left, (string) $right)
+                : strcmp((string) $left, (string) $right),
+            \SORT_NATURAL => $caseInsensitive
+                ? strnatcasecmp((string) $left, (string) $right)
+                : strnatcmp((string) $left, (string) $right),
+            \SORT_LOCALE_STRING => strcoll((string) $left, (string) $right),
+            default => $left <=> $right,
+        };
     }
 }

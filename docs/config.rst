@@ -6,9 +6,11 @@ ArrayKit configuration objects provide dot-notation access to nested settings.
 Classes:
 
 - ``Infocyph\ArrayKit\Config\Config``
+- ``Infocyph\ArrayKit\Config\LazyFileConfig``
 - ``Infocyph\ArrayKit\Config\DynamicConfig``
 
 ``DynamicConfig`` extends ``Config`` by adding value hooks.
+``LazyFileConfig`` loads namespace files only on first keyed access.
 
 Loading Configuration
 ---------------------
@@ -177,6 +179,40 @@ Use config as a mutable runtime container for app setup:
     $config->set('app.timezone', ' utc ');
     $tz = $config->get('app.timezone'); // UTC
 
+LazyFileConfig
+--------------
+
+Use ``LazyFileConfig`` when configuration is split into top-level namespace files
+like ``db.php``, ``cache.php``, ``queue.php``.
+
+Rules:
+
+- Key format is ``namespace.path.to.key``.
+- On first access, only ``{directory}/{namespace}.php`` is loaded.
+- Remaining key segments are resolved using dot notation.
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Config\LazyFileConfig;
+
+    $config = new LazyFileConfig(__DIR__.'/config');
+
+    // Loads only config/db.php:
+    $host = $config->get('db.host', '127.0.0.1');
+
+    // Optional warm-up:
+    $config->preload(['db', 'cache']);
+
+    $loaded = $config->loadedNamespaces(); // ['db', 'cache']
+
+Important behavior:
+
+- ``get()`` requires at least one key.
+- ``all()`` is intentionally disabled and throws.
+- Namespace file must return an array.
+- Missing namespace file returns the provided default.
+
 Method Summary
 --------------
 
@@ -186,6 +222,14 @@ Config methods:
 - ``get()``, ``has()``, ``hasAny()``
 - ``set()``, ``fill()``, ``forget()``
 - ``prepend()``, ``append()``
+
+LazyFileConfig methods:
+
+- ``get()`` (requires key)
+- ``has()``, ``hasAny()``
+- ``set()``, ``fill()``, ``forget()``
+- ``preload()``, ``isLoaded()``, ``loadedNamespaces()``
+- ``all()`` (throws by design)
 
 DynamicConfig methods:
 

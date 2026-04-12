@@ -138,6 +138,11 @@ it('returns default value if key is not found', function () {
     expect(DotNotation::get($data, 'b', 'default'))->toBe('default');
 });
 
+it('returns string defaults as-is when key is not found', function () {
+    $data = [];
+    expect(DotNotation::get($data, 'missing.key', 'file'))->toBe('file');
+});
+
 it('retrieves multiple keys when passed an array', function () {
     $data = [
         'user' => ['name' => 'Carol', 'email' => 'carol@example.com'],

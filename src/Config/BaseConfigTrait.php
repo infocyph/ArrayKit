@@ -42,7 +42,6 @@ trait BaseConfigTrait
      *
      * @param string|array $key Dot-notation key or multiple [key => value]
      * @param mixed|null   $value The value to set if missing
-     * @return bool
      */
     public function fill(string|array $key, mixed $value = null): bool
     {
@@ -52,9 +51,6 @@ trait BaseConfigTrait
 
     /**
      * Remove/unset a key (or keys) from configuration using dot notation + wildcard expansions.
-     *
-     * @param string|int|array $key
-     * @return bool
      */
     public function forget(string|int|array $key): bool
     {

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\Array;
 
+use InvalidArgumentException;
+
 class ArraySingle
 {
     /**
@@ -64,7 +66,7 @@ class ArraySingle
             $values = array_slice($values, 0, $size);
         }
 
-        return array_combine($keys, $values) ?: [];
+        return array_combine($keys, $values);
     }
 
     /**
@@ -90,6 +92,32 @@ class ArraySingle
             return static::some($array, $valueOrCallback);
         }
         return in_array($valueOrCallback, $array, $strict);
+    }
+
+    /**
+     * Determine if all given values exist in the array.
+     *
+     * @param array $array The array to search.
+     * @param array $needles The values to verify.
+     * @param bool $strict Whether to use strict comparison.
+     * @return bool True if every value exists, false otherwise.
+     */
+    public static function containsAll(array $array, array $needles, bool $strict = false): bool
+    {
+        return array_all($needles, fn($needle) => in_array($needle, $array, $strict));
+    }
+
+    /**
+     * Determine if any of the given values exist in the array.
+     *
+     * @param array $array The array to search.
+     * @param array $needles The values to verify.
+     * @param bool $strict Whether to use strict comparison.
+     * @return bool True if at least one value exists, false otherwise.
+     */
+    public static function containsAny(array $array, array $needles, bool $strict = false): bool
+    {
+        return array_any($needles, fn($needle) => in_array($needle, $array, $strict));
     }
 
     /**
@@ -143,12 +171,7 @@ class ArraySingle
      */
     public static function every(array $array, callable $callback): bool
     {
-        foreach ($array as $key => $value) {
-            if (!$callback($value, $key)) {
-                return false;
-            }
-        }
-        return true;
+        return array_all($array, fn($value, $key) => $callback($value, $key));
     }
 
     /**
@@ -199,12 +222,7 @@ class ArraySingle
      */
     public static function isInt(array $array): bool
     {
-        foreach ($array as $v) {
-            if (!is_int($v)) {
-                return false;
-            }
-        }
-        return true;
+        return array_all($array, fn($v) => is_int($v));
     }
 
     /**
@@ -316,7 +334,7 @@ class ArraySingle
         }
         $freq = array_count_values($array);
         $max = max($freq);
-        return array_keys(array_filter($freq, fn ($c) => $c === $max));
+        return array_keys(array_filter($freq, fn($c) => $c === $max));
     }
 
     /**
@@ -327,7 +345,7 @@ class ArraySingle
      */
     public static function negative(array $array): array
     {
-        return static::where($array, static fn ($value) => is_numeric($value) && $value < 0);
+        return static::where($array, static fn($value) => is_numeric($value) && $value < 0);
     }
 
     /**
@@ -336,11 +354,14 @@ class ArraySingle
      * A value is considered non-empty if it is not an empty string.
      *
      * @param array $array The array to check.
+     * @param bool $preserveKeys Whether to preserve original keys.
      * @return array The non-empty values.
      */
-    public static function nonEmpty(array $array): array
+    public static function nonEmpty(array $array, bool $preserveKeys = false): array
     {
-        return array_values(static::where($array, 'strlen'));
+        $filtered = array_filter($array, static fn(mixed $value): bool => $value !== '');
+
+        return $preserveKeys ? $filtered : array_values($filtered);
     }
 
     /**
@@ -351,9 +372,14 @@ class ArraySingle
      * @param int $offset The offset from which to begin selecting elements.
      *
      * @return array The sliced array.
+     * @throws InvalidArgumentException If step is less than 1.
      */
     public static function nth(array $array, int $step, int $offset = 0): array
     {
+        if ($step <= 0) {
+            throw new InvalidArgumentException('Step must be greater than 0.');
+        }
+
         $results = [];
         $position = 0;
 
@@ -378,7 +404,7 @@ class ArraySingle
      */
     public static function only(array $array, array|string $keys): array
     {
-        return array_intersect_key($array, array_flip((array)$keys));
+        return array_intersect_key($array, array_flip((array) $keys));
     }
 
     /**
@@ -437,7 +463,7 @@ class ArraySingle
      */
     public static function positive(array $array): array
     {
-        return static::where($array, static fn ($value) => is_numeric($value) && $value > 0);
+        return static::where($array, static fn($value) => is_numeric($value) && $value > 0);
     }
 
     /**
@@ -608,7 +634,7 @@ class ArraySingle
      */
     public static function skipUntil(array $array, callable $callback): array
     {
-        return static::skipWhile($array, fn ($value, $key) => !$callback($value, $key));
+        return static::skipWhile($array, fn($value, $key) => !$callback($value, $key));
     }
 
     /**
@@ -670,12 +696,7 @@ class ArraySingle
      */
     public static function some(array $array, callable $callback): bool
     {
-        foreach ($array as $key => $value) {
-            if ($callback($value, $key)) {
-                return true;
-            }
-        }
-        return false;
+        return array_any($array, fn($value, $key) => $callback($value, $key));
     }
 
     /**
@@ -747,6 +768,6 @@ class ArraySingle
     public static function where(array $array, ?callable $callback = null): array
     {
         $flag = ($callback !== null) ? \ARRAY_FILTER_USE_BOTH : 0;
-        return array_filter($array, $callback ?? fn ($val) => (bool)$val, $flag);
+        return array_filter($array, $callback ?? fn($val) => (bool) $val, $flag);
     }
 }

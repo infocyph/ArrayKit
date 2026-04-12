@@ -35,10 +35,7 @@ if (!function_exists('compare')) {
 
 if (!function_exists('isCallable')) {
     /**
-     * Determine if the given value is callable (but not a string).
-     *
-     * @param mixed $value
-     * @return bool
+     * Determine if the given value is callable(but not a string).
      */
     function isCallable(mixed $value): bool
     {
@@ -75,7 +72,6 @@ if (!function_exists('array_set')) {
      * If a single key is provided, the value is set directly.
      *
      * @param array $array The array to set items in.
-     * @param string|array|null $key
      * @param mixed $value The value to set.
      * @param bool $overwrite If true, overwrite existing values. If false, existing values are preserved.
      * @return bool True on success
@@ -90,7 +86,6 @@ if (!function_exists('collect')) {
      * Wrap the given value in an {@see Collection}.
      *
      * @param mixed $data  Anything “array-able”: array, Traversable, scalar, etc.
-     * @return Collection
      */
     function collect(mixed $data = []): Collection
     {
@@ -102,7 +97,6 @@ if (! function_exists('chain')) {
      * Start a chainable pipeline on any “array-able” value.
      *
      * @param mixed $data  Array, Traversable, scalar, etc.
-     * @return Pipeline
      */
     function chain(mixed $data): Pipeline
     {

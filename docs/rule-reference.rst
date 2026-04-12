@@ -358,6 +358,24 @@ Config uses ``BaseConfigTrait``. Public API:
     public function prepend(string $key, mixed $value): bool
     public function append(string $key, mixed $value): bool
 
+LazyFileConfig
+--------------------------------------
+
+LazyFileConfig loads top-level config files on first keyed access:
+
+.. code-block:: php
+
+    public function get(string|int|array|null $key = null, mixed $default = null): mixed
+    public function has(string|array $keys): bool
+    public function hasAny(string|array $keys): bool
+    public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
+    public function fill(string|array $key, mixed $value = null): bool
+    public function forget(string|int|array $key): bool
+    public function preload(string|array $namespaces): static
+    public function isLoaded(string $namespace): bool
+    public function loadedNamespaces(): array
+    public function all(): array // throws (design choice)
+
 DynamicConfig
 --------------------------------------
 

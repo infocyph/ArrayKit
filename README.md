@@ -1,7 +1,6 @@
 # ArrayKit
 
 [![Security & Standards](https://github.com/infocyph/arraykit/actions/workflows/build.yml/badge.svg)](https://github.com/infocyph/arraykit/actions/workflows/build.yml)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/955ce7fb105f4243a018e701f76ebf44)](https://app.codacy.com/gh/infocyph/ArrayKit/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 ![Packagist Downloads](https://img.shields.io/packagist/dt/infocyph/arraykit?color=green\&link=https%3A%2F%2Fpackagist.org%2Fpackages%2Finfocyph%2Farraykit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 ![Packagist Version](https://img.shields.io/packagist/v/infocyph/arraykit)
@@ -41,6 +40,7 @@ real-world PHP projects.
 | Class               | Description                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------|
 | **Config**          | Dot-access configuration loader.                                                                                   |
+| **LazyFileConfig**  | First-segment lazy loader (`db.host` loads `db.php` on demand) for lower memory usage on large config trees.      |
 | **DynamicConfig**   | Extends `Config` with **on-get/on-set hooks** to transform values dynamically (e.g., encrypt/decrypt, auto-format). |
 | **BaseConfigTrait** | Shared config logic.                                                                                                |
 

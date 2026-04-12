@@ -9,6 +9,6 @@ parameters:
         maximumNumberOfProcesses: 1
     cognitive_complexity:
         class: 150
-        function: 15
+        function: 14
         dependency_tree: 150
         dependency_tree_types: []
