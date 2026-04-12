@@ -49,7 +49,7 @@ trait BaseCollectionTrait
         if (method_exists($pipeline, $method)) {
             return $pipeline->$method(...$arguments);
         }
-        throw new BadMethodCallException("Method $method does not exist in ".static::class);
+        throw new BadMethodCallException("Method $method does not exist in " . static::class);
     }
 
     /**
@@ -115,7 +115,6 @@ trait BaseCollectionTrait
      *
      * @param string $key The key of the item to set.
      * @param mixed $value The value to set.
-     * @return void
      */
     public function __set(string $key, mixed $value): void
     {
@@ -138,7 +137,6 @@ trait BaseCollectionTrait
      * It internally calls the offsetUnset method to remove the value.
      *
      * @param string $key The key of the item to remove.
-     * @return void
      */
     public function __unset(string $key): void
     {
@@ -167,7 +165,6 @@ trait BaseCollectionTrait
      * If the given data is not an array, it will be converted to an array.
      *
      * @param  mixed  $data  The data to initialize the collection with.
-     * @return static
      */
     public static function make(mixed $data): static
     {
@@ -348,7 +345,7 @@ trait BaseCollectionTrait
     public function jsonSerialize(): array
     {
         return array_map(
-            static fn ($value) => $value instanceof JsonSerializable ? $value->jsonSerialize() : $value,
+            static fn($value) => $value instanceof JsonSerializable ? $value->jsonSerialize() : $value,
             $this->data,
         );
     }
@@ -378,9 +375,6 @@ trait BaseCollectionTrait
      * Merge additional items into the collection.
      *
      * Numeric keys are appended; string keys are overwritten by incoming items.
-     *
-     * @param mixed $items
-     * @return static
      */
     public function merge(mixed $items): static
     {
@@ -453,15 +447,14 @@ trait BaseCollectionTrait
      *
      * @param mixed $offset The key of the item to set, or null to append.
      * @param mixed $value The value of the item to set.
-     * @return void
      */
     public function offsetSet(mixed $offset, mixed $value): void
     {
         match (true) {
             $offset === null => $this->data[] = $value,
 
-            is_string($offset) && str_contains($offset, '.') =>
-            DotNotation::set($this->data, $offset, $value),
+            is_string($offset) && str_contains($offset, '.')
+            => DotNotation::set($this->data, $offset, $value),
 
             default => $this->data[$offset] = $value,
         };

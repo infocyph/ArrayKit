@@ -16,8 +16,7 @@ class Pipeline
     public function __construct(
         protected array &$working,
         private readonly Collection $collection,
-    ) {
-    }
+    ) {}
 
     /**
      * Quick example: Check if at least one item passes a truth test, from ArraySingle::some or ArrayMulti::some
@@ -230,7 +229,6 @@ class Pipeline
      * Pipe the working array through a callback, replacing it with whatever you return.
      *
      * @param callable $callback  fn(array $working): array
-     * @return Collection
      */
     public function pipe(callable $callback): Collection
     {
@@ -344,7 +342,6 @@ class Pipeline
      * Tap into the current working array for side-effects (debug/log), then continue.
      *
      * @param callable $callback  fn(array $working): void
-     * @return Collection
      */
     public function tap(callable $callback): Collection
     {
@@ -370,11 +367,6 @@ class Pipeline
 
     /**
      * Inverse of when(): only run if $condition is false.
-     *
-     * @param bool          $condition
-     * @param callable      $callback
-     * @param callable|null $default
-     * @return Collection
      */
     public function unless(bool $condition, callable $callback, ?callable $default = null): Collection
     {
@@ -396,10 +388,8 @@ class Pipeline
     /**
      * Conditionally apply one of two callbacks based on $condition.
      *
-     * @param bool          $condition
      * @param callable      $callback  fn(array $working): array
      * @param callable|null $default   fn(array $working): array
-     * @return Collection
      */
     public function when(bool $condition, callable $callback, ?callable $default = null): Collection
     {

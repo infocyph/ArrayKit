@@ -64,7 +64,7 @@ class ArraySingle
             $values = array_slice($values, 0, $size);
         }
 
-        return array_combine($keys, $values) ?: [];
+        return array_combine($keys, $values);
     }
 
     /**
@@ -316,7 +316,7 @@ class ArraySingle
         }
         $freq = array_count_values($array);
         $max = max($freq);
-        return array_keys(array_filter($freq, fn ($c) => $c === $max));
+        return array_keys(array_filter($freq, fn($c) => $c === $max));
     }
 
     /**
@@ -327,7 +327,7 @@ class ArraySingle
      */
     public static function negative(array $array): array
     {
-        return static::where($array, static fn ($value) => is_numeric($value) && $value < 0);
+        return static::where($array, static fn($value) => is_numeric($value) && $value < 0);
     }
 
     /**
@@ -378,7 +378,7 @@ class ArraySingle
      */
     public static function only(array $array, array|string $keys): array
     {
-        return array_intersect_key($array, array_flip((array)$keys));
+        return array_intersect_key($array, array_flip((array) $keys));
     }
 
     /**
@@ -437,7 +437,7 @@ class ArraySingle
      */
     public static function positive(array $array): array
     {
-        return static::where($array, static fn ($value) => is_numeric($value) && $value > 0);
+        return static::where($array, static fn($value) => is_numeric($value) && $value > 0);
     }
 
     /**
@@ -608,7 +608,7 @@ class ArraySingle
      */
     public static function skipUntil(array $array, callable $callback): array
     {
-        return static::skipWhile($array, fn ($value, $key) => !$callback($value, $key));
+        return static::skipWhile($array, fn($value, $key) => !$callback($value, $key));
     }
 
     /**
@@ -747,6 +747,6 @@ class ArraySingle
     public static function where(array $array, ?callable $callback = null): array
     {
         $flag = ($callback !== null) ? \ARRAY_FILTER_USE_BOTH : 0;
-        return array_filter($array, $callback ?? fn ($val) => (bool)$val, $flag);
+        return array_filter($array, $callback ?? fn($val) => (bool) $val, $flag);
     }
 }

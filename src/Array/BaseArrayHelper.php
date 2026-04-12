@@ -73,11 +73,11 @@ class BaseArrayHelper
         if (is_callable($callback)) {
             return array_filter(
                 $array,
-                fn ($val, $key) => !$callback($val, $key),
-                ARRAY_FILTER_USE_BOTH
+                fn($val, $key) => !$callback($val, $key),
+                ARRAY_FILTER_USE_BOTH,
             );
         }
-        return array_filter($array, fn ($val) => $val != $callback);
+        return array_filter($array, fn($val) => $val != $callback);
     }
 
 

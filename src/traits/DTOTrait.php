@@ -30,7 +30,6 @@ trait DTOTrait
      * class property names will be set.
      *
      * @param array $values Key-value pairs matching property names
-     * @return static
      */
     public static function create(array $values): static
     {
@@ -43,7 +42,6 @@ trait DTOTrait
      * Unknown keys are ignored.
      *
      * @param array $values Key-value pairs matching property names
-     * @return static
      */
     public function fromArray(array $values): static
     {
@@ -58,8 +56,6 @@ trait DTOTrait
 
     /**
      * Convert the current object’s public properties into an array.
-     *
-     * @return array
      */
     public function toArray(): array
     {

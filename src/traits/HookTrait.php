@@ -32,7 +32,6 @@ trait HookTrait
      *
      * @param string   $offset   The key or offset
      * @param callable $callback A transformation: fn($value) => $newValue
-     * @return static
      */
     public function onGet(string $offset, callable $callback): static
     {
@@ -44,7 +43,6 @@ trait HookTrait
      *
      * @param string   $offset   The key or offset
      * @param callable $callback A transformation: fn($value) => $newValue
-     * @return static
      */
     public function onSet(string $offset, callable $callback): static
     {
@@ -57,7 +55,6 @@ trait HookTrait
      * @param mixed    $offset    The key or offset (string recommended)
      * @param string   $direction Either "get" or "set"
      * @param callable $callback  The transformation function
-     * @return static
      */
     protected function addHook(mixed $offset, string $direction, callable $callback): static
     {
@@ -75,7 +72,6 @@ trait HookTrait
      *
      * @param string $hook       The offset or key
      * @param string $direction  Either "get" or "set"
-     * @return string
      */
     protected function getHookName(string $hook, string $direction): string
     {

@@ -34,7 +34,7 @@ class DotNotation
     {
         $value = static::get($array, $key, $default);
         if (! is_array($value)) {
-            throw new InvalidArgumentException('Expected array, got '.get_debug_type($value));
+            throw new InvalidArgumentException('Expected array, got ' . get_debug_type($value));
         }
 
         return $value;
@@ -58,7 +58,7 @@ class DotNotation
     {
         $value = static::get($array, $key, $default);
         if (! is_bool($value)) {
-            throw new InvalidArgumentException('Expected bool, got '.get_debug_type($value));
+            throw new InvalidArgumentException('Expected bool, got ' . get_debug_type($value));
         }
 
         return $value;
@@ -109,10 +109,10 @@ class DotNotation
             if (is_array($value) && ! empty($value)) {
                 $results = array_merge(
                     $results,
-                    static::flatten($value, $prepend.$key.'.')
+                    static::flatten($value, $prepend . $key . '.'),
                 );
             } else {
-                $results[$prepend.$key] = $value;
+                $results[$prepend . $key] = $value;
             }
         }
 
@@ -137,7 +137,7 @@ class DotNotation
     {
         $value = static::get($array, $key, $default);
         if (! is_float($value)) {
-            throw new InvalidArgumentException('Expected float, got '.get_debug_type($value));
+            throw new InvalidArgumentException('Expected float, got ' . get_debug_type($value));
         }
 
         return $value;
@@ -291,7 +291,7 @@ class DotNotation
     {
         $value = static::get($array, $key, $default);
         if (! is_int($value)) {
-            throw new InvalidArgumentException('Expected int, got '.get_debug_type($value));
+            throw new InvalidArgumentException('Expected int, got ' . get_debug_type($value));
         }
 
         return $value;
@@ -437,7 +437,7 @@ class DotNotation
     {
         $value = static::get($array, $key, $default);
         if (! is_string($value)) {
-            throw new InvalidArgumentException('Expected string, got '.get_debug_type($value));
+            throw new InvalidArgumentException('Expected string, got ' . get_debug_type($value));
         }
 
         return $value;
@@ -516,7 +516,7 @@ class DotNotation
             // Return top-level or integer index
             return $target[$key] ?? static::value($default);
         }
-        if (! is_string($key) || ! str_contains($key, '.')) {
+        if (! str_contains($key, '.')) {
             // If no dot path
             return static::value($default);
         }
@@ -583,8 +583,8 @@ class DotNotation
     private static function resolveFirst(mixed $target): string|int|null
     {
         if ((
-            is_object($target) ||
-                (is_string($target) && class_exists($target))
+            is_object($target)
+                || (is_string($target) && class_exists($target))
         ) && method_exists($target, 'all')) {
             $arr = $target->all();
 
@@ -605,8 +605,8 @@ class DotNotation
     private static function resolveLast(mixed $target): string|int|null
     {
         if ((
-            is_object($target) ||
-                (is_string($target) && class_exists($target))
+            is_object($target)
+                || (is_string($target) && class_exists($target))
         ) && method_exists($target, 'all')) {
             $arr = $target->all();
 
@@ -813,8 +813,8 @@ class DotNotation
     private static function traverseWildcard(mixed $target, array $segments, mixed $default): mixed
     {
         $target = (
-            is_object($target) ||
-            (is_string($target) && class_exists($target))
+            is_object($target)
+            || (is_string($target) && class_exists($target))
         ) && method_exists($target, 'all') ? $target->all() : $target;
 
         if (! BaseArrayHelper::accessible($target)) {
