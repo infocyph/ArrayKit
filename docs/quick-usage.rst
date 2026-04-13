@@ -3,6 +3,21 @@ Quick Usage
 
 This page shows copy-paste examples for common ArrayKit operations.
 
+ArrayKit Facade Example
+----------------------
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\ArrayKit;
+
+    $isList = ArrayKit::single()->isList([1, 2, 3]);
+    $flat = ArrayKit::multi()->flatten([[1], [2, [3]]]);
+    $name = ArrayKit::dot()->get(['user' => ['name' => 'Alice']], 'user.name');
+
+    $config = ArrayKit::config(['app' => ['env' => 'local']]);
+    $env = $config->get('app.env');
+
 ArraySingle Example
 -------------------
 

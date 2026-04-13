@@ -17,6 +17,7 @@ Contents
 
     installation
     quick-usage
+    facade
     array-helpers
     dot-notation
     collection

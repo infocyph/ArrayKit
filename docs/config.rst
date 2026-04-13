@@ -36,6 +36,7 @@ Important behavior:
 
 - ``loadArray()`` and ``loadFile()`` only load when config is currently empty.
 - If already loaded, they return ``false`` and do not overwrite existing items.
+- Facade-based config creation is documented in :doc:`facade`.
 
 Reading Values
 --------------

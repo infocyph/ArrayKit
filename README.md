@@ -20,6 +20,7 @@ real-world PHP projects.
 - **Dot Notation Get/Set/Flatten**
 - **Dynamic Config with Hooks**
 - **Collection & Hooked Collection**
+- **Unified Facade (`ArrayKit`)**
 - **Traits for DTO & Hooking**
 - **Pipeline for Collection Ops**
 - **Global Helpers (`functions.php`)**
@@ -68,6 +69,11 @@ real-world PHP projects.
 |-------------------|------------------------------------------------------------|
 | **functions.php** | Global shortcut functions for frequent array/config tasks. |
 
+### ➤ Facade
+
+| Class             | Description                                                                                   |
+|-------------------|-----------------------------------------------------------------------------------------------|
+| **ArrayKit**      | Single entry point for arrays, dot tools, config, and collections (`single()`, `multi()`, etc.). |
 
 ## ✅ Requirements
 
@@ -81,6 +87,19 @@ composer require infocyph/arraykit
 ```
 
 ## 🚀 Quick Examples
+
+### 🔹 One Facade Entry Point
+
+```php
+use Infocyph\ArrayKit\ArrayKit;
+
+$isList = ArrayKit::single()->isList([1, 2, 3]);            // true
+$flat = ArrayKit::multi()->flatten([[1], [2, [3]]]);        // [1, 2, 3]
+$name = ArrayKit::dot()->get(['user' => ['n' => 'A']], 'user.n'); // A
+
+$config = ArrayKit::config(['app' => ['env' => 'local']]);
+$env = $config->get('app.env');                            // local
+```
 
 ### 🔹 Single-Dimensional Helpers
 

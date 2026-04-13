@@ -7,6 +7,17 @@ ArrayKit ships static helpers grouped by data shape:
 - ``ArrayMulti`` for nested arrays / row collections
 - ``BaseArrayHelper`` for lower-level shared operations
 
+If you prefer one entry point, use ``Infocyph\ArrayKit\ArrayKit``:
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\ArrayKit;
+
+    $isList = ArrayKit::single()->isList([1, 2, 3]);
+    $flat = ArrayKit::multi()->flatten([[1], [2, [3]]]);
+    $wrapped = ArrayKit::helper()->wrap('x');
+
 Choosing the Right Helper
 -------------------------
 
