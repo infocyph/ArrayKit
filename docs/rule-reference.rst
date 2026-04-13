@@ -28,6 +28,9 @@ Object-style data pipeline and fluent transformations:
 Configuration storage with optional get/set hooks:
     :doc:`config`
 
+Single facade entrypoint for modules and factories:
+    :doc:`facade`
+
 DTO and hook traits plus global helper functions:
     :doc:`traits-and-helpers`
 
@@ -94,6 +97,28 @@ Global Helper Functions
     function array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
     function collect(mixed $data = []): Collection
     function chain(mixed $data): Pipeline
+
+ArrayKit Facade
+---------------
+
+.. code-block:: php
+
+    public static function single(): ModuleProxy
+    public static function multi(): ModuleProxy
+    public static function helper(): ModuleProxy
+    public static function dot(): ModuleProxy
+    public static function config(array $items = []): Config
+    public static function lazyConfig(string $directory, string $extension = 'php', array $items = []): LazyFileConfig
+    public static function collection(mixed $data = []): Collection
+    public static function hookedCollection(mixed $data = []): HookedCollection
+    public static function pipeline(mixed $data): Pipeline
+
+Facade ModuleProxy
+------------------
+
+.. code-block:: php
+
+    public function __call(string $method, array $arguments): mixed
 
 BaseArrayHelper
 ---------------------------------------

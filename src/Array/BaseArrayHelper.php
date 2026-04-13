@@ -287,7 +287,7 @@ class BaseArrayHelper
      * filled with the numbers 1 through $number.
      *
      * Example:
-     *      ArrayKit::times(3, function ($i) {
+     *      ArrayKit::helper()->times(3, function ($i) {
      *          return "Row #{$i}";
      *      });
      *      // Output: ["Row #1", "Row #2", "Row #3"]
