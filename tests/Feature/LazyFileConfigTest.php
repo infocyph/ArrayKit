@@ -106,6 +106,16 @@ it('tracks resolved namespaces for observability', function () {
     expect($loaded)->toBe(['cache', 'db']);
 });
 
+it('supports loaded() alias for namespace checks', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost']);
+
+    $config = new LazyFileConfig($this->configPath);
+    $config->get('db.host');
+
+    expect($config->loaded('db'))->toBeTrue()
+        ->and($config->loaded('app'))->toBeFalse();
+});
+
 it('loads all requested namespaces for multi-key lookup', function () {
     lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost']);
     lazyConfigWriteArrayFile($this->configPath, 'app', ['name' => 'ArrayKit']);
@@ -208,4 +218,19 @@ it('supports hook-aware lazy bulk operations', function () {
         'db.host' => 'internal',
         'db.port' => 5432,
     ]);
+});
+
+it('supports replace/reload and required key access in lazy config', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost']);
+
+    $config = new LazyFileConfig($this->configPath);
+    $config->get('db.host');
+
+    $config->replace(['app' => ['name' => 'ArrayKit']]);
+    expect($config->get('app.name'))->toBe('ArrayKit')
+        ->and($config->getOrFail('app.name'))->toBe('ArrayKit')
+        ->and(fn () => $config->getOrFail('queue.driver'))->toThrow(OutOfBoundsException::class);
+
+    $config->reload(['cache' => ['driver' => 'file']]);
+    expect($config->get('cache.driver'))->toBe('file');
 });

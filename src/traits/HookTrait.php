@@ -30,7 +30,7 @@ trait HookTrait
     /**
      * Attach a callable hook that runs when a value is retrieved (on get) for the given offset.
      *
-     * @param string   $offset   The key or offset
+     * @param string $offset The key or offset
      * @param callable $callback A transformation: fn($value) => $newValue
      */
     public function onGet(string $offset, callable $callback): static
@@ -41,7 +41,7 @@ trait HookTrait
     /**
      * Attach a callable hook that runs when a value is assigned (on set) for the given offset.
      *
-     * @param string   $offset   The key or offset
+     * @param string $offset The key or offset
      * @param callable $callback A transformation: fn($value) => $newValue
      */
     public function onSet(string $offset, callable $callback): static
@@ -52,11 +52,11 @@ trait HookTrait
     /**
      * Register a hook callback for a given offset and direction ("get" or "set").
      *
-     * @param mixed    $offset    The key or offset (string recommended)
-     * @param string   $direction Either "get" or "set"
-     * @param callable $callback  The transformation function
+     * @param string|int $offset The key or offset
+     * @param string $direction Either "get" or "set"
+     * @param callable $callback The transformation function
      */
-    protected function addHook(mixed $offset, string $direction, callable $callback): static
+    protected function addHook(string|int $offset, string $direction, callable $callback): static
     {
         $name = $this->getHookName((string) $offset, $direction);
 
@@ -70,8 +70,8 @@ trait HookTrait
     /**
      * Construct the internal key for hooking, e.g. "offset-get" or "offset-set".
      *
-     * @param string $hook       The offset or key
-     * @param string $direction  Either "get" or "set"
+     * @param string $hook The offset or key
+     * @param string $direction Either "get" or "set"
      */
     protected function getHookName(string $hook, string $direction): string
     {
@@ -81,14 +81,14 @@ trait HookTrait
     /**
      * Apply any relevant hooks to a value before returning or storing it.
      *
-     * @param mixed  $offset    The key or offset
-     * @param mixed  $value     The value to be transformed
+     * @param string|int $offset The key or offset
+     * @param mixed $value The value to be transformed
      * @param string $direction Either "get" or "set"
      * @return mixed The possibly transformed value
      */
-    protected function processValue(mixed $offset, mixed $value, string $direction): mixed
+    protected function processValue(string|int $offset, mixed $value, string $direction): mixed
     {
-        $name  = $this->getHookName((string) $offset, $direction);
+        $name = $this->getHookName((string) $offset, $direction);
         $hooks = $this->hooks[$name] ?? [];
 
         foreach ($hooks as $hook) {

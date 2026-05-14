@@ -29,6 +29,22 @@ Basic Get/Set
     // Replace entire array (key = null)
     DotNotation::set($data, null, ['fresh' => true]);
 
+Literal Dot Keys (Escaped Paths)
+--------------------------------
+
+Use ``\\.`` inside a path segment to target literal key dots:
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Array\DotNotation;
+
+    $data = ['service.name' => 'ArrayKit'];
+
+    $name = DotNotation::get($data, 'service\\.name'); // ArrayKit
+    DotNotation::set($data, 'service\\.env', 'prod');
+    DotNotation::forget($data, 'service\\.env');
+
 Reading Multiple Keys
 ---------------------
 
@@ -197,7 +213,8 @@ Behavior Notes
 --------------
 
 - ``get($array, null)`` returns the full array.
-- Defaults may be plain values or callables.
+- Existing keys with ``null`` values return ``null`` (not the default).
+- Defaults may be plain values or callables, and callables are only evaluated when path resolution fails.
 - Wildcard traversal in ``get`` returns arrays of matched results.
 - ``set`` supports wildcard paths when wildcard is the first segment.
 - ``forget`` supports wildcard and nested removal across arrays.

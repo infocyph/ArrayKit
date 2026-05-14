@@ -97,6 +97,11 @@ Global Helper Functions
     function array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
     function collect(mixed $data = []): Collection
     function chain(mixed $data): Pipeline
+    function Infocyph\ArrayKit\compare(mixed $retrieved, mixed $value, ?string $operator = null): bool
+    function Infocyph\ArrayKit\array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed
+    function Infocyph\ArrayKit\array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
+    function Infocyph\ArrayKit\collect(mixed $data = []): Collection
+    function Infocyph\ArrayKit\chain(mixed $data): Pipeline
 
 ArrayKit Facade
 ---------------
@@ -128,6 +133,7 @@ BaseArrayHelper
     public static function isMultiDimensional(mixed $array): bool
     public static function wrap(mixed $value): array
     public static function unWrap(mixed $value): mixed
+    public static function unwrap(mixed $value): mixed
     public static function haveAny(array $array, callable $callback): bool
     public static function isAll(array $array, callable $callback): bool
     public static function findKey(array $array, callable $callback): int|string|null
@@ -142,6 +148,20 @@ BaseArrayHelper
     public static function forget(array &$array, int|string|array $keys): void
     public static function random(array $array, ?int $number = null, bool $preserveKeys = false): mixed
     public static function doReject(array $array, mixed $callback): array
+
+ArraySharedOps (Internal)
+---------------------------------------
+
+.. code-block:: php
+
+    public static function each(array $array, callable $callback): array
+    public static function every(array $array, callable $callback): bool
+    public static function partition(array $array, callable $callback): array
+    public static function skip(array $array, int $count): array
+    public static function skipUntil(array $array, callable $callback): array
+    public static function skipWhile(array $array, callable $callback): array
+    public static function normalizeArrayKey(mixed $value): int|string
+    public static function asString(mixed $value): string
 
 ArraySingle
 -----------------------------------
@@ -171,14 +191,21 @@ ArraySingle
     public static function search(array $array, mixed $needle): int|string|null
     public static function chunk(array $array, int $size, bool $preserveKeys = false): array
     public static function map(array $array, callable $callback): array
+    public static function mapWithKeys(array $array, callable $callback): array
     public static function each(array $array, callable $callback): array
     public static function reduce(array $array, callable $callback, mixed $initial = null): mixed
     public static function some(array $array, callable $callback): bool
     public static function every(array $array, callable $callback): bool
     public static function contains(array $array, mixed $valueOrCallback, bool $strict = false): bool
+    public static function countBy(array $array, ?callable $by = null): array
     public static function sum(array $array, ?callable $callback = null): float|int
     public static function unique(array $array, bool $strict = false): array
+    public static function values(array $array): array
     public static function reject(array $array, mixed $callback = true): array
+    public static function intersect(array $array, array $values, bool $strict = false): array
+    public static function diff(array $array, array $values, bool $strict = false): array
+    public static function symmetricDiff(array $left, array $right, bool $strict = false): array
+    public static function same(array $left, array $right, bool $strict = false): bool
     public static function slice(array $array, int $offset, ?int $length = null): array
     public static function skip(array $array, int $count): array
     public static function skipWhile(array $array, callable $callback): array
@@ -186,7 +213,12 @@ ArraySingle
     public static function partition(array $array, callable $callback): array
     public static function mode(array $array): array
     public static function median(array $array): float|int
+    public static function min(array $array): float|int|null
+    public static function max(array $array): float|int|null
+    public static function minBy(array $array, callable $callback): mixed
+    public static function maxBy(array $array, callable $callback): mixed
     public static function except(array $array, array|string $keys): array
+    public static function rekey(array $array, array|callable $mapper): array
 
 ArrayMulti
 ----------------------------------
@@ -198,8 +230,11 @@ ArrayMulti
     public static function depth(array $array): int
     public static function flatten(array $array, float|int $depth = \INF): array
     public static function flattenByKey(array $array): array
+    public static function values(array $array): array
+    public static function rekey(array $array, array|callable $mapper): array
     public static function sortRecursive(array $array, int $options = \SORT_REGULAR, bool $descending = false): array
     public static function first(array $array, ?callable $callback = null, mixed $default = null): mixed
+    public static function firstWhere(array $array, string $key, mixed $operator = null, mixed $value = null, mixed $default = null): mixed
     public static function last(array $array, ?callable $callback = null, mixed $default = null): mixed
     public static function between(array $array, string $key, float|int $from, float|int $to): array
     public static function whereCallback(array $array, ?callable $callback = null, mixed $default = null): mixed
@@ -218,15 +253,26 @@ ArrayMulti
     public static function skipWhile(array $array, callable $callback): array
     public static function skipUntil(array $array, callable $callback): array
     public static function sum(array $array, string|callable|null $keyOrCallback = null): float|int
+    public static function min(array $array, string|callable $keyOrCallback): float|int|null
+    public static function max(array $array, string|callable $keyOrCallback): float|int|null
+    public static function minBy(array $array, string|callable $keyOrCallback): mixed
+    public static function maxBy(array $array, string|callable $keyOrCallback): mixed
+    public static function countBy(array $array, string|callable $groupBy): array
     public static function whereIn(array $array, string $key, array $values, bool $strict = false): array
     public static function whereNotIn(array $array, string $key, array $values, bool $strict = false): array
     public static function whereNull(array $array, string $key): array
     public static function whereNotNull(array $array, string $key): array
     public static function groupBy(array $array, string|callable $groupBy, bool $preserveKeys = false): array
+    public static function keyBy(array $array, string|callable $keyBy): array
+    public static function indexBy(array $array, string|callable $indexBy): array
+    public static function mapWithKeys(array $array, callable $callback): array
     public static function sortBy(array $array, string|callable $by, bool $desc = false, int $options = \SORT_REGULAR): array
     public static function sortByDesc(array $array, string|callable $by, int $options = \SORT_REGULAR): array
     public static function transpose(array $matrix): array
     public static function pluck(array $array, string $column, ?string $indexBy = null): array
+    public static function mergeRecursiveDistinct(array $base, array $overrides): array
+    public static function replaceRecursive(array $base, array $replacements): array
+    public static function overlay(array $base, array $overlay): array
 
 DotNotation
 -----------------------------------
@@ -285,6 +331,8 @@ Collection uses ``BaseCollectionTrait``. Public API:
     public function keys(): array
     public function __debugInfo(): array
     public function clear(): void
+    public function copy(): static
+    public function immutable(): static
     public function merge(mixed $items): static
     public function offsetExists(mixed $offset): bool
     public function offsetGet(mixed $offset): mixed
@@ -318,16 +366,23 @@ Pipeline
 
     public function __construct(protected array &$working, private readonly Collection $collection)
     public function only(array|string $keys): Collection
+    public function values(): Collection
+    public function rekey(array|callable $mapper): Collection
     public function nth(int $step, int $offset = 0): Collection
     public function duplicates(): Collection
     public function slice(int $offset, ?int $length = null): Collection
     public function paginate(int $page, int $perPage): Collection
     public function combine(array $values): Collection
     public function map(callable $callback): Collection
+    public function mapWithKeys(callable $callback): Collection
     public function filter(callable $callback): Collection
     public function chunk(int $size, bool $preserveKeys = false): Collection
     public function unique(bool $strict = false): Collection
     public function reject(mixed $callback = true): Collection
+    public function intersect(array $values, bool $strict = false): Collection
+    public function diff(array $values, bool $strict = false): Collection
+    public function symmetricDiff(array $values, bool $strict = false): Collection
+    public function same(array $values, bool $strict = false): bool
     public function skip(int $count): Collection
     public function skipWhile(callable $callback): Collection
     public function skipUntil(callable $callback): Collection
@@ -337,7 +392,10 @@ Pipeline
     public function sortRecursive(int $options = SORT_REGULAR, bool $descending = false): Collection
     public function collapse(): Collection
     public function groupBy(string|callable $groupBy, bool $preserveKeys = false): Collection
+    public function keyBy(string|callable $keyBy): Collection
+    public function indexBy(string|callable $indexBy): Collection
     public function between(string $key, float|int $from, float|int $to): Collection
+    public function firstWhere(string $key, mixed $operator = null, mixed $value = null, mixed $default = null): mixed
     public function whereCallback(?callable $callback = null, mixed $default = null): Collection
     public function where(string $key, mixed $operator = null, mixed $value = null): Collection
     public function whereIn(string $key, array $values, bool $strict = false): Collection
@@ -348,17 +406,26 @@ Pipeline
     public function isMultiDimensional(): bool
     public function wrap(): Collection
     public function unWrap(): Collection
+    public function unwrap(): Collection
     public function shuffle(?int $seed = null): Collection
     public function sum(?callable $callback = null): float|int
+    public function min(string|callable|null $keyOrCallback = null): float|int|null
+    public function max(string|callable|null $keyOrCallback = null): float|int|null
     public function first(?callable $callback = null, mixed $default = null): mixed
     public function last(?callable $callback = null, mixed $default = null): mixed
     public function reduce(callable $callback, mixed $initial = null): mixed
     public function any(callable $callback): bool
+    public function countBy(callable|string|null $groupBy = null): array
     public function except(array|string $keys): Collection
     public function median(): float|int
     public function mode(): array
+    public function minBy(string|callable $keyOrCallback): mixed
+    public function maxBy(string|callable $keyOrCallback): mixed
     public function pluck(string $column, ?string $indexBy = null): Collection
     public function transpose(): Collection
+    public function mergeRecursiveDistinct(array $overlay): Collection
+    public function replaceRecursive(array $replacements): Collection
+    public function overlay(array $overlay): Collection
     public function tap(callable $callback): Collection
     public function pipe(callable $callback): Collection
     public function when(bool $condition, callable $callback, ?callable $default = null): Collection
@@ -377,11 +444,14 @@ Config uses ``BaseConfigTrait``. Public API:
     public function has(string|array $keys): bool
     public function hasAny(string|array $keys): bool
     public function get(string|int|array|null $key = null, mixed $default = null): mixed
+    public function getOrFail(string|int|array|null $key): mixed
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     public function fill(string|array $key, mixed $value = null): bool
     public function forget(string|int|array $key): bool
     public function prepend(string $key, mixed $value): bool
     public function append(string $key, mixed $value): bool
+    public function replace(array $items): bool
+    public function reload(array|string $source): bool
 
 LazyFileConfig
 --------------------------------------
@@ -398,6 +468,7 @@ LazyFileConfig loads top-level config files on first keyed access:
     public function forget(string|int|array $key): bool
     public function preload(string|array $namespaces): static
     public function isLoaded(string $namespace): bool
+    public function loaded(string $namespace): bool
     public function loadedNamespaces(): array
     public function all(): array // throws (design choice)
 

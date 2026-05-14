@@ -14,6 +14,8 @@ trait BaseCollectionTrait
 {
     /**
      * Holds the underlying array data for the collection.
+     *
+     * @var array<array-key, mixed>
      */
     protected array $data = [];
 
@@ -22,7 +24,7 @@ trait BaseCollectionTrait
     /**
      * Constructor. Initializes the collection with the given array data.
      *
-     * @param  array  $data  The initial data for the collection.
+     * @param array<array-key, mixed> $data The initial data for the collection.
      */
     public function __construct(array $data = [])
     {
@@ -39,7 +41,7 @@ trait BaseCollectionTrait
      * method does not exist.
      *
      * @param string $method The name of the method being called.
-     * @param array $arguments The arguments to pass to the method.
+     * @param array<int, mixed> $arguments The arguments to pass to the method.
      * @return mixed The result of the method call.
      * @throws BadMethodCallException If the method does not exist.
      */
@@ -49,6 +51,7 @@ trait BaseCollectionTrait
         if (method_exists($pipeline, $method)) {
             return $pipeline->$method(...$arguments);
         }
+
         throw new BadMethodCallException("Method $method does not exist in " . static::class);
     }
 
@@ -77,20 +80,18 @@ trait BaseCollectionTrait
         return $this->offsetGet($key);
     }
 
-
     /**
      * Invokes the collection and returns the underlying array data.
      *
      * When the collection is invoked as a function (e.g. `$collection()`),
      * the underlying array data is returned directly.
      *
-     * @return array The array data of this collection.
+     * @return array<array-key, mixed> The array data of this collection.
      */
     public function __invoke(): array
     {
         return $this->data;
     }
-
 
     /**
      * Magic isset to check for existence of an item via property access: isset($collection->key)
@@ -105,7 +106,6 @@ trait BaseCollectionTrait
     {
         return $this->offsetExists($key);
     }
-
 
     /**
      * Magic setter to set an item via property access: $collection->key = $value
@@ -128,7 +128,6 @@ trait BaseCollectionTrait
     {
         return $this->toJson();
     }
-
 
     /**
      * Magic unset to remove an item via property access: unset($collection->key)
@@ -164,7 +163,7 @@ trait BaseCollectionTrait
      *
      * If the given data is not an array, it will be converted to an array.
      *
-     * @param  mixed  $data  The data to initialize the collection with.
+     * @param mixed $data The data to initialize the collection with.
      */
     public static function make(mixed $data): static
     {
@@ -174,13 +173,12 @@ trait BaseCollectionTrait
         return $instance;
     }
 
-
     /**
      * Returns the entire array of items in this collection.
      *
      * This is an alias for the `items()` method.
      *
-     * @return array The entire array of items in this collection.
+     * @return array<array-key, mixed> The entire array of items in this collection.
      */
     public function all(): array
     {
@@ -193,6 +191,14 @@ trait BaseCollectionTrait
     public function clear(): void
     {
         $this->data = [];
+    }
+
+    /**
+     * Create a shallow copy of the current collection.
+     */
+    public function copy(): static
+    {
+        return new static($this->data);
     }
 
     /*
@@ -223,7 +229,6 @@ trait BaseCollectionTrait
         return current($this->data);
     }
 
-
     /**
      * Retrieve an item from the collection by key or keys.
      *
@@ -232,14 +237,13 @@ trait BaseCollectionTrait
      *  - If an array of keys is provided, all values are returned in an array.
      *  - If a single key is provided, the value is returned directly.
      *
-     * @param string|array $keys The key(s) to retrieve.
+     * @param string|array<int, string|int> $keys The key(s) to retrieve.
      * @return mixed The retrieved value(s).
      */
     public function get(string|array $keys): mixed
     {
         return DotNotation::get($this->data, $keys);
     }
-
 
     /**
      * Normalizes the given items to an array.
@@ -250,18 +254,17 @@ trait BaseCollectionTrait
      * Otherwise, it will cast the $items to an array.
      *
      * @param mixed $items The items to normalize.
-     * @return array The normalized items.
+     * @return array<array-key, mixed> The normalized items.
      */
     public function getArrayableItems(mixed $items): array
     {
         return match (true) {
             $items instanceof self => $items->items(),
-            $items instanceof JsonSerializable => $items->jsonSerialize(),
+            $items instanceof JsonSerializable => is_array($items->jsonSerialize()) ? $items->jsonSerialize() : (array) $items->jsonSerialize(),
             $items instanceof Traversable => iterator_to_array($items),
             default => (array) $items,
         };
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -276,25 +279,23 @@ trait BaseCollectionTrait
      * to iterate over the collection's data. It is part of the IteratorAggregate
      * interface, allowing for external iteration of the collection.
      *
-     * @return Traversable An iterator for the collection's data.
+     * @return Traversable<array-key, mixed> An iterator for the collection's data.
      */
     public function getIterator(): Traversable
     {
         return new ArrayIterator($this->data);
     }
 
-
     /**
      * Determine if the given key or keys exist in the collection.
      *
-     * @param string|array $keys The key(s) to check for existence.
+     * @param string|array<int, string> $keys The key(s) to check for existence.
      * @return bool True if all the given keys exist in the collection, false otherwise.
      */
     public function has(string|array $keys): bool
     {
         return DotNotation::has($this->data, $keys);
     }
-
 
     /**
      * Check if at least one of the given keys exists in the collection.
@@ -303,12 +304,20 @@ trait BaseCollectionTrait
      * within the collection's data. It supports checking a single key
      * or an array of keys.
      *
-     * @param string|array $keys The key(s) to check for existence.
+     * @param string|array<int, string> $keys The key(s) to check for existence.
      * @return bool True if at least one key exists, false otherwise.
      */
     public function hasAny(string|array $keys): bool
     {
         return DotNotation::hasAny($this->data, $keys);
+    }
+
+    /**
+     * Return an immutable-style copy for functional pipelines.
+     */
+    public function immutable(): static
+    {
+        return $this->copy();
     }
 
     /**
@@ -321,6 +330,8 @@ trait BaseCollectionTrait
 
     /**
      * Return the raw array of items in this collection.
+     *
+     * @return array<array-key, mixed>
      */
     public function items(): array
     {
@@ -340,7 +351,7 @@ trait BaseCollectionTrait
      * to an array representation if it implements the JsonSerializable interface.
      * Non-serializable items are returned as-is.
      *
-     * @return array The array representation of the collection, ready for JSON serialization.
+     * @return array<array-key, mixed> The array representation of the collection, ready for JSON serialization.
      */
     public function jsonSerialize(): array
     {
@@ -365,6 +376,8 @@ trait BaseCollectionTrait
 
     /**
      * Return an array of all the keys in the collection.
+     *
+     * @return array<int, int|string>
      */
     public function keys(): array
     {
@@ -417,6 +430,7 @@ trait BaseCollectionTrait
         if (!is_int($offset) && !is_string($offset)) {
             return false;
         }
+
         return array_key_exists($offset, $this->data);
     }
 
@@ -435,6 +449,11 @@ trait BaseCollectionTrait
         if (is_string($offset) && str_contains($offset, '.')) {
             return DotNotation::get($this->data, $offset);
         }
+
+        if (!is_string($offset) && !is_int($offset)) {
+            return null;
+        }
+
         return $this->data[$offset] ?? null;
     }
 
@@ -450,16 +469,22 @@ trait BaseCollectionTrait
      */
     public function offsetSet(mixed $offset, mixed $value): void
     {
-        match (true) {
-            $offset === null => $this->data[] = $value,
+        if ($offset === null) {
+            $this->data[] = $value;
 
-            is_string($offset) && str_contains($offset, '.')
-            => DotNotation::set($this->data, $offset, $value),
+            return;
+        }
 
-            default => $this->data[$offset] = $value,
-        };
+        if (is_string($offset) && str_contains($offset, '.')) {
+            DotNotation::set($this->data, $offset, $value);
+
+            return;
+        }
+
+        if (is_string($offset) || is_int($offset)) {
+            $this->data[$offset] = $value;
+        }
     }
-
 
     /**
      * Remove an item from the collection by key.
@@ -475,9 +500,13 @@ trait BaseCollectionTrait
     {
         if (is_string($offset) && str_contains($offset, '.')) {
             DotNotation::forget($this->data, $offset);
+
             return;
         }
-        unset($this->data[$offset]);
+
+        if (is_string($offset) || is_int($offset)) {
+            unset($this->data[$offset]);
+        }
     }
 
     /**
@@ -503,7 +532,6 @@ trait BaseCollectionTrait
         reset($this->data);
     }
 
-
     /**
      * Set one or multiple items in the collection using dot notation.
      *
@@ -511,7 +539,7 @@ trait BaseCollectionTrait
      * If an array of key-value pairs is provided, each value is set.
      * If a single key is provided, the value is set directly.
      *
-     * @param array|string|null $keys The key(s) to set.
+     * @param array<array-key, mixed>|string|null $keys The key(s) to set.
      * @param mixed $value The value to set.
      * @return bool True on success.
      */
@@ -522,6 +550,8 @@ trait BaseCollectionTrait
 
     /**
      * Get the collection of items as a plain array.
+     *
+     * @return array<array-key, mixed>
      */
     public function toArray(): array
     {
@@ -531,7 +561,7 @@ trait BaseCollectionTrait
     /**
      * Get the collection of items as a JSON string.
      *
-     * @param  int  $options  JSON encoding options
+     * @param int $options JSON encoding options
      */
     public function toJson(int $options = 0): string
     {

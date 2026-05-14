@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Collection\Pipeline;
 
@@ -10,25 +9,25 @@ if (!function_exists('compare')) {
     /**
      * Compare two values using a specified operator.
      *
-     * @param mixed       $retrieved The value to compare
-     * @param mixed       $value     The reference value
-     * @param string|null $operator  Supported operators:
-     *                               '!=', '<>', 'ne', '<', 'lt', '>', 'gt',
-     *                               '<=', 'lte', '>=', 'gte', '===', '!=='
-     *                               or null/default for '=='.
+     * @param mixed $retrieved The value to compare
+     * @param mixed $value The reference value
+     * @param string|null $operator Supported operators:
+     *                              '!=', '<>', 'ne', '<', 'lt', '>', 'gt',
+     *                              '<=', 'lte', '>=', 'gte', '===', '!=='
+     *                              or null/default for '=='.
      * @return bool True if comparison holds, false otherwise
      */
     function compare(mixed $retrieved, mixed $value, ?string $operator = null): bool
     {
         return match ($operator) {
             '!=', '<>', 'ne' => $retrieved != $value,
-            '<', 'lt'        => $retrieved < $value,
-            '>', 'gt'        => $retrieved > $value,
-            '<=', 'lte'      => $retrieved <= $value,
-            '>=', 'gte'      => $retrieved >= $value,
-            '==='            => $retrieved === $value,
-            '!=='            => $retrieved !== $value,
-            default          => $retrieved == $value,
+            '<', 'lt' => $retrieved < $value,
+            '>', 'gt' => $retrieved > $value,
+            '<=', 'lte' => $retrieved <= $value,
+            '>=', 'gte' => $retrieved >= $value,
+            '===' => $retrieved === $value,
+            '!==' => $retrieved !== $value,
+            default => $retrieved == $value,
         };
     }
 }
@@ -52,8 +51,8 @@ if (!function_exists('array_get')) {
      *  - If an array of keys is provided, all values are returned in an array.
      *  - If a single key is provided, the value is returned directly.
      *
-     * @param array $array The array to retrieve items from.
-     * @param int|string|array|null $key The key(s) to retrieve.
+     * @param array<array-key, mixed> $array The array to retrieve items from.
+     * @param int|string|array<int, string|int>|null $key The key(s) to retrieve.
      * @param mixed $default The default value to return if the key is not found.
      * @return mixed The retrieved value(s).
      */
@@ -71,7 +70,8 @@ if (!function_exists('array_set')) {
      * If an array of key-value pairs is provided, each value is set.
      * If a single key is provided, the value is set directly.
      *
-     * @param array $array The array to set items in.
+     * @param array<array-key, mixed> $array The array to set items in.
+     * @param string|array<array-key, mixed>|null $key
      * @param mixed $value The value to set.
      * @param bool $overwrite If true, overwrite existing values. If false, existing values are preserved.
      * @return bool True on success
@@ -85,18 +85,18 @@ if (!function_exists('collect')) {
     /**
      * Wrap the given value in an {@see Collection}.
      *
-     * @param mixed $data  Anything “array-able”: array, Traversable, scalar, etc.
+     * @param mixed $data Anything “array-able”: array, Traversable, scalar, etc.
      */
     function collect(mixed $data = []): Collection
     {
         return Collection::make($data);
     }
 }
-if (! function_exists('chain')) {
+if (!function_exists('chain')) {
     /**
      * Start a chainable pipeline on any “array-able” value.
      *
-     * @param mixed $data  Array, Traversable, scalar, etc.
+     * @param mixed $data Array, Traversable, scalar, etc.
      */
     function chain(mixed $data): Pipeline
     {

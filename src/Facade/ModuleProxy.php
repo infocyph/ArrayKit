@@ -15,6 +15,9 @@ final readonly class ModuleProxy
         private string $targetClass,
     ) {}
 
+    /**
+     * @param array<int, mixed> $arguments
+     */
     public function __call(string $method, array $arguments): mixed
     {
         if (!method_exists($this->targetClass, $method)) {

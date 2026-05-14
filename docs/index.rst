@@ -23,6 +23,7 @@ Contents
     collection
     config
     traits-and-helpers
+    migration
     rule-reference
 
 The feature pages above are guide-style usage docs.

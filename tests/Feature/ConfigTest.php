@@ -28,3 +28,23 @@ it('checks if a config key exists', function () use ($config) {
         ->toBeTrue()
         ->and($config->has('app.unknown'))->toBeFalse();
 });
+
+it('supports replace and reload operations', function () {
+    $cfg = new Config();
+    $cfg->loadArray(['app' => ['name' => 'ArrayKit']]);
+
+    $cfg->replace(['app' => ['name' => 'ArrayKitX']]);
+    expect($cfg->get('app.name'))->toBe('ArrayKitX');
+
+    $cfg->reload(['db' => ['host' => 'localhost']]);
+    expect($cfg->get('db.host'))->toBe('localhost')
+        ->and($cfg->has('app.name'))->toBeFalse();
+});
+
+it('supports getOrFail for required keys', function () {
+    $cfg = new Config();
+    $cfg->loadArray(['app' => ['name' => 'ArrayKit']]);
+
+    expect($cfg->getOrFail('app.name'))->toBe('ArrayKit')
+        ->and(fn () => $cfg->getOrFail('app.missing'))->toThrow(OutOfBoundsException::class);
+});

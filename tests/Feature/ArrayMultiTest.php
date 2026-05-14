@@ -346,3 +346,88 @@ it('partitions a 2D array using partition()', function () {
         1 => ['score' => 50],
     ]);
 });
+
+it('handles null values correctly in whereIn()', function () {
+    $rows = [
+        ['id' => 1, 'role' => null],
+        ['id' => 2, 'role' => 'admin'],
+        ['id' => 3],
+    ];
+
+    expect(ArrayMulti::whereIn($rows, 'role', [null], true))->toBe([
+        0 => ['id' => 1, 'role' => null],
+    ]);
+});
+
+it('handles null values and missing keys correctly in whereNotIn()', function () {
+    $rows = [
+        ['id' => 1, 'role' => null],
+        ['id' => 2, 'role' => 'admin'],
+        ['id' => 3],
+    ];
+
+    expect(ArrayMulti::whereNotIn($rows, 'role', [null], true))->toBe([
+        1 => ['id' => 2, 'role' => 'admin'],
+        2 => ['id' => 3],
+    ]);
+});
+
+it('supports keyBy/indexBy/countBy/firstWhere/mapWithKeys helpers', function () {
+    $rows = [
+        ['id' => 10, 'team' => 'A', 'score' => 40],
+        ['id' => 11, 'team' => 'B', 'score' => 70],
+        ['id' => 12, 'team' => 'A', 'score' => 55],
+    ];
+
+    expect(ArrayMulti::keyBy($rows, 'id'))->toBe([
+        10 => ['id' => 10, 'team' => 'A', 'score' => 40],
+        11 => ['id' => 11, 'team' => 'B', 'score' => 70],
+        12 => ['id' => 12, 'team' => 'A', 'score' => 55],
+    ])
+        ->and(ArrayMulti::indexBy($rows, fn (array $row) => 'row_' . $row['id']))->toBe([
+            'row_10' => ['id' => 10, 'team' => 'A', 'score' => 40],
+            'row_11' => ['id' => 11, 'team' => 'B', 'score' => 70],
+            'row_12' => ['id' => 12, 'team' => 'A', 'score' => 55],
+        ])
+        ->and(ArrayMulti::countBy($rows, 'team'))->toBe(['A' => 2, 'B' => 1])
+        ->and(ArrayMulti::firstWhere($rows, 'score', '>=', 50))->toBe(['id' => 11, 'team' => 'B', 'score' => 70])
+        ->and(ArrayMulti::mapWithKeys($rows, fn (array $row) => [$row['id'] => $row['team']]))->toBe([10 => 'A', 11 => 'B', 12 => 'A']);
+});
+
+it('supports min/max/minBy/maxBy helpers', function () {
+    $rows = [
+        ['id' => 1, 'score' => 40],
+        ['id' => 2, 'score' => 70],
+        ['id' => 3, 'score' => 55],
+    ];
+
+    expect(ArrayMulti::min($rows, 'score'))->toBe(40)
+        ->and(ArrayMulti::max($rows, 'score'))->toBe(70)
+        ->and(ArrayMulti::minBy($rows, 'score'))->toBe(['id' => 1, 'score' => 40])
+        ->and(ArrayMulti::maxBy($rows, 'score'))->toBe(['id' => 2, 'score' => 70]);
+});
+
+it('supports values, rekey, and deep merge helpers', function () {
+    $assoc = ['a' => ['v' => 1], 'b' => ['v' => 2]];
+
+    expect(ArrayMulti::values($assoc))->toBe([['v' => 1], ['v' => 2]])
+        ->and(ArrayMulti::rekey(['first_name' => 'Ada'], ['first_name' => 'firstName']))->toBe(['firstName' => 'Ada'])
+        ->and(ArrayMulti::mergeRecursiveDistinct(
+            ['db' => ['host' => 'localhost', 'opts' => ['timeout' => 5]]],
+            ['db' => ['opts' => ['timeout' => 10, 'ssl' => true]]],
+        ))->toBe([
+            'db' => ['host' => 'localhost', 'opts' => ['timeout' => 10, 'ssl' => true]],
+        ])
+        ->and(ArrayMulti::replaceRecursive(
+            ['app' => ['name' => 'ArrayKit', 'env' => 'local']],
+            ['app' => ['env' => 'prod']],
+        ))->toBe([
+            'app' => ['name' => 'ArrayKit', 'env' => 'prod'],
+        ])
+        ->and(ArrayMulti::overlay(
+            ['a' => ['b' => 1]],
+            ['a' => ['c' => 2]],
+        ))->toBe([
+            'a' => ['b' => 1, 'c' => 2],
+        ]);
+});

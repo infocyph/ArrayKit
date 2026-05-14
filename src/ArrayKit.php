@@ -38,6 +38,9 @@ final class ArrayKit
         return Collection::make($data);
     }
 
+    /**
+     * @param array<array-key, mixed> $items
+     */
     public static function config(array $items = []): Config
     {
         $config = new Config();
@@ -63,6 +66,9 @@ final class ArrayKit
         return HookedCollection::make($data);
     }
 
+    /**
+     * @param array<array-key, mixed> $items
+     */
     public static function lazyConfig(string $directory, string $extension = 'php', array $items = []): LazyFileConfig
     {
         return new LazyFileConfig($directory, $extension, $items);

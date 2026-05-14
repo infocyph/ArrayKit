@@ -6,6 +6,7 @@ ArrayKit ships static helpers grouped by data shape:
 - ``ArraySingle`` for one-dimensional arrays
 - ``ArrayMulti`` for nested arrays / row collections
 - ``BaseArrayHelper`` for lower-level shared operations
+- ``ArraySharedOps`` for shared iteration/partition/skip and key-normalization internals
 
 If you prefer one entry point, use ``Infocyph\ArrayKit\ArrayKit``:
 
@@ -84,6 +85,7 @@ ArraySingle: Positional Operations
     $slice = ArraySingle::slice($arr, 1, 3);            // [1 => 20, 2 => 30, 3 => 40]
     $skip = ArraySingle::skip($arr, 2);                 // [2 => 30, 3 => 40, ...]
     $nth = ArraySingle::nth($arr, 2);                   // [10, 30, 50]
+    $nthOffset = ArraySingle::nth($arr, 2, 2);          // [30, 50]
     $page = ArraySingle::paginate($arr, 2, 2);          // page 2 => [2 => 30, 3 => 40]
     $chunks = ArraySingle::chunk($arr, 2);              // [[10,20], [30,40], [50,60]]
     $until40 = ArraySingle::skipUntil($arr, fn ($v) => $v === 40);
@@ -176,6 +178,8 @@ ArrayMulti: Grouping, Ordering, and Projection
     ];
 
     $grouped = ArrayMulti::groupBy($rows, 'team');
+    $indexed = ArrayMulti::keyBy($rows, 'team');
+    $counts = ArrayMulti::countBy($rows, 'team');
     $sorted = ArrayMulti::sortBy($rows, 'score', true);      // desc
     $sortedRecursive = ArrayMulti::sortRecursive($rows);
     $scores = ArrayMulti::pluck($rows, 'score');             // [10,30,20]
@@ -196,8 +200,12 @@ ArrayMulti: Row Set Operations
     ];
 
     $unique = ArrayMulti::unique($rows);
+    $minScore = ArrayMulti::min($rows, 'id');
+    $maxScore = ArrayMulti::max($rows, 'id');
+    $firstHigh = ArrayMulti::firstWhere($rows, 'id', '>=', 2);
     [$passed, $failed] = ArrayMulti::partition($rows, fn ($row) => $row['id'] === 1);
     $mapped = ArrayMulti::map($rows, fn ($row) => $row['name']);
+    $mappedKeys = ArrayMulti::mapWithKeys($rows, fn ($row) => [$row['id'] => $row['name']]);
     $reduced = ArrayMulti::reduce($rows, fn ($carry, $row) => $carry + $row['id'], 0);
     $sumById = ArrayMulti::sum($rows, 'id');
 
@@ -226,10 +234,54 @@ BaseArrayHelper
     $all = BaseArrayHelper::all([1, 2, 3], fn ($v) => $v > 0); // true
     $key = BaseArrayHelper::findKey(['x' => 3], fn ($v) => $v === 3); // x
 
+ArraySharedOps (Internal)
+-------------------------
+
+``ArraySharedOps`` is internal infrastructure shared by ``ArraySingle`` and ``ArrayMulti``.
+Prefer consuming the public helper APIs directly (``ArraySingle``, ``ArrayMulti``, ``BaseArrayHelper``).
+
+Behavior Matrix
+---------------
+
+.. list-table::
+    :header-rows: 1
+
+    * - Helper family
+      - Preserves keys by default
+      - Mutates input argument
+      - Dot-path support
+      - Wildcard support
+    * - ``ArraySingle``
+      - yes (except ``values()``, ``unique()``, positional list helpers)
+      - no
+      - no
+      - no
+    * - ``ArrayMulti``
+      - usually yes for filters/sorts; reshape methods may reindex
+      - no
+      - no
+      - no
+    * - ``DotNotation``
+      - n/a (key-path accessor)
+      - yes for ``set/fill/forget`` via reference
+      - yes
+      - yes
+
+Performance Notes
+-----------------
+
+- Direct static calls (``ArraySingle::*``, ``ArrayMulti::*``, ``DotNotation::*``) are the fastest path.
+- ``ArrayKit`` facade and ``ModuleProxy`` add convenience but include dynamic-call overhead.
+- Collection pipeline methods mutate the current collection; use ``copy()`` / ``immutable()`` when needed.
+- Dot-notation paths are parsed and cached; escaped literal segments (for example ``service\\.name``) are supported.
+
 Behavior Notes
 --------------
 
 - Many methods preserve original keys (especially ``slice``, ``where``, ``skip`` variants).
+- ``ArraySingle::isAssoc([])`` is ``false``; empty arrays are treated as non-associative.
+- ``ArraySingle::nth($array, $step, $offset)`` starts at ``$offset`` then takes every ``$step`` item.
 - ``ArraySingle::unique()`` has loose mode (default) and strict mode.
+- ``ArrayMulti::whereIn()`` / ``whereNotIn()`` treat ``null`` as a real value when the key exists.
 - ``ArrayMulti::where()`` uses the global ``compare()`` helper semantics for operators.
 - ``BaseArrayHelper::random()`` throws ``InvalidArgumentException`` when requested count exceeds array size.

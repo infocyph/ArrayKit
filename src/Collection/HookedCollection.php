@@ -35,6 +35,10 @@ class HookedCollection extends Collection
             ? DotNotation::get($this->data, $offset)
             : parent::offsetGet($offset);
 
+        if (!is_string($offset) && !is_int($offset)) {
+            return $value;
+        }
+
         return $this->processValue($offset, $value, 'get');
     }
 
@@ -44,15 +48,22 @@ class HookedCollection extends Collection
      * Applies any "on set" hooks associated with that offset.
      *
      * @param mixed $offset The array key
-     * @param mixed $value  The value to set
+     * @param mixed $value The value to set
      */
     #[\Override]
     public function offsetSet(mixed $offset, mixed $value): void
     {
+        if (!is_string($offset) && !is_int($offset)) {
+            parent::offsetSet($offset, $value);
+
+            return;
+        }
+
         $processed = $this->processValue($offset, $value, 'set');
 
         if (is_string($offset) && str_contains($offset, '.')) {
             DotNotation::set($this->data, $offset, $processed);
+
             return;
         }
 
