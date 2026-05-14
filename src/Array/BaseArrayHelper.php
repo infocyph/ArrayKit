@@ -20,7 +20,6 @@ class BaseArrayHelper
         return is_array($value) || $value instanceof ArrayAccess;
     }
 
-
     /**
      * Check if all elements in the array pass the given truth test.
      *
@@ -28,7 +27,7 @@ class BaseArrayHelper
      * If the callback returns true for all elements, the function returns true.
      * Otherwise, it returns false.
      *
-     * @param array $array The array to be evaluated.
+     * @param array<array-key, mixed> $array The array to be evaluated.
      * @param callable $callback The callback function to apply to each element.
      * @return bool True if all elements pass the truth test, false otherwise.
      */
@@ -37,7 +36,6 @@ class BaseArrayHelper
         return static::isAll($array, $callback);
     }
 
-
     /**
      * Check if at least one element in the array passes a given truth test.
      *
@@ -45,7 +43,7 @@ class BaseArrayHelper
      * It is provided for syntactic sugar, as it is very common to want to
      * check if at least one item in an array matches a given criteria.
      *
-     * @param array $array The array to check.
+     * @param array<array-key, mixed> $array The array to check.
      * @param callable $callback The callback to apply to each element.
      * @return bool True if at least one element passes the test, false otherwise.
      */
@@ -53,7 +51,6 @@ class BaseArrayHelper
     {
         return static::haveAny($array, $callback);
     }
-
 
     /**
      * Filter an array by rejecting elements based on a callback function or value.
@@ -64,9 +61,9 @@ class BaseArrayHelper
      * If the callback is a value, elements equal to this value are rejected.
      * The function returns an array with the same type of indices as the input array.
      *
-     * @param array $array The array to be filtered.
+     * @param array<array-key, mixed> $array The array to be filtered.
      * @param mixed $callback The callback function or value for filtering.
-     * @return array The array with elements rejected based on the callback or value.
+     * @return array<array-key, mixed> The array with elements rejected based on the callback or value.
      */
     public static function doReject(array $array, mixed $callback): array
     {
@@ -77,14 +74,14 @@ class BaseArrayHelper
                 ARRAY_FILTER_USE_BOTH,
             );
         }
+
         return array_filter($array, fn($val) => $val != $callback);
     }
-
 
     /**
      * Search the array for a given value and return its key if found.
      *
-     * @param array $array The array to search.
+     * @param array<array-key, mixed> $array The array to search.
      * @param callable $callback The callback to use for searching.
      *
      * @return int|string|null The key of the value if found, or null if not found.
@@ -96,9 +93,9 @@ class BaseArrayHelper
                 return $key;
             }
         }
+
         return null;
     }
-
 
     /**
      * Remove one or multiple array items from an array.
@@ -107,8 +104,8 @@ class BaseArrayHelper
      * It then iterates over the given keys, and unsets the corresponding
      * items from the array.
      *
-     * @param array $array The array from which to remove items.
-     * @param int|string|array $keys The key or array of keys to be removed.
+     * @param array<array-key, mixed> $array The array from which to remove items.
+     * @param int|string|array<int, int|string> $keys The key or array of keys to be removed.
      */
     public static function forget(array &$array, int|string|array $keys): void
     {
@@ -117,12 +114,11 @@ class BaseArrayHelper
         }
     }
 
-
     /**
      * Check if all the given keys exist in the array.
      *
-     * @param array $array The array to search.
-     * @param int|string|array $keys The key(s) to check for existence.
+     * @param array<array-key, mixed> $array The array to search.
+     * @param int|string|array<int, int|string> $keys The key(s) to check for existence.
      *
      * @return bool True if all the given keys exist in the array, false otherwise.
      */
@@ -132,9 +128,9 @@ class BaseArrayHelper
         if (empty($keys)) {
             return false;
         }
-        return array_all($keys, fn($key) => array_key_exists($key, $array));
-    }
 
+        return array_all($keys, fn(int|string $key): bool => array_key_exists($key, $array));
+    }
 
     /**
      * Check if at least one of the given keys exists in the array.
@@ -144,8 +140,8 @@ class BaseArrayHelper
      * provided array. If any key is found, the function returns
      * true. Otherwise, it returns false.
      *
-     * @param array $array The array to search.
-     * @param int|string|array $keys The key(s) to check for existence.
+     * @param array<array-key, mixed> $array The array to search.
+     * @param int|string|array<int, int|string> $keys The key(s) to check for existence.
      * @return bool True if at least one key exists in the array, false otherwise.
      */
     public static function hasAny(array $array, int|string|array $keys): bool
@@ -154,14 +150,14 @@ class BaseArrayHelper
         if (empty($keys)) {
             return false;
         }
-        return array_any($keys, fn($key) => array_key_exists($key, $array));
-    }
 
+        return array_any($keys, fn(int|string $key): bool => array_key_exists($key, $array));
+    }
 
     /**
      * Determine if at least one element in the array passes the given truth test.
      *
-     * @param array $array The array to search.
+     * @param array<array-key, mixed> $array The array to search.
      * @param callable $callback The callback to use for searching.
      * @return bool Whether at least one element passed the truth test.
      */
@@ -170,11 +166,10 @@ class BaseArrayHelper
         return array_any($array, fn($value, $key) => $callback($value, $key) === true);
     }
 
-
     /**
      * Determine if all elements in the array pass the given truth test.
      *
-     * @param array $array The array to search.
+     * @param array<array-key, mixed> $array The array to search.
      * @param callable $callback The callback to use for searching.
      * @return bool Whether all elements passed the truth test.
      */
@@ -182,6 +177,7 @@ class BaseArrayHelper
     {
         return array_all($array, fn($value, $key) => !($callback($value, $key) === false));
     }
+
     /**
      * Check if an array is multi-dimensional.
      *
@@ -198,7 +194,6 @@ class BaseArrayHelper
             && count($array) !== count($array, COUNT_RECURSIVE);
     }
 
-
     /**
      * Retrieve one or multiple random items from an array.
      *
@@ -207,7 +202,7 @@ class BaseArrayHelper
      * number of items. If you set the third argument to `true`, the
      * keys from the original array are preserved in the returned array.
      *
-     * @param array $array The array from which to retrieve random items.
+     * @param array<array-key, mixed> $array The array from which to retrieve random items.
      * @param int|null $number The number of items to retrieve. If null, a single item is returned.
      * @param bool $preserveKeys Whether to preserve the keys from the original array.
      *
@@ -224,6 +219,7 @@ class BaseArrayHelper
 
         if ($number === null) {
             $randKey = array_rand($array);
+
             return $array[$randKey];
         }
 
@@ -239,7 +235,6 @@ class BaseArrayHelper
         return $preserveKeys ? $picked : array_values($picked);
     }
 
-
     /**
      * Generate an array containing a sequence of numbers.
      *
@@ -249,7 +244,7 @@ class BaseArrayHelper
      * @param int $start The starting number of the sequence.
      * @param int $end The ending number of the sequence.
      * @param int $step The increment between each number in the sequence. Defaults to 1.
-     * @return array An array containing the sequence of numbers.
+     * @return array<int, int> An array containing the sequence of numbers.
      */
     public static function range(int $start, int $end, int $step = 1): array
     {
@@ -257,6 +252,7 @@ class BaseArrayHelper
             // We could throw an exception, or return empty:
             return [];
         }
+
         return range($start, $end, $step);
     }
 
@@ -264,22 +260,21 @@ class BaseArrayHelper
      |                     Additional "Sugar" Methods (Point 1)
        ---------------------------------------------------------------------- */
 
-
     /**
      * Pass the array to the given callback and return it.
      *
      * Useful for tapping into a fluent method chain for debugging.
      *
-     * @param array $array The array to be tapped.
+     * @param array<array-key, mixed> $array The array to be tapped.
      * @param callable $callback The callback to apply to the array.
-     * @return array The original array.
+     * @return array<array-key, mixed> The original array.
      */
     public static function tap(array $array, callable $callback): array
     {
         $callback($array);
+
         return $array;
     }
-
 
     /**
      * Create an array of the specified length and fill it with the results of the
@@ -294,7 +289,7 @@ class BaseArrayHelper
      *
      * @param int $number The length of the array.
      * @param callable|null $callback The callback function to use.
-     * @return array The filled array.
+     * @return array<int, mixed> The filled array.
      */
     public static function times(int $number, ?callable $callback = null): array
     {
@@ -309,7 +304,6 @@ class BaseArrayHelper
 
         return $results;
     }
-
 
     /**
      * Unwrap a value from an array if it contains exactly one element.
@@ -327,9 +321,9 @@ class BaseArrayHelper
         if (!is_array($value)) {
             return $value;
         }
+
         return (count($value) === 1) ? reset($value) : $value;
     }
-
 
     /**
      * Wrap a value in an array if it's not already an array; otherwise return the array as is.
@@ -337,13 +331,14 @@ class BaseArrayHelper
      * If the value is empty, an empty array is returned.
      *
      * @param mixed $value The value to wrap.
-     * @return array The wrapped value.
+     * @return array<array-key, mixed> The wrapped value.
      */
     public static function wrap(mixed $value): array
     {
         if (empty($value)) {
             return [];
         }
+
         return is_array($value) ? $value : [$value];
     }
 }

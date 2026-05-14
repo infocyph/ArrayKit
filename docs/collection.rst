@@ -4,7 +4,7 @@ Collections
 ArrayKit collections provide an object-oriented array wrapper with:
 
 - dot-notation read/write
-- full ``ArrayAccess`` + ``Iterator`` + ``Countable`` behavior
+- full ``ArrayAccess`` + ``IteratorAggregate`` + ``Countable`` behavior
 - a chainable pipeline of transformation methods
 - optional get/set hooks via ``HookedCollection``
 
@@ -89,6 +89,10 @@ Collection Utility Methods
     $c->merge(['c' => 3]);       // now a,b,c
     $c->clear();                 // now empty
 
+    // Immutable-style snapshots
+    $copy = $c->copy();
+    $immutable = $c->immutable();
+
 Iteration and Interfaces
 ------------------------
 
@@ -139,6 +143,8 @@ Pipeline Basics
 
 Every transformation method is exposed through ``Pipeline``.
 You can start it either with ``process()`` or directly by calling pipeline methods on collection (via ``__call``).
+Pipeline methods mutate the current collection instance and return that same instance for chaining.
+Use ``copy()`` or ``immutable()`` before chaining when you need functional-style non-mutating behavior.
 
 .. code-block:: php
 
@@ -165,6 +171,7 @@ Selection and filtering:
 - ``where()``, ``whereCallback()``
 - ``whereIn()``, ``whereNotIn()``, ``whereNull()``, ``whereNotNull()``
 - ``between()``
+- ``firstWhere()``
 
 Slicing and positional:
 
@@ -174,22 +181,25 @@ Slicing and positional:
 Structure and reshape:
 
 - ``flatten()``, ``flattenByKey()``, ``collapse()``
-- ``groupBy()``, ``pluck()``, ``transpose()``
-- ``wrap()``, ``unWrap()``
+- ``groupBy()``, ``keyBy()``, ``indexBy()``, ``pluck()``, ``transpose()``
+- ``mapWithKeys()``, ``values()``, ``rekey()``
+- ``wrap()``, ``unWrap()``, ``unwrap()``
 
 Ordering and uniqueness:
 
 - ``sortBy()``, ``sortRecursive()``, ``shuffle()``
 - ``unique()``, ``duplicates()``, ``partition()``
+- ``intersect()``, ``diff()``, ``symmetricDiff()``, ``same()``
 
 Terminal methods (end chain with scalar/array/bool):
 
-- ``sum()``, ``first()``, ``last()``, ``reduce()``
-- ``any()``, ``median()``, ``mode()``, ``isMultiDimensional()``
+- ``sum()``, ``min()``, ``max()``, ``first()``, ``last()``, ``reduce()``
+- ``any()``, ``countBy()``, ``median()``, ``mode()``, ``minBy()``, ``maxBy()``, ``isMultiDimensional()``
 
 Flow-control helpers:
 
 - ``tap()``, ``pipe()``, ``when()``, ``unless()``
+- ``mergeRecursiveDistinct()``, ``replaceRecursive()``, ``overlay()``
 
 Detailed Pipeline Examples
 --------------------------

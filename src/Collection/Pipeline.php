@@ -12,6 +12,8 @@ class Pipeline
 {
     /**
      * Construct with an initial array.
+     *
+     * @param array<array-key, mixed> $working
      */
     public function __construct(
         protected array &$working,
@@ -33,6 +35,7 @@ class Pipeline
     public function between(string $key, float|int $from, float|int $to): Collection
     {
         $this->working = ArrayMulti::between($this->working, $key, $from, $to);
+
         return $this->collection;
     }
 
@@ -42,6 +45,7 @@ class Pipeline
     public function chunk(int $size, bool $preserveKeys = false): Collection
     {
         $this->working = ArraySingle::chunk($this->working, $size, $preserveKeys);
+
         return $this->collection;
     }
 
@@ -51,18 +55,52 @@ class Pipeline
     public function collapse(): Collection
     {
         $this->working = ArrayMulti::collapse($this->working);
+
         return $this->collection;
     }
 
     /**
      * Combine the current array with a second array of values, using ArraySingle::combine.
      * (We treat $this->working as the *keys*, user passes an array of values.)
+     *
+     * @param array<array-key, mixed> $values
      */
     public function combine(array $values): Collection
     {
         $combined = ArraySingle::combine($this->working, $values);
         // Replacing the entire array with the combined result
         $this->working = $combined;
+
+        return $this->collection;
+    }
+
+    /**
+     * Count items grouped by value/callback buckets.
+     *
+     * @return array<int|string, int>
+     */
+    public function countBy(callable|string|null $groupBy = null): array
+    {
+        if ($groupBy === null) {
+            return ArraySingle::countBy($this->working);
+        }
+
+        if (is_string($groupBy)) {
+            return ArrayMulti::countBy($this->working, $groupBy);
+        }
+
+        return ArraySingle::countBy($this->working, $groupBy);
+    }
+
+    /**
+     * Keep values from current array that do not exist in the provided array.
+     *
+     * @param array<array-key, mixed> $values
+     */
+    public function diff(array $values, bool $strict = false): Collection
+    {
+        $this->working = ArraySingle::diff($this->working, $values, $strict);
+
         return $this->collection;
     }
 
@@ -77,13 +115,18 @@ class Pipeline
         // This means our collection now becomes an array of those duplicated values.
         // Possibly you might want to keep them in a "counts" structure, but let's do direct.
         $this->working = $dupes;
+
         return $this->collection;
     }
 
     /** Remove keys (inverse of only) */
+    /**
+     * @param array<int, string|int>|string $keys
+     */
     public function except(array|string $keys): Collection
     {
         $this->working = ArraySingle::except($this->working, $keys);
+
         return $this->collection;
     }
 
@@ -94,6 +137,7 @@ class Pipeline
     {
         // We use "where(...)" or direct array_filter:
         $this->working = ArraySingle::where($this->working, $callback);
+
         return $this->collection;
     }
 
@@ -104,6 +148,14 @@ class Pipeline
     public function first(?callable $callback = null, mixed $default = null): mixed
     {
         return ArrayMulti::first($this->working, $callback, $default);
+    }
+
+    /**
+     * Return the first row where the key comparison matches.
+     */
+    public function firstWhere(string $key, mixed $operator = null, mixed $value = null, mixed $default = null): mixed
+    {
+        return ArrayMulti::firstWhere($this->working, $key, $operator, $value, $default);
     }
 
     /*
@@ -118,6 +170,7 @@ class Pipeline
     public function flatten(float|int $depth = \INF): Collection
     {
         $this->working = ArrayMulti::flatten($this->working, $depth);
+
         return $this->collection;
     }
 
@@ -127,6 +180,7 @@ class Pipeline
     public function flattenByKey(): Collection
     {
         $this->working = ArrayMulti::flattenByKey($this->working);
+
         return $this->collection;
     }
 
@@ -136,6 +190,29 @@ class Pipeline
     public function groupBy(string|callable $groupBy, bool $preserveKeys = false): Collection
     {
         $this->working = ArrayMulti::groupBy($this->working, $groupBy, $preserveKeys);
+
+        return $this->collection;
+    }
+
+    /**
+     * Alias of keyBy().
+     */
+    public function indexBy(string|callable $indexBy): Collection
+    {
+        $this->working = ArrayMulti::indexBy($this->working, $indexBy);
+
+        return $this->collection;
+    }
+
+    /**
+     * Keep values that exist in both arrays.
+     *
+     * @param array<array-key, mixed> $values
+     */
+    public function intersect(array $values, bool $strict = false): Collection
+    {
+        $this->working = ArraySingle::intersect($this->working, $values, $strict);
+
         return $this->collection;
     }
 
@@ -154,6 +231,16 @@ class Pipeline
     }
 
     /**
+     * Key rows by a derived key (last write wins on duplicates).
+     */
+    public function keyBy(string|callable $keyBy): Collection
+    {
+        $this->working = ArrayMulti::keyBy($this->working, $keyBy);
+
+        return $this->collection;
+    }
+
+    /**
      * Return the last item in a 2D array, or single-dim array, depending on usage.
      */
     public function last(?callable $callback = null, mixed $default = null): mixed
@@ -167,7 +254,34 @@ class Pipeline
     public function map(callable $callback): Collection
     {
         $this->working = ArraySingle::map($this->working, $callback);
+
         return $this->collection;
+    }
+
+    /**
+     * Transform items and return a key/value map from callback results.
+     */
+    public function mapWithKeys(callable $callback): Collection
+    {
+        $this->working = ArraySingle::mapWithKeys($this->working, $callback);
+
+        return $this->collection;
+    }
+
+    /**
+     * Return the maximum numeric value.
+     */
+    public function max(string|callable|null $keyOrCallback = null): float|int|null
+    {
+        return $this->numericAggregate($keyOrCallback, pickMax: true);
+    }
+
+    /**
+     * Return the item/row with the maximum callback score.
+     */
+    public function maxBy(string|callable $keyOrCallback): mixed
+    {
+        return $this->selectExtremeBy($keyOrCallback, pickMax: true);
     }
 
     /** Return the statistical median – TERMINATES chain (scalar) */
@@ -176,7 +290,38 @@ class Pipeline
         return ArraySingle::median($this->working);
     }
 
+    /**
+     * Recursively merge while keeping scalar collisions distinct (override wins).
+     *
+     * @param array<array-key, mixed> $overlay
+     */
+    public function mergeRecursiveDistinct(array $overlay): Collection
+    {
+        $this->working = ArrayMulti::mergeRecursiveDistinct($this->working, $overlay);
+
+        return $this->collection;
+    }
+
+    /**
+     * Return the minimum numeric value.
+     */
+    public function min(string|callable|null $keyOrCallback = null): float|int|null
+    {
+        return $this->numericAggregate($keyOrCallback, pickMax: false);
+    }
+
+    /**
+     * Return the item/row with the minimum callback score.
+     */
+    public function minBy(string|callable $keyOrCallback): mixed
+    {
+        return $this->selectExtremeBy($keyOrCallback, pickMax: false);
+    }
+
     /** Return the statistical mode(s) – TERMINATES chain (array) */
+    /**
+     * @return array<array-key, mixed>
+     */
     public function mode(): array
     {
         return ArraySingle::mode($this->working);
@@ -188,6 +333,7 @@ class Pipeline
     public function nth(int $step, int $offset = 0): Collection
     {
         $this->working = ArraySingle::nth($this->working, $step, $offset);
+
         return $this->collection;
     }
 
@@ -200,10 +346,25 @@ class Pipeline
     /**
      * Keep only certain keys in the array, using ArraySingle::only.
      * (Typically relevant if the array is associative 1D.)
+     *
+     * @param array<int, string|int>|string $keys
      */
     public function only(array|string $keys): Collection
     {
         $this->working = ArraySingle::only($this->working, $keys);
+
+        return $this->collection;
+    }
+
+    /**
+     * Overlay another array on top of current data (distinct recursive merge).
+     *
+     * @param array<array-key, mixed> $overlay
+     */
+    public function overlay(array $overlay): Collection
+    {
+        $this->working = ArrayMulti::overlay($this->working, $overlay);
+
         return $this->collection;
     }
 
@@ -213,6 +374,7 @@ class Pipeline
     public function paginate(int $page, int $perPage): Collection
     {
         $this->working = ArraySingle::paginate($this->working, $page, $perPage);
+
         return $this->collection;
     }
 
@@ -222,17 +384,19 @@ class Pipeline
     public function partition(callable $callback): Collection
     {
         $this->working = ArraySingle::partition($this->working, $callback);
+
         return $this->collection;
     }
 
     /**
      * Pipe the working array through a callback, replacing it with whatever you return.
      *
-     * @param callable $callback  fn(array $working): array
+     * @param callable(array<array-key, mixed>): array<array-key, mixed> $callback
      */
     public function pipe(callable $callback): Collection
     {
         $this->working = $callback($this->working);
+
         return $this->collection;
     }
 
@@ -240,6 +404,7 @@ class Pipeline
     public function pluck(string $column, ?string $indexBy = null): Collection
     {
         $this->working = ArrayMulti::pluck($this->working, $column, $indexBy);
+
         return $this->collection;
     }
 
@@ -257,7 +422,42 @@ class Pipeline
     public function reject(mixed $callback = true): Collection
     {
         $this->working = ArraySingle::reject($this->working, $callback);
+
         return $this->collection;
+    }
+
+    /**
+     * Rename keys using a map or callback.
+     *
+     * @param array<array-key, int|string>|callable $mapper
+     */
+    public function rekey(array|callable $mapper): Collection
+    {
+        $this->working = ArraySingle::rekey($this->working, $mapper);
+
+        return $this->collection;
+    }
+
+    /**
+     * Recursively replace values.
+     *
+     * @param array<array-key, mixed> $replacements
+     */
+    public function replaceRecursive(array $replacements): Collection
+    {
+        $this->working = ArrayMulti::replaceRecursive($this->working, $replacements);
+
+        return $this->collection;
+    }
+
+    /**
+     * Determine if the working set has the same values as another array.
+     *
+     * @param array<array-key, mixed> $values
+     */
+    public function same(array $values, bool $strict = false): bool
+    {
+        return ArraySingle::same($this->working, $values, $strict);
     }
 
     /**
@@ -266,6 +466,7 @@ class Pipeline
     public function shuffle(?int $seed = null): Collection
     {
         $this->working = ArraySingle::shuffle($this->working, $seed);
+
         return $this->collection;
     }
 
@@ -275,6 +476,7 @@ class Pipeline
     public function skip(int $count): Collection
     {
         $this->working = ArraySingle::skip($this->working, $count);
+
         return $this->collection;
     }
 
@@ -284,6 +486,7 @@ class Pipeline
     public function skipUntil(callable $callback): Collection
     {
         $this->working = ArraySingle::skipUntil($this->working, $callback);
+
         return $this->collection;
     }
 
@@ -293,6 +496,7 @@ class Pipeline
     public function skipWhile(callable $callback): Collection
     {
         $this->working = ArraySingle::skipWhile($this->working, $callback);
+
         return $this->collection;
     }
 
@@ -302,6 +506,7 @@ class Pipeline
     public function slice(int $offset, ?int $length = null): Collection
     {
         $this->working = ArraySingle::slice($this->working, $offset, $length);
+
         return $this->collection;
     }
 
@@ -311,6 +516,7 @@ class Pipeline
     public function sortBy(string|callable $by, bool $desc = false, int $options = SORT_REGULAR): Collection
     {
         $this->working = ArrayMulti::sortBy($this->working, $by, $desc, $options);
+
         return $this->collection;
     }
 
@@ -320,6 +526,7 @@ class Pipeline
     public function sortRecursive(int $options = SORT_REGULAR, bool $descending = false): Collection
     {
         $this->working = ArrayMulti::sortRecursive($this->working, $options, $descending);
+
         return $this->collection;
     }
 
@@ -339,13 +546,26 @@ class Pipeline
     }
 
     /**
+     * Keep values that exist in either array but not both.
+     *
+     * @param array<array-key, mixed> $values
+     */
+    public function symmetricDiff(array $values, bool $strict = false): Collection
+    {
+        $this->working = ArraySingle::symmetricDiff($this->working, $values, $strict);
+
+        return $this->collection;
+    }
+
+    /**
      * Tap into the current working array for side-effects (debug/log), then continue.
      *
-     * @param callable $callback  fn(array $working): void
+     * @param callable $callback fn(array $working): void
      */
     public function tap(callable $callback): Collection
     {
         $callback($this->working);
+
         return $this->collection;
     }
 
@@ -353,6 +573,7 @@ class Pipeline
     public function transpose(): Collection
     {
         $this->working = ArrayMulti::transpose($this->working);
+
         return $this->collection;
     }
 
@@ -362,6 +583,7 @@ class Pipeline
     public function unique(bool $strict = false): Collection
     {
         $this->working = ArraySingle::unique($this->working, $strict);
+
         return $this->collection;
     }
 
@@ -370,7 +592,7 @@ class Pipeline
      */
     public function unless(bool $condition, callable $callback, ?callable $default = null): Collection
     {
-        return $this->when(! $condition, $callback, $default);
+        return $this->when(!$condition, $callback, $default);
     }
 
     /**
@@ -378,18 +600,27 @@ class Pipeline
      */
     public function unWrap(): Collection
     {
-        // Might produce a non-array, so up to you if you want to store that as $working...
         $unwrapped = BaseArrayHelper::unWrap($this->working);
-        // If $unwrapped is not array, we store it as a single-element array to keep chain consistent
         $this->working = is_array($unwrapped) ? $unwrapped : [$unwrapped];
+
+        return $this->collection;
+    }
+
+    /**
+     * Reindex the working set numerically.
+     */
+    public function values(): Collection
+    {
+        $this->working = ArraySingle::values($this->working);
+
         return $this->collection;
     }
 
     /**
      * Conditionally apply one of two callbacks based on $condition.
      *
-     * @param callable      $callback  fn(array $working): array
-     * @param callable|null $default   fn(array $working): array
+     * @param callable(array<array-key, mixed>): array<array-key, mixed> $callback
+     * @param callable(array<array-key, mixed>): array<array-key, mixed>|null $default
      */
     public function when(bool $condition, callable $callback, ?callable $default = null): Collection
     {
@@ -398,6 +629,7 @@ class Pipeline
         } elseif ($default) {
             $this->working = $default($this->working);
         }
+
         return $this->collection;
     }
 
@@ -407,6 +639,7 @@ class Pipeline
     public function where(string $key, mixed $operator = null, mixed $value = null): Collection
     {
         $this->working = ArrayMulti::where($this->working, $key, $operator, $value);
+
         return $this->collection;
     }
 
@@ -415,25 +648,33 @@ class Pipeline
      */
     public function whereCallback(?callable $callback = null, mixed $default = null): Collection
     {
-        $this->working = ArrayMulti::whereCallback($this->working, $callback, $default);
+        $result = ArrayMulti::whereCallback($this->working, $callback, $default);
+        $this->working = is_array($result) ? $result : [$result];
+
         return $this->collection;
     }
 
     /**
      * Filter rows where "column" matches one of the given values.
+     *
+     * @param array<array-key, mixed> $values
      */
     public function whereIn(string $key, array $values, bool $strict = false): Collection
     {
         $this->working = ArrayMulti::whereIn($this->working, $key, $values, $strict);
+
         return $this->collection;
     }
 
     /**
      * Filter rows where "column" is not in the given values.
+     *
+     * @param array<array-key, mixed> $values
      */
     public function whereNotIn(string $key, array $values, bool $strict = false): Collection
     {
         $this->working = ArrayMulti::whereNotIn($this->working, $key, $values, $strict);
+
         return $this->collection;
     }
 
@@ -443,6 +684,7 @@ class Pipeline
     public function whereNotNull(string $key): Collection
     {
         $this->working = ArrayMulti::whereNotNull($this->working, $key);
+
         return $this->collection;
     }
 
@@ -452,6 +694,7 @@ class Pipeline
     public function whereNull(string $key): Collection
     {
         $this->working = ArrayMulti::whereNull($this->working, $key);
+
         return $this->collection;
     }
 
@@ -461,7 +704,40 @@ class Pipeline
     public function wrap(): Collection
     {
         $this->working = BaseArrayHelper::wrap($this->working);
+
         return $this->collection;
     }
 
+    private function numericAggregate(string|callable|null $keyOrCallback, bool $pickMax): float|int|null
+    {
+        if ($keyOrCallback === null) {
+            return $pickMax ? ArraySingle::max($this->working) : ArraySingle::min($this->working);
+        }
+
+        if (is_string($keyOrCallback)) {
+            return $pickMax
+                ? ArrayMulti::max($this->working, $keyOrCallback)
+                : ArrayMulti::min($this->working, $keyOrCallback);
+        }
+
+        $mapped = ArraySingle::map(
+            $this->working,
+            static fn(mixed $value, int|string $key): mixed => $keyOrCallback($value, $key),
+        );
+
+        return $pickMax ? ArraySingle::max($mapped) : ArraySingle::min($mapped);
+    }
+
+    private function selectExtremeBy(string|callable $keyOrCallback, bool $pickMax): mixed
+    {
+        if (is_string($keyOrCallback)) {
+            return $pickMax
+                ? ArrayMulti::maxBy($this->working, $keyOrCallback)
+                : ArrayMulti::minBy($this->working, $keyOrCallback);
+        }
+
+        return $pickMax
+            ? ArraySingle::maxBy($this->working, $keyOrCallback)
+            : ArraySingle::minBy($this->working, $keyOrCallback);
+    }
 }

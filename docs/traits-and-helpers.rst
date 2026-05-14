@@ -146,6 +146,14 @@ Available helpers:
 - ``collect(mixed $data = []): Collection``
 - ``chain(mixed $data): Pipeline``
 
+Namespaced alternatives are also available to avoid global symbol collisions:
+
+- ``Infocyph\ArrayKit\compare()``
+- ``Infocyph\ArrayKit\array_get()``
+- ``Infocyph\ArrayKit\array_set()``
+- ``Infocyph\ArrayKit\collect()``
+- ``Infocyph\ArrayKit\chain()``
+
 array_get / array_set
 ~~~~~~~~~~~~~~~~~~~~~
 

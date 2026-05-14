@@ -1,6 +1,6 @@
 # ArrayKit
 
-[![Security & Standards](https://github.com/infocyph/arraykit/actions/workflows/build.yml/badge.svg)](https://github.com/infocyph/arraykit/actions/workflows/build.yml)
+[![Security & Standards](https://github.com/infocyph/arraykit/actions/workflows/security-standards.yml/badge.svg)](https://github.com/infocyph/arraykit/actions/workflows/security-standards.yml)
 ![Packagist Downloads](https://img.shields.io/packagist/dt/infocyph/arraykit?color=green\&link=https%3A%2F%2Fpackagist.org%2Fpackages%2Finfocyph%2Farraykit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 ![Packagist Version](https://img.shields.io/packagist/v/infocyph/arraykit)
@@ -31,10 +31,11 @@ real-world PHP projects.
 
 | Helper              | Description                                                                                        |
 |---------------------|----------------------------------------------------------------------------------------------------|
-| **ArraySingle**     | Helpers for single-dimensional arrays (detect list/assoc, filter, paginate, duplicates, averages). |
-| **ArrayMulti**      | Helpers for multi-dimensional arrays (flatten, collapse, depth, recursive sort, filter).           |
-| **DotNotation**     | Get/set/remove values using dot keys; flatten & expand nested arrays with dot keys.                |
+| **ArraySingle**     | Helpers for single-dimensional arrays (set ops, mapWithKeys, countBy, min/max, paginate, duplicates, averages). |
+| **ArrayMulti**      | Helpers for multi-dimensional arrays (flatten, collapse, depth, keyBy/indexBy, firstWhere, recursive sort/filter). |
+| **DotNotation**     | Get/set/remove values using dot keys; wildcard support; escaped literal-dot paths; flatten & expand. |
 | **BaseArrayHelper** | Internal shared base for consistent API across helpers.                                            |
+| **ArraySharedOps**  | Internal shared operations used by `ArraySingle` and `ArrayMulti` (`each/every/partition/skip*`). |
 
 ### ➤ Config System
 
@@ -49,7 +50,7 @@ real-world PHP projects.
 
 | Class                   | Description                                                                                |
 |-------------------------|--------------------------------------------------------------------------------------------|
-| **Collection**          | OOP array wrapper implementing `ArrayAccess`, `Iterator`, `Countable`, `JsonSerializable`. |
+| **Collection**          | OOP array wrapper implementing `ArrayAccess`, `IteratorAggregate`, `Countable`, `JsonSerializable`. |
 | **HookedCollection**    | Extends `Collection` with **on-get/on-set hooks** for real-time transformation of values.  |
 | **Pipeline**            | Functional-style pipeline for chaining operations on collections.                          |
 | **BaseCollectionTrait** | Shared collection behavior.                                                                |
@@ -149,12 +150,16 @@ $user = [
 
 // Get value
 $name = DotNotation::get($user, 'profile.name'); // Alice
+$literal = DotNotation::get(['profile.name' => 'flat'], 'profile\\.name'); // flat
 
 // Set value
 DotNotation::set($user, 'profile.email', 'alice@example.com');
 
 // Flatten
 $flat = DotNotation::flatten($user);
+
+// wildcard set
+DotNotation::set($user, 'users.*.active', true);
 // [ 'profile.name' => 'Alice', 'profile.email' => 'alice@example.com' ]
 ```
 

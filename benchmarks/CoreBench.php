@@ -23,7 +23,12 @@ final class CoreBench
     private array $dot = [];
 
     private array $nested = [];
+
+    private array $queryRows = [];
+
     private array $single = [];
+
+    private array $singleAssoc = [];
 
     public function setUp(): void
     {
@@ -31,6 +36,17 @@ final class CoreBench
             10, 20, 30, 40, 50, 10, 20, 30, 99, 120, 44, 55,
             8, 15, 16, 23, 42, 7, 11, 13, 17, 19, 21, 34,
             50, 51, 52, 53, 54, 55, 56, 57,
+        ];
+
+        $this->singleAssoc = [
+            'a' => 10,
+            'b' => 20,
+            'c' => 30,
+            'd' => 40,
+            'e' => 50,
+            'f' => 60,
+            'g' => 70,
+            'h' => 80,
         ];
 
         $this->nested = [
@@ -41,6 +57,14 @@ final class CoreBench
             ['id' => 5, 'name' => 'Evan', 'scores' => [8, 8, 8]],
         ];
 
+        $this->queryRows = [
+            ['id' => 1, 'role' => 'admin'],
+            ['id' => 2, 'role' => null],
+            ['id' => 3, 'role' => 'editor'],
+            ['id' => 4],
+            ['id' => 5, 'role' => 'viewer'],
+        ];
+
         $this->dot = [
             'app' => ['name' => 'ArrayKit', 'env' => 'local'],
             'db' => [
@@ -49,6 +73,7 @@ final class CoreBench
                 'options' => ['timeout' => 5, 'ssl' => false],
             ],
             'cache' => ['driver' => 'file', 'prefix' => 'arraykit'],
+            'service.name' => 'arraykit-service',
         ];
 
         $this->config = new Config();
@@ -56,9 +81,57 @@ final class CoreBench
     }
 
     #[Subject]
+    public function benchArrayMultiEvery(): void
+    {
+        ArrayMulti::every($this->nested, static fn(array $row): bool => isset($row['id']));
+    }
+
+    #[Subject]
     public function benchArrayMultiFlatten(): void
     {
         ArrayMulti::flatten($this->nested);
+    }
+
+    #[Subject]
+    public function benchArrayMultiKeyBy(): void
+    {
+        ArrayMulti::keyBy($this->nested, 'id');
+    }
+
+    #[Subject]
+    public function benchArrayMultiSkipUntil(): void
+    {
+        ArrayMulti::skipUntil($this->nested, static fn(array $row): bool => ($row['id'] ?? 0) >= 3);
+    }
+
+    #[Subject]
+    public function benchArrayMultiWhereInNull(): void
+    {
+        ArrayMulti::whereIn($this->queryRows, 'role', [null], true);
+    }
+
+    #[Subject]
+    public function benchArraySingleCountBy(): void
+    {
+        ArraySingle::countBy($this->single);
+    }
+
+    #[Subject]
+    public function benchArraySingleNth(): void
+    {
+        ArraySingle::nth($this->single, 3, 2);
+    }
+
+    #[Subject]
+    public function benchArraySinglePartition(): void
+    {
+        ArraySingle::partition($this->singleAssoc, static fn(int $value): bool => $value >= 40);
+    }
+
+    #[Subject]
+    public function benchArraySingleSkipWhile(): void
+    {
+        ArraySingle::skipWhile($this->single, static fn(int $value): bool => $value < 50);
     }
 
     #[Subject]
@@ -71,6 +144,12 @@ final class CoreBench
     public function benchConfigGet(): void
     {
         $this->config->get('db.options.timeout');
+    }
+
+    #[Subject]
+    public function benchDotNotationEscapedKeyGet(): void
+    {
+        DotNotation::get($this->dot, 'service\\.name');
     }
 
     #[Subject]

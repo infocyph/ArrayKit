@@ -138,9 +138,45 @@ it('returns default value if key is not found', function () {
     expect(DotNotation::get($data, 'b', 'default'))->toBe('default');
 });
 
+it('returns null when key exists with null value', function () {
+    $data = ['user' => ['middle_name' => null]];
+
+    expect(DotNotation::get($data, 'user.middle_name', 'fallback'))->toBeNull();
+});
+
+it('does not treat existing value equal to default as missing', function () {
+    $data = ['app' => ['env' => 'local']];
+
+    expect(DotNotation::get($data, 'app.env', 'local'))->toBe('local');
+});
+
+it('evaluates callable default once when key path is missing', function () {
+    $data = ['app' => ['name' => 'ArrayKit']];
+    $calls = 0;
+
+    $value = DotNotation::get($data, 'app.env.current', function () use (&$calls) {
+        $calls++;
+
+        return 'fallback';
+    });
+
+    expect($value)->toBe('fallback')
+        ->and($calls)->toBe(1);
+});
+
 it('returns string defaults as-is when key is not found', function () {
     $data = [];
     expect(DotNotation::get($data, 'missing.key', 'file'))->toBe('file');
+});
+
+it('supports escaped dot paths for literal dot keys', function () {
+    $data = [
+        'service.name' => 'ArrayKit',
+        'service' => ['name' => 'Nested'],
+    ];
+
+    expect(DotNotation::get($data, 'service\\.name'))->toBe('ArrayKit')
+        ->and(DotNotation::has($data, 'service\\.name'))->toBeTrue();
 });
 
 it('retrieves multiple keys when passed an array', function () {
@@ -196,6 +232,35 @@ it('fills missing keys when fill() is used', function () {
     $data = ['user' => []];
     DotNotation::fill($data, 'user.email', 'frank@example.com');
     expect($data['user']['email'])->toBe('frank@example.com');
+});
+
+it('supports escaped dot paths for set and forget', function () {
+    $data = [];
+    DotNotation::set($data, 'service\\.name', 'ArrayKit');
+
+    expect($data)->toBe(['service.name' => 'ArrayKit']);
+
+    DotNotation::forget($data, 'service\\.name');
+    expect($data)->toBe([]);
+});
+
+it('supports wildcard set and wildcard forget', function () {
+    $data = [
+        'users' => [
+            ['name' => 'Alice', 'active' => false, 'secret' => 'a'],
+            ['name' => 'Bob', 'active' => false, 'secret' => 'b'],
+        ],
+    ];
+
+    DotNotation::set($data, 'users.*.active', true);
+    DotNotation::forget($data, 'users.*.secret');
+
+    expect($data)->toBe([
+        'users' => [
+            ['name' => 'Alice', 'active' => true],
+            ['name' => 'Bob', 'active' => true],
+        ],
+    ]);
 });
 
 //

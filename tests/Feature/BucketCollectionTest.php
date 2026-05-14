@@ -24,6 +24,21 @@ it('supports iteration', function () {
     expect($keys)->toBe(['a', 'b']);
 });
 
+it('supports nested iteration without pointer side effects', function () {
+    $collection = new Collection(['a' => 1, 'b' => 2, 'c' => 3]);
+    $pairs = [];
+
+    foreach ($collection as $outerKey => $outerValue) {
+        foreach ($collection as $innerKey => $innerValue) {
+            $pairs[] = [$outerKey, $innerKey, $outerValue + $innerValue];
+        }
+    }
+
+    expect(count($pairs))->toBe(9)
+        ->and($pairs[0])->toBe(['a', 'a', 2])
+        ->and($pairs[8])->toBe(['c', 'c', 6]);
+});
+
 it('provides a merge method', function () {
     $c1 = new Collection(['a' => 1]);
     $c2 = new Collection(['b' => 2]);
@@ -42,4 +57,15 @@ it('considers null-valued keys as existing', function () {
     $collection = new Collection(['nullable' => null]);
 
     expect(isset($collection['nullable']))->toBeTrue();
+});
+
+it('supports copy and immutable snapshots', function () {
+    $collection = new Collection(['a' => 1, 'b' => 2]);
+    $copy = $collection->copy();
+    $immutable = $collection->immutable();
+
+    $collection['a'] = 99;
+
+    expect($copy->all())->toBe(['a' => 1, 'b' => 2])
+        ->and($immutable->all())->toBe(['a' => 1, 'b' => 2]);
 });

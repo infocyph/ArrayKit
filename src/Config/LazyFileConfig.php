@@ -11,8 +11,14 @@ use UnexpectedValueException;
 
 class LazyFileConfig extends Config
 {
+    /**
+     * @var array<string, bool>
+     */
     protected array $loadedNamespaces = [];
 
+    /**
+     * @param array<array-key, mixed> $items
+     */
     public function __construct(
         protected string $directory,
         protected string $extension = 'php',
@@ -24,12 +30,18 @@ class LazyFileConfig extends Config
     }
 
     #[\Override]
+    /**
+     * @return array<array-key, mixed>
+     */
     public function all(): array
     {
         throw new RuntimeException('LazyFileConfig does not support full config retrieval. At least one key is required.');
     }
 
     #[\Override]
+    /**
+     * @param string|array<array-key, mixed> $key
+     */
     public function fill(string|array $key, mixed $value = null): bool
     {
         if (is_array($key)) {
@@ -48,14 +60,13 @@ class LazyFileConfig extends Config
     }
 
     #[\Override]
+    /**
+     * @param string|int|array<int, string|int> $key
+     */
     public function forget(string|int|array $key): bool
     {
         if (is_array($key)) {
             foreach ($key as $path) {
-                if (!is_string($path) && !is_int($path)) {
-                    throw new InvalidArgumentException('Forget keys must be dot-notation strings.');
-                }
-
                 $this->forgetPath((string) $path);
             }
         } else {
@@ -66,6 +77,9 @@ class LazyFileConfig extends Config
     }
 
     #[\Override]
+    /**
+     * @param string|int|array<int, string|int>|null $key
+     */
     public function get(string|int|array|null $key = null, mixed $default = null): mixed
     {
         if ($key === null) {
@@ -83,10 +97,6 @@ class LazyFileConfig extends Config
 
             $results = [];
             foreach ($key as $path) {
-                if (!is_string($path) && !is_int($path)) {
-                    throw new InvalidArgumentException('Config keys must be dot-notation strings.');
-                }
-
                 $results[(string) $path] = $this->getPath((string) $path, $default);
             }
 
@@ -97,6 +107,9 @@ class LazyFileConfig extends Config
     }
 
     #[\Override]
+    /**
+     * @param string|array<int, string> $keys
+     */
     public function has(string|array $keys): bool
     {
         $keys = (array) $keys;
@@ -104,20 +117,13 @@ class LazyFileConfig extends Config
             return false;
         }
 
-        foreach ($keys as $path) {
-            if (!is_string($path)) {
-                return false;
-            }
-
-            if (!$this->hasPath($path)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($keys, fn($path) => $this->hasPath($path));
     }
 
     #[\Override]
+    /**
+     * @param string|array<int, string> $keys
+     */
     public function hasAny(string|array $keys): bool
     {
         $keys = (array) $keys;
@@ -125,17 +131,7 @@ class LazyFileConfig extends Config
             return false;
         }
 
-        foreach ($keys as $path) {
-            if (!is_string($path)) {
-                continue;
-            }
-
-            if ($this->hasPath($path)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($keys, fn($path) => $this->hasPath($path));
     }
 
     /**
@@ -144,6 +140,14 @@ class LazyFileConfig extends Config
     public function isLoaded(string $namespace): bool
     {
         return isset($this->loadedNamespaces[$this->normalizeNamespace($namespace)]);
+    }
+
+    /**
+     * Alias of isLoaded().
+     */
+    public function loaded(string $namespace): bool
+    {
+        return $this->isLoaded($namespace);
     }
 
     /**
@@ -157,15 +161,11 @@ class LazyFileConfig extends Config
     /**
      * Preload one or multiple top-level config namespaces.
      *
-     * @param string|array $namespaces Namespace (e.g. "db") or list of namespaces.
+     * @param string|array<int, string> $namespaces Namespace (e.g. "db") or list of namespaces.
      */
     public function preload(string|array $namespaces): static
     {
         foreach ((array) $namespaces as $namespace) {
-            if (!is_string($namespace)) {
-                throw new InvalidArgumentException('Preload namespaces must be strings.');
-            }
-
             $this->loadNamespace($this->normalizeNamespace($namespace));
         }
 
@@ -173,6 +173,31 @@ class LazyFileConfig extends Config
     }
 
     #[\Override]
+    /**
+     * @param array<array-key, mixed>|string $source
+     */
+    public function reload(array|string $source): bool
+    {
+        $this->loadedNamespaces = [];
+
+        return parent::reload($source);
+    }
+
+    #[\Override]
+    /**
+     * @param array<array-key, mixed> $items
+     */
+    public function replace(array $items): bool
+    {
+        $this->loadedNamespaces = [];
+
+        return parent::replace($items);
+    }
+
+    #[\Override]
+    /**
+     * @param string|array<array-key, mixed>|null $key
+     */
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
         if ($key === null) {
@@ -222,11 +247,19 @@ class LazyFileConfig extends Config
         $this->loadNamespace($namespace);
 
         if (!array_key_exists($namespace, $this->items)) {
-            return \isCallable($default) ? $default() : $default;
+            if ($default instanceof \Closure) {
+                return $default();
+            }
+
+            return $default;
         }
 
         if ($rest === null || $rest === '') {
             return $this->items[$namespace];
+        }
+
+        if (!is_array($this->items[$namespace])) {
+            return $default;
         }
 
         return DotNotation::get($this->items[$namespace], $rest, $default);

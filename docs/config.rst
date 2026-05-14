@@ -36,6 +36,8 @@ Important behavior:
 
 - ``loadArray()`` and ``loadFile()`` only load when config is currently empty.
 - If already loaded, they return ``false`` and do not overwrite existing items.
+- ``replace()`` always replaces in-memory config items.
+- ``reload()`` replaces from array or readable file path.
 - Facade-based config creation is documented in :doc:`facade`.
 
 Reading Values
@@ -59,6 +61,7 @@ Reading Values
 
     $has = $config->has('app.name');                          // true
     $hasAny = $config->hasAny(['missing.path', 'queue.driver']); // true
+    $required = $config->getOrFail('app.name');               // throws if missing
 
 Writing Values
 --------------
@@ -207,6 +210,7 @@ Rules:
     $config->preload(['db', 'cache']);
 
     $loaded = $config->loadedNamespaces(); // ['db', 'cache']
+    $isLoaded = $config->loaded('db');     // alias of isLoaded()
 
 Important behavior:
 
@@ -214,6 +218,7 @@ Important behavior:
 - ``all()`` is intentionally disabled and throws.
 - Namespace file must return an array.
 - Missing namespace file returns the provided default.
+- ``replace()`` and ``reload()`` reset resolved-namespace tracking.
 
 Method Summary
 --------------
@@ -222,15 +227,18 @@ Config methods:
 
 - ``loadFile()``, ``loadArray()``, ``all()``
 - ``get()``, ``has()``, ``hasAny()``
+- ``getOrFail()``
 - ``set()``, ``fill()``, ``forget()``
 - ``prepend()``, ``append()``
+- ``replace()``, ``reload()``
 
 LazyFileConfig methods:
 
 - ``get()`` (requires key)
 - ``has()``, ``hasAny()``
 - ``set()``, ``fill()``, ``forget()``
-- ``preload()``, ``isLoaded()``, ``loadedNamespaces()``
+- ``preload()``, ``isLoaded()``, ``loaded()``, ``loadedNamespaces()``
+- ``replace()``, ``reload()``
 - ``all()`` (throws by design)
 
 Hook-aware methods (Config and LazyFileConfig):

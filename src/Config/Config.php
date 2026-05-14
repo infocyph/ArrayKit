@@ -22,6 +22,8 @@ class Config
 
     /**
      * Hook-aware variant of fill().
+     *
+     * @param string|array<array-key, mixed> $key
      */
     public function fillWithHooks(string|array $key, mixed $value = null): bool
     {
@@ -41,16 +43,26 @@ class Config
 
     /**
      * Hook-aware variant of get().
+     *
+     * @param int|string|array<int, string|int>|null $key
      */
     public function getWithHooks(int|string|array|null $key = null, mixed $default = null): mixed
     {
         $value = $this->get($key, $default);
 
         if (is_array($key)) {
+            if (!is_array($value)) {
+                return $value;
+            }
+
             foreach ($value as $path => $entry) {
                 $value[$path] = $this->processValue($path, $entry, 'get');
             }
 
+            return $value;
+        }
+
+        if ($key === null) {
             return $value;
         }
 
@@ -59,6 +71,8 @@ class Config
 
     /**
      * Hook-aware variant of set().
+     *
+     * @param string|array<array-key, mixed>|null $key
      */
     public function setWithHooks(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
@@ -69,6 +83,10 @@ class Config
             }
 
             return $this->set($processed, null, $overwrite);
+        }
+
+        if ($key === null) {
+            return $this->set($key, $value, $overwrite);
         }
 
         $processedValue = $this->processValue($key, $value, 'set');
