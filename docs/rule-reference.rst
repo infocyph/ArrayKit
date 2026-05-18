@@ -114,7 +114,6 @@ Helper Functions
 
     // Optional globals (manual include of src/functions.php)
     function compare(mixed $retrieved, mixed $value, ?string $operator = null): bool
-    function isCallable(mixed $value): bool
     function array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed
     function array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
     function collect(mixed $data = []): Collection

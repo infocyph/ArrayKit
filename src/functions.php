@@ -5,6 +5,12 @@ declare(strict_types=1);
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Collection\Pipeline;
 
+use function Infocyph\ArrayKit\array_get as arraykit_array_get;
+use function Infocyph\ArrayKit\array_set as arraykit_array_set;
+use function Infocyph\ArrayKit\chain as arraykit_chain;
+use function Infocyph\ArrayKit\collect as arraykit_collect;
+use function Infocyph\ArrayKit\compare as arraykit_compare;
+
 // Optional global helpers:
 // this file is intentionally not autoloaded by default to avoid global symbol pressure.
 
@@ -22,26 +28,7 @@ if (!function_exists('compare')) {
      */
     function compare(mixed $retrieved, mixed $value, ?string $operator = null): bool
     {
-        return match ($operator) {
-            '!=', '<>', 'ne' => $retrieved != $value,
-            '<', 'lt' => $retrieved < $value,
-            '>', 'gt' => $retrieved > $value,
-            '<=', 'lte' => $retrieved <= $value,
-            '>=', 'gte' => $retrieved >= $value,
-            '===' => $retrieved === $value,
-            '!==' => $retrieved !== $value,
-            default => $retrieved == $value,
-        };
-    }
-}
-
-if (!function_exists('isCallable')) {
-    /**
-     * Determine if the given value is callable(but not a string).
-     */
-    function isCallable(mixed $value): bool
-    {
-        return !is_string($value) && is_callable($value);
+        return arraykit_compare($retrieved, $value, $operator);
     }
 }
 
@@ -61,7 +48,7 @@ if (!function_exists('array_get')) {
      */
     function array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed
     {
-        return Infocyph\ArrayKit\Array\DotNotation::get($array, $key, $default);
+        return arraykit_array_get($array, $key, $default);
     }
 }
 
@@ -81,7 +68,7 @@ if (!function_exists('array_set')) {
      */
     function array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
     {
-        return Infocyph\ArrayKit\Array\DotNotation::set($array, $key, $value, $overwrite);
+        return arraykit_array_set($array, $key, $value, $overwrite);
     }
 }
 if (!function_exists('collect')) {
@@ -92,7 +79,7 @@ if (!function_exists('collect')) {
      */
     function collect(mixed $data = []): Collection
     {
-        return Collection::make($data);
+        return arraykit_collect($data);
     }
 }
 if (!function_exists('chain')) {
@@ -103,6 +90,6 @@ if (!function_exists('chain')) {
      */
     function chain(mixed $data): Pipeline
     {
-        return Collection::make($data)->process();
+        return arraykit_chain($data);
     }
 }

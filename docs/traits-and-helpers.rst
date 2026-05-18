@@ -154,7 +154,6 @@ Namespaced helpers (autoloaded):
 Optional global helpers (manual include):
 
 - ``compare(mixed $retrieved, mixed $value, ?string $operator = null): bool``
-- ``isCallable(mixed $value): bool``
 - ``array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed``
 - ``array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool``
 - ``collect(mixed $data = []): Collection``
@@ -213,20 +212,6 @@ compare Helper
     compare(10, 10, '==='); // true
     compare('5', 5, '!=='); // true
     compare(10, 10);        // true (default ==)
-
-isCallable Helper
-~~~~~~~~~~~~~~~~~
-
-``isCallable()`` is stricter than ``is_callable()`` for strings:
-
-``isCallable()`` is part of the optional global helper file (not the default
-namespaced helper surface).
-
-.. code-block:: php
-
-    <?php
-    isCallable(fn () => true);   // true
-    isCallable('strlen');        // false
 
 When to Use These Helpers
 -------------------------

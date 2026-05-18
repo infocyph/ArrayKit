@@ -23,7 +23,8 @@ it('keeps global helper declarations guarded in optional file', function () {
         ->and($source)->toContain("if (!function_exists('array_get'))")
         ->and($source)->toContain("if (!function_exists('array_set'))")
         ->and($source)->toContain("if (!function_exists('collect'))")
-        ->and($source)->toContain("if (!function_exists('chain'))");
+        ->and($source)->toContain("if (!function_exists('chain'))")
+        ->and($source)->not->toContain("if (!function_exists('isCallable'))");
 });
 
 it('provides namespaced helper alternatives', function () {
