@@ -4,13 +4,23 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit;
 
+use Infocyph\ArrayKit\Array\DotNotation;
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Collection\Pipeline;
 
 if (!function_exists(__NAMESPACE__ . '\\compare')) {
     function compare(mixed $retrieved, mixed $value, ?string $operator = null): bool
     {
-        return \compare($retrieved, $value, $operator);
+        return match ($operator) {
+            '!=', '<>', 'ne' => $retrieved != $value,
+            '<', 'lt' => $retrieved < $value,
+            '>', 'gt' => $retrieved > $value,
+            '<=', 'lte' => $retrieved <= $value,
+            '>=', 'gte' => $retrieved >= $value,
+            '===' => $retrieved === $value,
+            '!==' => $retrieved !== $value,
+            default => $retrieved == $value,
+        };
     }
 }
 
@@ -21,7 +31,7 @@ if (!function_exists(__NAMESPACE__ . '\\array_get')) {
      */
     function array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed
     {
-        return \array_get($array, $key, $default);
+        return DotNotation::get($array, $key, $default);
     }
 }
 
@@ -32,20 +42,20 @@ if (!function_exists(__NAMESPACE__ . '\\array_set')) {
      */
     function array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
     {
-        return \array_set($array, $key, $value, $overwrite);
+        return DotNotation::set($array, $key, $value, $overwrite);
     }
 }
 
 if (!function_exists(__NAMESPACE__ . '\\collect')) {
     function collect(mixed $data = []): Collection
     {
-        return \collect($data);
+        return Collection::make($data);
     }
 }
 
 if (!function_exists(__NAMESPACE__ . '\\chain')) {
     function chain(mixed $data): Pipeline
     {
-        return \chain($data);
+        return Collection::make($data)->process();
     }
 }

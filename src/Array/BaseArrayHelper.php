@@ -67,15 +67,31 @@ class BaseArrayHelper
      */
     public static function doReject(array $array, mixed $callback): array
     {
+        $results = [];
+
         if (is_callable($callback)) {
-            return array_filter(
-                $array,
-                fn($val, $key) => !$callback($val, $key),
-                ARRAY_FILTER_USE_BOTH,
-            );
+            foreach ($array as $key => $value) {
+                try {
+                    $passes = (bool) $callback($value, $key);
+                } catch (\ArgumentCountError) {
+                    $passes = (bool) $callback($value);
+                }
+
+                if (!$passes) {
+                    $results[$key] = $value;
+                }
+            }
+
+            return $results;
         }
 
-        return array_filter($array, fn($val) => $val != $callback);
+        foreach ($array as $key => $value) {
+            if ($value != $callback) {
+                $results[$key] = $value;
+            }
+        }
+
+        return $results;
     }
 
     /**

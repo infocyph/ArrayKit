@@ -31,7 +31,7 @@ Configuration storage with optional get/set hooks:
 Single facade entrypoint for modules and factories:
     :doc:`facade`
 
-DTO and hook traits plus global helper functions:
+DTO and hook traits plus helper functions:
     :doc:`traits-and-helpers`
 
 Common Workflows
@@ -42,6 +42,9 @@ Nested data access (read/write with fallback):
 .. code-block:: php
 
     <?php
+    use function Infocyph\ArrayKit\array_get;
+    use function Infocyph\ArrayKit\array_set;
+
     $user = ['profile' => ['name' => 'Alice']];
     $name = array_get($user, 'profile.name', 'Guest');
     array_set($user, 'profile.email', 'alice@example.com');
@@ -51,10 +54,21 @@ Collection transformation pipeline:
 .. code-block:: php
 
     <?php
+    use function Infocyph\ArrayKit\collect;
+
     $result = collect([1, 2, 3, 4])
         ->filter(fn ($v) => $v % 2 === 0)
         ->map(fn ($v) => $v * 10)
         ->all(); // [1 => 20, 3 => 40]
+
+Behavior Highlights
+-------------------
+
+- ``ArrayMulti::flatten($array, 0)`` keeps top-level values unchanged.
+- ``ArraySingle::avg()``, ``sum()``, ``isPositive()``, and ``isNegative()`` ignore non-numeric values.
+- ``ArraySingle::paginate()`` throws when ``page < 1`` or ``perPage < 1``.
+- ``ArrayMulti::sortBy()`` / ``sum()`` / ``maxBy()`` / ``minBy()`` callbacks support ``($row, $key)``.
+- Namespaced helper functions are autoloaded by default; global helpers are optional.
 
 Runtime configuration with hooks:
 
@@ -86,22 +100,25 @@ Exact API Signatures
 
 This appendix maps the current public API surface in ``src/`` one-to-one.
 
-Global Helper Functions
------------------------
+Helper Functions
+----------------
 
 .. code-block:: php
 
+    // Namespaced helpers (autoloaded by default)
+    function Infocyph\ArrayKit\compare(mixed $retrieved, mixed $value, ?string $operator = null): bool
+    function Infocyph\ArrayKit\array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed
+    function Infocyph\ArrayKit\array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
+    function Infocyph\ArrayKit\collect(mixed $data = []): Collection
+    function Infocyph\ArrayKit\chain(mixed $data): Pipeline
+
+    // Optional globals (manual include of src/functions.php)
     function compare(mixed $retrieved, mixed $value, ?string $operator = null): bool
     function isCallable(mixed $value): bool
     function array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed
     function array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
     function collect(mixed $data = []): Collection
     function chain(mixed $data): Pipeline
-    function Infocyph\ArrayKit\compare(mixed $retrieved, mixed $value, ?string $operator = null): bool
-    function Infocyph\ArrayKit\array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed
-    function Infocyph\ArrayKit\array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
-    function Infocyph\ArrayKit\collect(mixed $data = []): Collection
-    function Infocyph\ArrayKit\chain(mixed $data): Pipeline
 
 ArrayKit Facade
 ---------------
@@ -116,6 +133,7 @@ ArrayKit Facade
     public static function lazyConfig(string $directory, string $extension = 'php', array $items = []): LazyFileConfig
     public static function collection(mixed $data = []): Collection
     public static function hookedCollection(mixed $data = []): HookedCollection
+    public static function lazyCollection(mixed $data = []): LazyCollection
     public static function pipeline(mixed $data): Pipeline
 
 Facade ModuleProxy
@@ -133,7 +151,6 @@ BaseArrayHelper
     public static function isMultiDimensional(mixed $array): bool
     public static function wrap(mixed $value): array
     public static function unWrap(mixed $value): mixed
-    public static function unwrap(mixed $value): mixed
     public static function haveAny(array $array, callable $callback): bool
     public static function isAll(array $array, callable $callback): bool
     public static function findKey(array $array, callable $callback): int|string|null
@@ -197,6 +214,8 @@ ArraySingle
     public static function some(array $array, callable $callback): bool
     public static function every(array $array, callable $callback): bool
     public static function contains(array $array, mixed $valueOrCallback, bool $strict = false): bool
+    public static function containsAll(array $array, array $needles, bool $strict = false): bool
+    public static function containsAny(array $array, array $needles, bool $strict = false): bool
     public static function countBy(array $array, ?callable $by = null): array
     public static function sum(array $array, ?callable $callback = null): float|int
     public static function unique(array $array, bool $strict = false): array
@@ -228,15 +247,23 @@ ArrayMulti
     public static function only(array $array, array|string $keys): array
     public static function collapse(array $array): array
     public static function depth(array $array): int
+    public static function depthGuarded(array $array, int $maxDepth = 256, int $maxNodes = 100000, bool $throwOnTooDeep = false): int
     public static function flatten(array $array, float|int $depth = \INF): array
+    public static function flattenGuarded(array $array, float|int $depth = \INF, int $maxDepth = 256, int $maxNodes = 100000, bool $throwOnTooDeep = false): array
     public static function flattenByKey(array $array): array
     public static function values(array $array): array
     public static function rekey(array $array, array|callable $mapper): array
     public static function sortRecursive(array $array, int $options = \SORT_REGULAR, bool $descending = false): array
     public static function first(array $array, ?callable $callback = null, mixed $default = null): mixed
     public static function firstWhere(array $array, string $key, mixed $operator = null, mixed $value = null, mixed $default = null): mixed
+    public static function firstWhereIn(array $array, string $key, array $values, bool $strict = false, mixed $default = null): mixed
     public static function last(array $array, ?callable $callback = null, mixed $default = null): mixed
     public static function between(array $array, string $key, float|int $from, float|int $to): array
+    public static function whereBetween(array $array, string $key, float|int $from, float|int $to): array
+    public static function whereLike(array $array, string $key, string $pattern, bool $caseSensitive = false): array
+    public static function whereStartsWith(array $array, string $key, string $prefix, bool $caseSensitive = true): array
+    public static function whereEndsWith(array $array, string $key, string $suffix, bool $caseSensitive = true): array
+    public static function whereContains(array $array, string $key, string $needle, bool $caseSensitive = true): array
     public static function whereCallback(array $array, ?callable $callback = null, mixed $default = null): mixed
     public static function where(array $array, string $key, mixed $operator = null, mixed $value = null): array
     public static function chunk(array $array, int $size, bool $preserveKeys = false): array
@@ -247,6 +274,8 @@ ArrayMulti
     public static function every(array $array, callable $callback): bool
     public static function contains(array $array, mixed $valueOrCallback, bool $strict = false): bool
     public static function unique(array $array, bool $strict = false): array
+    public static function uniqueBy(array $array, string|callable $keyOrCallback, bool $strict = false): array
+    public static function duplicatesBy(array $array, string|callable $keyOrCallback, bool $strict = false): array
     public static function reject(array $array, mixed $callback = true): array
     public static function partition(array $array, callable $callback): array
     public static function skip(array $array, int $count): array
@@ -268,11 +297,20 @@ ArrayMulti
     public static function mapWithKeys(array $array, callable $callback): array
     public static function sortBy(array $array, string|callable $by, bool $desc = false, int $options = \SORT_REGULAR): array
     public static function sortByDesc(array $array, string|callable $by, int $options = \SORT_REGULAR): array
+    public static function sortByMany(array $array, array $criteria): array
+    public static function sortRecursiveGuarded(array $array, int $options = \SORT_REGULAR, bool $descending = false, int $maxDepth = 256, int $maxNodes = 100000, bool $throwOnTooDeep = false): array
     public static function transpose(array $matrix): array
     public static function pluck(array $array, string $column, ?string $indexBy = null): array
     public static function mergeRecursiveDistinct(array $base, array $overrides): array
     public static function replaceRecursive(array $base, array $replacements): array
     public static function overlay(array $base, array $overlay): array
+
+ArrayShape
+-------------------------------
+
+.. code-block:: php
+
+    public static function require(array $row, array $shape): array
 
 DotNotation
 -----------------------------------
@@ -283,10 +321,16 @@ DotNotation
     public static function expand(array $array): array
     public static function has(array $array, array|string $keys): bool
     public static function hasAny(array $array, array|string $keys): bool
+    public static function hasWildcard(string $path): bool
+    public static function paths(array $array): array
+    public static function matches(array $array, string $path): bool
     public static function get(array $array, array|int|string|null $keys = null, mixed $default = null): mixed
+    public static function getSafe(array $array, array|int|string|null $keys = null, mixed $default = null, int $maxDepth = 256, int $maxNodes = 100000, bool $throwOnTooDeep = false): mixed
     public static function set(array &$array, array|string|null $keys = null, mixed $value = null, bool $overwrite = true): bool
     public static function fill(array &$array, array|string $keys, mixed $value = null): void
     public static function forget(array &$target, array|string|int|null $keys): void
+    public static function rename(array &$array, string $from, string $to, bool $overwrite = true): bool
+    public static function move(array &$array, string $from, string $to, bool $overwrite = true): bool
     public static function string(array $array, string $key, mixed $default = null): string
     public static function integer(array $array, string $key, mixed $default = null): int
     public static function float(array $array, string $key, mixed $default = null): float
@@ -313,6 +357,8 @@ Collection uses ``BaseCollectionTrait``. Public API:
     public function __call(string $method, array $arguments): mixed
     public function __invoke(): array
     public function process(): Pipeline
+    public function immutableProcess(): Pipeline
+    public function pipeImmutable(): Pipeline
     public function get(string|array $keys): mixed
     public function has(string|array $keys): bool
     public function hasAny(string|array $keys): bool
@@ -395,7 +441,13 @@ Pipeline
     public function keyBy(string|callable $keyBy): Collection
     public function indexBy(string|callable $indexBy): Collection
     public function between(string $key, float|int $from, float|int $to): Collection
+    public function whereBetween(string $key, float|int $from, float|int $to): Collection
+    public function whereLike(string $key, string $pattern, bool $caseSensitive = false): Collection
+    public function whereStartsWith(string $key, string $prefix, bool $caseSensitive = true): Collection
+    public function whereEndsWith(string $key, string $suffix, bool $caseSensitive = true): Collection
+    public function whereContains(string $key, string $needle, bool $caseSensitive = true): Collection
     public function firstWhere(string $key, mixed $operator = null, mixed $value = null, mixed $default = null): mixed
+    public function firstWhereIn(string $key, array $values, bool $strict = false, mixed $default = null): mixed
     public function whereCallback(?callable $callback = null, mixed $default = null): Collection
     public function where(string $key, mixed $operator = null, mixed $value = null): Collection
     public function whereIn(string $key, array $values, bool $strict = false): Collection
@@ -403,10 +455,10 @@ Pipeline
     public function whereNull(string $key): Collection
     public function whereNotNull(string $key): Collection
     public function sortBy(string|callable $by, bool $desc = false, int $options = SORT_REGULAR): Collection
+    public function sortByMany(array $criteria): Collection
     public function isMultiDimensional(): bool
     public function wrap(): Collection
     public function unWrap(): Collection
-    public function unwrap(): Collection
     public function shuffle(?int $seed = null): Collection
     public function sum(?callable $callback = null): float|int
     public function min(string|callable|null $keyOrCallback = null): float|int|null
@@ -423,6 +475,8 @@ Pipeline
     public function maxBy(string|callable $keyOrCallback): mixed
     public function pluck(string $column, ?string $indexBy = null): Collection
     public function transpose(): Collection
+    public function uniqueBy(string|callable $keyOrCallback, bool $strict = false): Collection
+    public function duplicatesBy(string|callable $keyOrCallback, bool $strict = false): Collection
     public function mergeRecursiveDistinct(array $overlay): Collection
     public function replaceRecursive(array $replacements): Collection
     public function overlay(array $overlay): Collection
@@ -445,6 +499,13 @@ Config uses ``BaseConfigTrait``. Public API:
     public function hasAny(string|array $keys): bool
     public function get(string|int|array|null $key = null, mixed $default = null): mixed
     public function getOrFail(string|int|array|null $key): mixed
+    public function getString(string|int|array|null $key, ?string $default = null): ?string
+    public function getInt(string|int|array|null $key, ?int $default = null): ?int
+    public function getFloat(string|int|array|null $key, ?float $default = null): ?float
+    public function getBool(string|int|array|null $key, ?bool $default = null): ?bool
+    public function getArray(string|int|array|null $key, ?array $default = null): ?array
+    public function getList(string|int|array|null $key, ?array $default = null): ?array
+    public function getEnum(string|int|array|null $key, string $enumClass, ?\UnitEnum $default = null): ?\UnitEnum
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     public function fill(string|array $key, mixed $value = null): bool
     public function forget(string|int|array $key): bool
@@ -452,6 +513,13 @@ Config uses ``BaseConfigTrait``. Public API:
     public function append(string $key, mixed $value): bool
     public function replace(array $items): bool
     public function reload(array|string $source): bool
+    public function merge(array $items): bool
+    public function overlay(array $overlay): bool
+    public function snapshot(string $name = 'default'): bool
+    public function restore(string $name = 'default'): bool
+    public function changed(string $snapshot = 'default'): bool
+    public function readonly(bool $enabled = true): static
+    public function isReadonly(): bool
 
 LazyFileConfig
 --------------------------------------
@@ -492,7 +560,11 @@ DTOTrait
 
     public static function create(array $values): static
     public function fromArray(array $values): static
+    public function hydrate(array $values, array $mapping = [], bool $coerce = false): static
+    public function hydrateNested(array $values, array $mapping = [], bool $coerce = false): static
     public function toArray(): array
+    public function toArrayDeep(): array
+    public function replaceFromArray(array $values, array $mapping = [], bool $coerce = false): static
 
 HookTrait
 ----------------------------------
@@ -501,3 +573,34 @@ HookTrait
 
     public function onGet(string $offset, callable $callback): static
     public function onSet(string $offset, callable $callback): static
+
+LazyCollection
+----------------------------------
+
+.. code-block:: php
+
+    public static function from(iterable $source): self
+    public static function make(mixed $data = []): self
+    public function getIterator(): Traversable
+    public function cursor(): Generator
+    public function mapLazy(callable $callback): self
+    public function filterLazy(callable $callback): self
+    public function chunkLazy(int $size, bool $preserveKeys = false): self
+    public function take(int $limit): self
+    public function takeUntil(callable $callback): self
+    public function all(): array
+
+Laravel Compatibility
+----------------------------------
+
+.. code-block:: php
+
+    // Infocyph\ArrayKit\LaravelCompat\Arr
+    public static function get(iterable $array, string|int|array|null $key = null, mixed $default = null): mixed
+    public static function set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
+    public static function has(iterable $array, int|string|array $keys): bool
+    public static function hasAny(iterable $array, int|string|array $keys): bool
+    public static function only(iterable $array, array|string $keys): array
+    public static function except(iterable $array, array|string $keys): array
+
+    // Infocyph\ArrayKit\LaravelCompat\Collection extends Collection

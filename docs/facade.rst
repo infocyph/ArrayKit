@@ -43,6 +43,7 @@ Use these when you want object instances instead of static helpers.
 
     $collection = ArrayKit::collection([1, 2, 3]);
     $hooked = ArrayKit::hookedCollection(['name' => 'alice']);
+    $lazyCollection = ArrayKit::lazyCollection(range(1, 100));
     $pipeline = ArrayKit::pipeline([1, 2, 3, 4]);
 
 Behavior Notes

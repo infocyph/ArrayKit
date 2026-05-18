@@ -80,6 +80,16 @@ Fill vs Set
     DotNotation::fill($data, 'app.env', 'staging'); // does not overwrite
     DotNotation::fill($data, 'app.debug', true);    // writes
 
+Object properties (including null-valued properties) are treated as existing
+when filling:
+
+.. code-block:: php
+
+    <?php
+    $data = ['user' => (object) ['middle_name' => null]];
+    DotNotation::fill($data, 'user.middle_name', 'X');
+    // remains null; existing null property is not considered missing
+
 Bulk Set/Fill
 -------------
 
@@ -154,6 +164,38 @@ Wildcards and Special Segments in get()
     $first = DotNotation::get($data, 'users.{first}.name'); // Alice
     $last = DotNotation::get($data, 'users.{last}.name');   // Bob
 
+Wildcard and Path Utilities
+---------------------------
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Array\DotNotation;
+
+    $data = [
+        'users' => [
+            ['name' => 'Alice', 'email' => 'a@example.com'],
+            ['name' => 'Bob', 'email' => 'b@example.com'],
+        ],
+    ];
+
+    $hasWildcard = DotNotation::hasWildcard('users.*.email'); // true
+    $allPaths = DotNotation::paths($data); // ['users.0.name', ...]
+    $matched = DotNotation::matches($data, 'users.*.email'); // true
+
+    DotNotation::rename($data, 'users.0.name', 'users.0.full_name');
+    DotNotation::move($data, 'users.1.email', 'contacts.secondary');
+
+Safe Traversal Limits
+---------------------
+
+Use ``getSafe()`` when path traversal depth or node count must be bounded.
+
+.. code-block:: php
+
+    <?php
+    $value = DotNotation::getSafe($data, 'users.*.email', 'missing', maxDepth: 8, maxNodes: 50000);
+
 Flatten and Expand
 ------------------
 
@@ -214,6 +256,8 @@ Behavior Notes
 
 - ``get($array, null)`` returns the full array.
 - Existing keys with ``null`` values return ``null`` (not the default).
+- Existing object properties with ``null`` values are also treated as present.
+- Missing integer keys return the provided default.
 - Defaults may be plain values or callables, and callables are only evaluated when path resolution fails.
 - Wildcard traversal in ``get`` returns arrays of matched results.
 - ``set`` supports wildcard paths when wildcard is the first segment.

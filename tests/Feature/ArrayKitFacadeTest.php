@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Collection\HookedCollection;
+use Infocyph\ArrayKit\Collection\LazyCollection;
 use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
 use Infocyph\ArrayKit\Facade\ModuleProxy;
@@ -90,9 +91,12 @@ it('creates lazy config instances from the facade', function () {
 it('creates collection and pipeline helpers from the facade', function () {
     $collection = ArrayKit::collection([1, 2, 3]);
     $hooked = ArrayKit::hookedCollection(['name' => 'alice']);
+    $lazy = ArrayKit::lazyCollection([1, 2, 3]);
     $sum = ArrayKit::pipeline([1, 2, 3])->sum();
 
     expect($collection)->toBeInstanceOf(Collection::class)
         ->and($hooked)->toBeInstanceOf(HookedCollection::class)
+        ->and($lazy)->toBeInstanceOf(LazyCollection::class)
+        ->and($lazy->mapLazy(fn (int $v) => $v * 2)->all())->toBe([2, 4, 6])
         ->and($sum)->toBe(6);
 });

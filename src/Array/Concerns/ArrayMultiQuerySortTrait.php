@@ -6,6 +6,9 @@ namespace Infocyph\ArrayKit\Array\Concerns;
 
 use Infocyph\ArrayKit\Array\ArraySharedOps;
 use Infocyph\ArrayKit\Array\ArraySingle;
+use Infocyph\ArrayKit\Array\ArraySingleOps;
+
+use function Infocyph\ArrayKit\compare;
 
 trait ArrayMultiQuerySortTrait
 {
@@ -17,13 +20,19 @@ trait ArrayMultiQuerySortTrait
      */
     public static function between(array $array, string $key, float|int $from, float|int $to): array
     {
-        return array_filter(
-            $array,
-            static fn(mixed $item): bool => is_array($item)
+        $results = [];
+        foreach ($array as $index => $item) {
+            if (
+                is_array($item)
                 && ArraySingle::exists($item, $key)
                 && compare($item[$key], $from, '>=')
-                && compare($item[$key], $to, '<='),
-        );
+                && compare($item[$key], $to, '<=')
+            ) {
+                $results[$index] = $item;
+            }
+        }
+
+        return $results;
     }
 
     /**
@@ -46,6 +55,17 @@ trait ArrayMultiQuerySortTrait
         }
 
         return $counts;
+    }
+
+    /**
+     * Return duplicate rows by derived key (first duplicate occurrence onward).
+     *
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    public static function duplicatesBy(array $array, string|callable $keyOrCallback, bool $strict = false): array
+    {
+        return self::collectByDerivedKey($array, $keyOrCallback, $strict, keepDuplicates: true);
     }
 
     /**
@@ -72,6 +92,28 @@ trait ArrayMultiQuerySortTrait
                 && ArraySingle::exists($row, $key)
                 && compare($row[$key], $value, $operator)
             ) {
+                return $row;
+            }
+        }
+
+        return $default;
+    }
+
+    /**
+     * Return the first row where a key value is in the given value set.
+     *
+     * @param array<array-key, mixed> $array
+     * @param array<array-key, mixed> $values
+     */
+    public static function firstWhereIn(array $array, string $key, array $values, bool $strict = false, mixed $default = null): mixed
+    {
+        $lookup = self::buildInLookup($values, $strict);
+        foreach ($array as $row) {
+            if (!is_array($row) || !array_key_exists($key, $row)) {
+                continue;
+            }
+
+            if (self::inLookupContains($lookup, $values, $row[$key], $strict)) {
                 return $row;
             }
         }
@@ -256,11 +298,24 @@ trait ArrayMultiQuerySortTrait
      */
     public static function reject(array $array, mixed $callback = true): array
     {
+        $results = [];
         if (is_callable($callback)) {
-            return array_filter($array, fn($row, $key) => !$callback($row, $key), \ARRAY_FILTER_USE_BOTH);
+            foreach ($array as $key => $row) {
+                if (!$callback($row, $key)) {
+                    $results[$key] = $row;
+                }
+            }
+
+            return $results;
         }
 
-        return array_filter($array, fn($row) => $row != $callback);
+        foreach ($array as $key => $row) {
+            if ($row != $callback) {
+                $results[$key] = $row;
+            }
+        }
+
+        return $results;
     }
 
     /**
@@ -276,6 +331,8 @@ trait ArrayMultiQuerySortTrait
     /**
      * Sort a 2D array by a specified column or using a callback function.
      *
+     * Callback receives ($row, $key).
+     *
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
      */
@@ -285,13 +342,36 @@ trait ArrayMultiQuerySortTrait
         bool $desc = false,
         int $options = \SORT_REGULAR,
     ): array {
+        if (is_callable($by)) {
+            $scores = [];
+            foreach ($array as $key => $row) {
+                $scores[$key] = self::invokeRowCallback($by, $row, $key);
+            }
+
+            uksort(
+                $array,
+                static function (int|string $leftKey, int|string $rightKey) use ($scores, $desc, $options): int {
+                    $comparison = self::compareSortValues(
+                        $scores[$leftKey] ?? null,
+                        $scores[$rightKey] ?? null,
+                        $options,
+                    );
+
+                    return self::applySortDirection($comparison, $desc);
+                },
+            );
+
+            return $array;
+        }
+
         uasort($array, function ($a, $b) use ($by, $desc, $options) {
-            $valA = is_callable($by) ? $by($a) : (is_array($a) ? ($a[$by] ?? null) : null);
-            $valB = is_callable($by) ? $by($b) : (is_array($b) ? ($b[$by] ?? null) : null);
+            $valA = is_array($a) ? ($a[$by] ?? null) : null;
+            $valB = is_array($b) ? ($b[$by] ?? null) : null;
 
-            $comparison = self::compareSortValues($valA, $valB, $options);
-
-            return $desc ? -$comparison : $comparison;
+            return self::applySortDirection(
+                self::compareSortValues($valA, $valB, $options),
+                $desc,
+            );
         });
 
         return $array;
@@ -304,6 +384,29 @@ trait ArrayMultiQuerySortTrait
     public static function sortByDesc(array $array, string|callable $by, int $options = \SORT_REGULAR): array
     {
         return static::sortBy($array, $by, true, $options);
+    }
+
+    /**
+     * Sort by multiple sort rules.
+     *
+     * Each criterion can be:
+     * - ['column', 'asc'|'desc', SORT_*]
+     * - [callable, 'asc'|'desc', SORT_*]
+     *
+     * @param array<array-key, mixed> $array
+     * @param array<int, array<int, mixed>> $criteria
+     * @return array<array-key, mixed>
+     */
+    public static function sortByMany(array $array, array $criteria): array
+    {
+        if ($criteria === []) {
+            return $array;
+        }
+
+        $normalized = self::normalizeSortByManyCriteria($criteria);
+        uasort($array, static fn(mixed $left, mixed $right): int => self::compareByManyCriteria($left, $right, $normalized));
+
+        return $array;
     }
 
     /**
@@ -337,18 +440,59 @@ trait ArrayMultiQuerySortTrait
     }
 
     /**
+     * Safe recursive sort with depth/node guards.
+     *
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    public static function sortRecursiveGuarded(
+        array $array,
+        int $options = \SORT_REGULAR,
+        bool $descending = false,
+        int $maxDepth = 256,
+        int $maxNodes = 100000,
+        bool $throwOnTooDeep = false,
+    ): array {
+        $visitedNodes = 0;
+
+        return self::sortRecursiveWithGuards(
+            $array,
+            $options,
+            $descending,
+            1,
+            $visitedNodes,
+            $maxDepth,
+            $maxNodes,
+            $throwOnTooDeep,
+        );
+    }
+
+    /**
      * Calculate the sum of an array of values.
+     *
+     * Callback receives ($row, $key). Non-numeric values are ignored.
      *
      * @param array<array-key, mixed> $array
      */
     public static function sum(array $array, string|callable|null $keyOrCallback = null): float|int
     {
         $total = 0;
-        foreach ($array as $row) {
-            $total += self::extractSummableValue($row, $keyOrCallback);
+        foreach ($array as $key => $row) {
+            $total += self::extractSummableValue($row, $keyOrCallback, $key);
         }
 
         return fmod($total, 1.0) === 0.0 ? (int) $total : $total;
+    }
+
+    /**
+     * Return unique rows by derived key.
+     *
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    public static function uniqueBy(array $array, string|callable $keyOrCallback, bool $strict = false): array
+    {
+        return self::collectByDerivedKey($array, $keyOrCallback, $strict, keepDuplicates: false);
     }
 
     /**
@@ -365,12 +509,29 @@ trait ArrayMultiQuerySortTrait
         }
         $operator = is_string($operator) ? $operator : null;
 
-        return array_filter(
-            $array,
-            static fn(mixed $item): bool => is_array($item)
+        $results = [];
+        foreach ($array as $index => $item) {
+            if (
+                is_array($item)
                 && ArraySingle::exists($item, $key)
-                && compare($item[$key], $value, $operator),
-        );
+                && compare($item[$key], $value, $operator)
+            ) {
+                $results[$index] = $item;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Filter rows where a key value falls inside an inclusive range.
+     *
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    public static function whereBetween(array $array, string $key, float|int $from, float|int $to): array
+    {
+        return self::between($array, $key, $from, $to);
     }
 
     /**
@@ -384,7 +545,48 @@ trait ArrayMultiQuerySortTrait
             return empty($array) ? $default : $array;
         }
 
-        return array_filter($array, static fn(mixed $item, int|string $index): bool => (bool) $callback($item, $index), \ARRAY_FILTER_USE_BOTH);
+        $results = [];
+        foreach ($array as $index => $item) {
+            if ((bool) $callback($item, $index)) {
+                $results[$index] = $item;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Filter rows where a key value contains a given substring.
+     *
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    public static function whereContains(array $array, string $key, string $needle, bool $caseSensitive = true): array
+    {
+        $match = $caseSensitive ? $needle : strtolower($needle);
+
+        return self::filterByTextMatch(
+            $array,
+            $key,
+            static fn(string $text): bool => str_contains($caseSensitive ? $text : strtolower($text), $match),
+        );
+    }
+
+    /**
+     * Filter rows where a key value ends with a given suffix.
+     *
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    public static function whereEndsWith(array $array, string $key, string $suffix, bool $caseSensitive = true): array
+    {
+        $needle = $caseSensitive ? $suffix : strtolower($suffix);
+
+        return self::filterByTextMatch(
+            $array,
+            $key,
+            static fn(string $text): bool => str_ends_with($caseSensitive ? $text : strtolower($text), $needle),
+        );
     }
 
     /**
@@ -396,12 +598,51 @@ trait ArrayMultiQuerySortTrait
      */
     public static function whereIn(array $array, string $key, array $values, bool $strict = false): array
     {
-        return array_filter(
-            $array,
-            static fn(mixed $row): bool => is_array($row)
-                && array_key_exists($key, $row)
-                && in_array($row[$key], $values, $strict),
-        );
+        $results = [];
+        $lookup = self::buildInLookup($values, $strict);
+
+        foreach ($array as $index => $row) {
+            if (!is_array($row) || !array_key_exists($key, $row)) {
+                continue;
+            }
+
+            if (self::inLookupContains($lookup, $values, $row[$key], $strict)) {
+                $results[$index] = $row;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Filter rows where a key value matches an SQL-like pattern ('%' and '_').
+     *
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    public static function whereLike(array $array, string $key, string $pattern, bool $caseSensitive = false): array
+    {
+        $quoted = preg_quote($pattern, '/');
+        $regex = '/^' . str_replace(['%', '_'], ['.*', '.'], $quoted) . '$/' . ($caseSensitive ? '' : 'i');
+        $results = [];
+
+        foreach ($array as $index => $row) {
+            if (!is_array($row) || !array_key_exists($key, $row)) {
+                continue;
+            }
+
+            $value = $row[$key];
+            if (!is_scalar($value) && $value !== null) {
+                continue;
+            }
+
+            $text = (string) $value;
+            if (preg_match($regex, $text) === 1) {
+                $results[$index] = $row;
+            }
+        }
+
+        return $results;
     }
 
     /**
@@ -413,12 +654,22 @@ trait ArrayMultiQuerySortTrait
      */
     public static function whereNotIn(array $array, string $key, array $values, bool $strict = false): array
     {
-        return array_filter(
-            $array,
-            static fn(mixed $row): bool => !is_array($row)
-                || !array_key_exists($key, $row)
-                || !in_array($row[$key], $values, $strict),
-        );
+        $results = [];
+        $lookup = self::buildInLookup($values, $strict);
+
+        foreach ($array as $index => $row) {
+            if (!is_array($row) || !array_key_exists($key, $row)) {
+                $results[$index] = $row;
+
+                continue;
+            }
+
+            if (!self::inLookupContains($lookup, $values, $row[$key], $strict)) {
+                $results[$index] = $row;
+            }
+        }
+
+        return $results;
     }
 
     /**
@@ -429,7 +680,7 @@ trait ArrayMultiQuerySortTrait
      */
     public static function whereNotNull(array $array, string $key): array
     {
-        return array_filter($array, static fn(mixed $row): bool => is_array($row) && isset($row[$key]));
+        return self::filterByNullState($array, $key, expectNull: false);
     }
 
     /**
@@ -440,13 +691,29 @@ trait ArrayMultiQuerySortTrait
      */
     public static function whereNull(array $array, string $key): array
     {
-        return array_filter(
+        return self::filterByNullState($array, $key, expectNull: true);
+    }
+
+    /**
+     * Filter rows where a key value starts with a given prefix.
+     *
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    public static function whereStartsWith(array $array, string $key, string $prefix, bool $caseSensitive = true): array
+    {
+        $needle = $caseSensitive ? $prefix : strtolower($prefix);
+
+        return self::filterByTextMatch(
             $array,
-            static fn(mixed $row): bool => is_array($row)
-                && !empty($row)
-                && array_key_exists($key, $row)
-                && $row[$key] === null,
+            $key,
+            static fn(string $text): bool => str_starts_with($caseSensitive ? $text : strtolower($text), $needle),
         );
+    }
+
+    private static function applySortDirection(int $comparison, bool $desc): int
+    {
+        return $desc ? -$comparison : $comparison;
     }
 
     private static function asNumeric(mixed $value): float
@@ -465,6 +732,117 @@ trait ArrayMultiQuerySortTrait
     private static function asString(mixed $value): string
     {
         return ArraySharedOps::asString($value);
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     * @return array<string, bool>|null
+     */
+    private static function buildInLookup(array $values, bool $strict): ?array
+    {
+        if ($strict) {
+            $lookup = [];
+            foreach ($values as $value) {
+                $lookup[ArraySingleOps::fingerprint($value, true)] = true;
+            }
+
+            return $lookup;
+        }
+
+        $lookup = [];
+        foreach ($values as $value) {
+            $fingerprint = self::looseScalarFingerprint($value);
+            if ($fingerprint === null) {
+                return null;
+            }
+
+            $lookup[$fingerprint] = true;
+        }
+
+        return $lookup;
+    }
+
+    private static function canTraverse(
+        int $currentDepth,
+        int &$visitedNodes,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+    ): bool {
+        if ($maxDepth > 0 && $currentDepth > $maxDepth) {
+            if ($throwOnTooDeep) {
+                throw new \RuntimeException('Recursive sort exceeded max depth.');
+            }
+
+            return false;
+        }
+
+        $visitedNodes++;
+        if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
+            if ($throwOnTooDeep) {
+                throw new \RuntimeException('Recursive sort exceeded max node count.');
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    private static function collectByDerivedKey(
+        array $array,
+        string|callable $keyOrCallback,
+        bool $strict,
+        bool $keepDuplicates,
+    ): array {
+        $seen = [];
+        $results = [];
+
+        foreach ($array as $index => $row) {
+            $derived = self::resolveDerivedValue($row, $keyOrCallback, $index);
+            $fingerprint = ArraySingleOps::fingerprint($derived, $strict);
+            $alreadySeen = isset($seen[$fingerprint]);
+
+            if ($keepDuplicates) {
+                if ($alreadySeen) {
+                    $results[$index] = $row;
+                } else {
+                    $seen[$fingerprint] = true;
+                }
+
+                continue;
+            }
+
+            if ($alreadySeen) {
+                continue;
+            }
+
+            $seen[$fingerprint] = true;
+            $results[$index] = $row;
+        }
+
+        return $results;
+    }
+
+    /**
+     * @param array<int, array{by:string|callable, desc:bool, options:int}> $criteria
+     */
+    private static function compareByManyCriteria(mixed $left, mixed $right, array $criteria): int
+    {
+        foreach ($criteria as $criterion) {
+            $leftValue = self::resolveSortByManyValue($left, $criterion['by'], 0);
+            $rightValue = self::resolveSortByManyValue($right, $criterion['by'], 1);
+            $comparison = self::compareSortValues($leftValue, $rightValue, $criterion['options']);
+            if ($comparison !== 0) {
+                return self::applySortDirection($comparison, $criterion['desc']);
+            }
+        }
+
+        return 0;
     }
 
     /**
@@ -492,10 +870,10 @@ trait ArrayMultiQuerySortTrait
         };
     }
 
-    private static function extractComparableValue(mixed $row, string|callable $keyOrCallback): ?float
+    private static function extractComparableValue(mixed $row, string|callable $keyOrCallback, int|string $key): ?float
     {
         if (is_callable($keyOrCallback)) {
-            $result = $keyOrCallback($row);
+            $result = self::invokeRowCallback($keyOrCallback, $row, $key);
 
             return is_numeric($result) ? (float) $result : null;
         }
@@ -507,14 +885,28 @@ trait ArrayMultiQuerySortTrait
         return null;
     }
 
-    private static function extractSummableValue(mixed $row, string|callable|null $keyOrCallback): float
+    private static function extractRowTextValue(mixed $row, string $key): ?string
+    {
+        if (!is_array($row) || !array_key_exists($key, $row)) {
+            return null;
+        }
+
+        $value = $row[$key];
+        if (!is_scalar($value) && $value !== null) {
+            return null;
+        }
+
+        return (string) $value;
+    }
+
+    private static function extractSummableValue(mixed $row, string|callable|null $keyOrCallback, int|string $key): float
     {
         if ($keyOrCallback === null) {
             return is_numeric($row) ? (float) $row : 0.0;
         }
 
         if (is_callable($keyOrCallback)) {
-            $result = $keyOrCallback($row);
+            $result = self::invokeRowCallback($keyOrCallback, $row, $key);
 
             return is_numeric($result) ? (float) $result : 0.0;
         }
@@ -526,6 +918,47 @@ trait ArrayMultiQuerySortTrait
         return 0.0;
     }
 
+    /**
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    private static function filterByNullState(array $array, string $key, bool $expectNull): array
+    {
+        $results = [];
+        foreach ($array as $index => $row) {
+            if (!is_array($row) || !array_key_exists($key, $row)) {
+                continue;
+            }
+
+            $isNull = $row[$key] === null;
+            if (($expectNull && $isNull) || (!$expectNull && !$isNull)) {
+                $results[$index] = $row;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     * @param callable(string): bool $matcher
+     * @return array<array-key, mixed>
+     */
+    private static function filterByTextMatch(array $array, string $key, callable $matcher): array
+    {
+        $results = [];
+        foreach ($array as $index => $row) {
+            $text = self::extractRowTextValue($row, $key);
+            if ($text === null || !$matcher($text)) {
+                continue;
+            }
+
+            $results[$index] = $row;
+        }
+
+        return $results;
+    }
+
     private static function formatNumericResult(?float $value): float|int|null
     {
         if ($value === null) {
@@ -535,9 +968,92 @@ trait ArrayMultiQuerySortTrait
         return fmod($value, 1.0) === 0.0 ? (int) $value : $value;
     }
 
+    /**
+     * @param array<string, bool>|null $lookup
+     * @param array<array-key, mixed> $values
+     */
+    private static function inLookupContains(?array $lookup, array $values, mixed $candidate, bool $strict): bool
+    {
+        if ($lookup !== null) {
+            if ($strict) {
+                return isset($lookup[ArraySingleOps::fingerprint($candidate, true)]);
+            }
+
+            $fingerprint = self::looseScalarFingerprint($candidate);
+
+            return $fingerprint !== null && isset($lookup[$fingerprint]);
+        }
+
+        return in_array($candidate, $values, $strict);
+    }
+
+    private static function invokeRowCallback(callable $callback, mixed $row, int|string $key): mixed
+    {
+        try {
+            return $callback($row, $key);
+        } catch (\ArgumentCountError) {
+            return $callback($row);
+        }
+    }
+
+    private static function looseScalarFingerprint(mixed $value): ?string
+    {
+        return match (true) {
+            is_int($value), is_float($value), is_bool($value), $value === null => 'numeric:' . (float) $value,
+            is_string($value) => is_numeric($value) ? 'numeric:' . (float) $value : 'string:' . $value,
+            default => null,
+        };
+    }
+
     private static function normalizeArrayKey(mixed $value): int|string
     {
         return ArraySharedOps::normalizeArrayKey($value);
+    }
+
+    /**
+     * @param array<int, array<int, mixed>> $criteria
+     * @return array<int, array{by:string|callable, desc:bool, options:int}>
+     */
+    private static function normalizeSortByManyCriteria(array $criteria): array
+    {
+        $normalized = [];
+        foreach ($criteria as $criterion) {
+            $by = $criterion[0] ?? null;
+            if (!is_string($by) && !is_callable($by)) {
+                continue;
+            }
+
+            $rawDirection = $criterion[1] ?? 'asc';
+            $direction = is_string($rawDirection) ? strtolower($rawDirection) : 'asc';
+            $desc = $direction === 'desc';
+            $options = isset($criterion[2]) && is_int($criterion[2]) ? $criterion[2] : \SORT_REGULAR;
+
+            $normalized[] = [
+                'by' => $by,
+                'desc' => $desc,
+                'options' => $options,
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private static function resolveDerivedValue(mixed $row, string|callable $keyOrCallback, int|string $index): mixed
+    {
+        if (is_callable($keyOrCallback)) {
+            return self::invokeRowCallback($keyOrCallback, $row, $index);
+        }
+
+        return is_array($row) && array_key_exists($keyOrCallback, $row) ? $row[$keyOrCallback] : null;
+    }
+
+    private static function resolveSortByManyValue(mixed $row, string|callable $by, int|string $key): mixed
+    {
+        if (is_callable($by)) {
+            return self::invokeRowCallback($by, $row, $key);
+        }
+
+        return is_array($row) ? ($row[$by] ?? null) : null;
     }
 
     /**
@@ -549,8 +1065,8 @@ trait ArrayMultiQuerySortTrait
         $bestScore = null;
         $found = false;
 
-        foreach ($array as $row) {
-            $score = self::extractComparableValue($row, $keyOrCallback);
+        foreach ($array as $key => $row) {
+            $score = self::extractComparableValue($row, $keyOrCallback, $key);
             if ($score === null) {
                 continue;
             }
@@ -572,8 +1088,8 @@ trait ArrayMultiQuerySortTrait
     {
         $selected = null;
 
-        foreach ($array as $row) {
-            $value = self::extractComparableValue($row, $keyOrCallback);
+        foreach ($array as $key => $row) {
+            $value = self::extractComparableValue($row, $keyOrCallback, $key);
             if ($value === null) {
                 continue;
             }
@@ -584,5 +1100,56 @@ trait ArrayMultiQuerySortTrait
         }
 
         return $selected;
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    private static function sortRecursiveWithGuards(
+        array $array,
+        int $options,
+        bool $descending,
+        int $currentDepth,
+        int &$visitedNodes,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+    ): array {
+        if (!self::canTraverse($currentDepth, $visitedNodes, $maxDepth, $maxNodes, $throwOnTooDeep)) {
+            return $array;
+        }
+
+        foreach ($array as &$value) {
+            if (is_array($value)) {
+                $value = self::sortRecursiveWithGuards(
+                    $value,
+                    $options,
+                    $descending,
+                    $currentDepth + 1,
+                    $visitedNodes,
+                    $maxDepth,
+                    $maxNodes,
+                    $throwOnTooDeep,
+                );
+            }
+        }
+        unset($value);
+
+        if (ArraySingle::isAssoc($array)) {
+            $descending
+                ? krsort($array, $options)
+                : ksort($array, $options);
+        } else {
+            usort(
+                $array,
+                static fn(mixed $left, mixed $right): int => self::applySortDirection(
+                    self::compareSortValues($left, $right, $options),
+                    $descending,
+                ),
+            );
+        }
+
+        return $array;
     }
 }

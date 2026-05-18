@@ -5,6 +5,9 @@ declare(strict_types=1);
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Collection\Pipeline;
 
+// Optional global helpers:
+// this file is intentionally not autoloaded by default to avoid global symbol pressure.
+
 if (!function_exists('compare')) {
     /**
      * Compare two values using a specified operator.

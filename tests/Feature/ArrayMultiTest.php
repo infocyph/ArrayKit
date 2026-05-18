@@ -23,6 +23,12 @@ it('can flatten an array by one level', function () {
     expect($result)->toBe([1, 2, [3, 4], 5]);
 });
 
+it('returns top-level values unchanged when flatten depth is zero', function () {
+    $source = [1, [2, [3, 4]], 5];
+
+    expect(ArrayMulti::flatten($source, 0))->toBe([1, [2, [3, 4]], 5]);
+});
+
 it('can get the depth of a nested array', function () {
     $source = [1, [2, [3]], 4];
     $depth  = ArrayMulti::depth($source);
@@ -330,6 +336,15 @@ it('calculates the sum from a 2D array using sum()', function () {
     expect(ArrayMulti::sum($data, 'val'))->toBe(6);
 });
 
+it('passes row key to sum callback', function () {
+    $data = [
+        2 => ['val' => 1],
+        4 => ['val' => 2],
+    ];
+
+    expect(ArrayMulti::sum($data, fn (array $row, int $key) => $row['val'] + $key))->toBe(9);
+});
+
 // partition()
 it('partitions a 2D array using partition()', function () {
     $data = [
@@ -407,6 +422,49 @@ it('supports min/max/minBy/maxBy helpers', function () {
         ->and(ArrayMulti::maxBy($rows, 'score'))->toBe(['id' => 2, 'score' => 70]);
 });
 
+it('passes row key to sortBy/maxBy/minBy callbacks', function () {
+    $rows = [
+        'z' => ['id' => 1, 'score' => 10],
+        'a' => ['id' => 2, 'score' => 20],
+    ];
+
+    $sorted = ArrayMulti::sortBy(
+        $rows,
+        fn (array $row, string $key) => $key . ':' . $row['id'],
+        false,
+        SORT_STRING,
+    );
+
+    expect(array_keys($sorted))->toBe(['a', 'z'])
+        ->and(ArrayMulti::maxBy($rows, fn (array $row, string $key) => $row['score'] + ($key === 'z' ? 100 : 0)))
+        ->toBe(['id' => 1, 'score' => 10])
+        ->and(ArrayMulti::minBy($rows, fn (array $row, string $key) => $row['score'] + ($key === 'z' ? 100 : 0)))
+        ->toBe(['id' => 2, 'score' => 20]);
+});
+
+it('supports unique() with nested arrays and objects in strict and loose modes', function () {
+    $firstObject = (object) ['id' => 1];
+    $secondObject = (object) ['id' => 1];
+
+    $rows = [
+        0 => ['id' => 1],
+        1 => ['id' => '1'],
+        2 => $firstObject,
+        3 => $secondObject,
+        4 => ['id' => 1],
+    ];
+
+    expect(ArrayMulti::unique($rows))->toBe([
+        0 => ['id' => 1],
+        2 => $firstObject,
+    ])->and(ArrayMulti::unique($rows, true))->toBe([
+        0 => ['id' => 1],
+        1 => ['id' => '1'],
+        2 => $firstObject,
+        3 => $secondObject,
+    ]);
+});
+
 it('supports values, rekey, and deep merge helpers', function () {
     $assoc = ['a' => ['v' => 1], 'b' => ['v' => 2]];
 
@@ -430,4 +488,91 @@ it('supports values, rekey, and deep merge helpers', function () {
         ))->toBe([
             'a' => ['b' => 1, 'c' => 2],
         ]);
+});
+
+it('supports uniqueBy and duplicatesBy helpers', function () {
+    $rows = [
+        ['id' => 1, 'email' => 'A@example.com'],
+        ['id' => 2, 'email' => 'a@example.com'],
+        ['id' => 3, 'email' => 'b@example.com'],
+    ];
+
+    expect(ArrayMulti::uniqueBy($rows, fn (array $row) => strtolower($row['email'])))->toBe([
+        0 => ['id' => 1, 'email' => 'A@example.com'],
+        2 => ['id' => 3, 'email' => 'b@example.com'],
+    ])->and(ArrayMulti::duplicatesBy($rows, fn (array $row) => strtolower($row['email'])))->toBe([
+        1 => ['id' => 2, 'email' => 'a@example.com'],
+    ]);
+});
+
+it('supports sortByMany with mixed sort directions', function () {
+    $rows = [
+        ['team' => 'A', 'score' => 10, 'id' => 2],
+        ['team' => 'A', 'score' => 20, 'id' => 1],
+        ['team' => 'B', 'score' => 15, 'id' => 4],
+        ['team' => 'B', 'score' => 15, 'id' => 3],
+    ];
+
+    $sorted = ArrayMulti::sortByMany($rows, [
+        ['team', 'asc'],
+        ['score', 'desc'],
+        ['id', 'asc'],
+    ]);
+
+    expect(array_values($sorted))->toBe([
+        ['team' => 'A', 'score' => 20, 'id' => 1],
+        ['team' => 'A', 'score' => 10, 'id' => 2],
+        ['team' => 'B', 'score' => 15, 'id' => 3],
+        ['team' => 'B', 'score' => 15, 'id' => 4],
+    ]);
+});
+
+it('supports whereBetween/whereLike/whereStartsWith/whereEndsWith/whereContains/firstWhereIn', function () {
+    $rows = [
+        ['id' => 1, 'name' => 'Alice Cooper', 'age' => 25, 'role' => 'admin'],
+        ['id' => 2, 'name' => 'Bob Stone', 'age' => 19, 'role' => 'editor'],
+        ['id' => 3, 'name' => 'Carol Jones', 'age' => 31, 'role' => 'viewer'],
+    ];
+
+    expect(ArrayMulti::whereBetween($rows, 'age', 20, 30))->toBe([
+        0 => ['id' => 1, 'name' => 'Alice Cooper', 'age' => 25, 'role' => 'admin'],
+    ])
+        ->and(ArrayMulti::whereLike($rows, 'name', '%Stone'))->toBe([
+            1 => ['id' => 2, 'name' => 'Bob Stone', 'age' => 19, 'role' => 'editor'],
+        ])
+        ->and(ArrayMulti::whereStartsWith($rows, 'name', 'Ali'))->toBe([
+            0 => ['id' => 1, 'name' => 'Alice Cooper', 'age' => 25, 'role' => 'admin'],
+        ])
+        ->and(ArrayMulti::whereEndsWith($rows, 'name', 'Jones'))->toBe([
+            2 => ['id' => 3, 'name' => 'Carol Jones', 'age' => 31, 'role' => 'viewer'],
+        ])
+        ->and(ArrayMulti::whereContains($rows, 'name', 'Coop'))->toBe([
+            0 => ['id' => 1, 'name' => 'Alice Cooper', 'age' => 25, 'role' => 'admin'],
+        ])
+        ->and(ArrayMulti::firstWhereIn($rows, 'role', ['viewer', 'guest']))->toBe([
+            'id' => 3,
+            'name' => 'Carol Jones',
+            'age' => 31,
+            'role' => 'viewer',
+        ]);
+});
+
+it('supports guarded depth/flatten/sort recursion limits', function () {
+    $deep = [[[['value']]]];
+
+    expect(ArrayMulti::depthGuarded($deep, maxDepth: 2, throwOnTooDeep: false))->toBe(2)
+        ->and(ArrayMulti::flattenGuarded($deep, \INF, maxDepth: 2, throwOnTooDeep: false))->toBe([])
+        ->and(ArrayMulti::sortRecursiveGuarded($deep, maxDepth: 2, throwOnTooDeep: false))
+        ->toBe($deep);
+});
+
+it('can throw when guarded recursion limits are exceeded', function () {
+    $deep = [[[['value']]]];
+
+    expect(fn () => ArrayMulti::depthGuarded($deep, maxDepth: 2, throwOnTooDeep: true))
+        ->toThrow(\RuntimeException::class)
+        ->and(fn () => ArrayMulti::flattenGuarded($deep, \INF, maxDepth: 2, throwOnTooDeep: true))
+        ->toThrow(\RuntimeException::class)
+        ->and(fn () => ArrayMulti::sortRecursiveGuarded($deep, maxDepth: 2, throwOnTooDeep: true))
+        ->toThrow(\RuntimeException::class);
 });

@@ -138,6 +138,48 @@ trait DotNotationPublicApiTrait
     }
 
     /**
+     * Safe get variant with traversal limits for deep or user-controlled data.
+     *
+     * @param array<array-key, mixed> $array
+     * @param array<int, int|string>|int|string|null $keys
+     */
+    public static function getSafe(
+        array $array,
+        array|int|string|null $keys = null,
+        mixed $default = null,
+        int $maxDepth = 256,
+        int $maxNodes = 100000,
+        bool $throwOnTooDeep = false,
+    ): mixed {
+        if ($keys === null) {
+            return $array;
+        }
+
+        if ($keys === []) {
+            return [];
+        }
+
+        if (is_array($keys)) {
+            $results = [];
+            foreach ($keys as $k) {
+                $resolvedKey = (string) $k;
+                $results[$resolvedKey] = self::getValueSafe(
+                    $array,
+                    $resolvedKey,
+                    $default,
+                    $maxDepth,
+                    $maxNodes,
+                    $throwOnTooDeep,
+                );
+            }
+
+            return $results;
+        }
+
+        return self::getValueSafe($array, $keys, $default, $maxDepth, $maxNodes, $throwOnTooDeep);
+    }
+
+    /**
      * @param array<array-key, mixed> $array
      * @param array<int, int|string>|string $keys
      */
@@ -182,6 +224,20 @@ trait DotNotationPublicApiTrait
     }
 
     /**
+     * Determine whether a path includes wildcard/special selector segments.
+     */
+    public static function hasWildcard(string $path): bool
+    {
+        foreach (self::splitPath($path) as $segment) {
+            if ($segment === '*' || $segment === '{first}' || $segment === '{last}') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param array<array-key, mixed> $array
      */
     public static function integer(array $array, string $key, mixed $default = null): int
@@ -192,6 +248,35 @@ trait DotNotationPublicApiTrait
         }
 
         return $value;
+    }
+
+    /**
+     * Determine whether a path resolves to at least one existing value.
+     *
+     * For wildcard paths, returns true if any matched result is present.
+     *
+     * @param array<array-key, mixed> $array
+     */
+    public static function matches(array $array, string $path): bool
+    {
+        if (!self::hasWildcard($path)) {
+            return self::has($array, $path);
+        }
+
+        $missing = self::missing();
+        $resolved = self::get($array, $path, $missing);
+
+        return self::containsResolvedValue($resolved, $missing);
+    }
+
+    /**
+     * Move a dot path from one key to another.
+     *
+     * @param array<array-key, mixed> $array
+     */
+    public static function move(array &$array, string $from, string $to, bool $overwrite = true): bool
+    {
+        return self::rename($array, $from, $to, $overwrite);
     }
 
     /**
@@ -227,6 +312,17 @@ trait DotNotationPublicApiTrait
     }
 
     /**
+     * Return all leaf paths from the array.
+     *
+     * @param array<array-key, mixed> $array
+     * @return array<int, string>
+     */
+    public static function paths(array $array): array
+    {
+        return array_keys(self::flatten($array));
+    }
+
+    /**
      * @param array<array-key, mixed> $array
      * @param array<int, int|string>|string $keys
      * @return array<array-key, mixed>
@@ -241,6 +337,28 @@ trait DotNotationPublicApiTrait
         }
 
         return $results;
+    }
+
+    /**
+     * Rename a dot path from one key to another.
+     *
+     * @param array<array-key, mixed> $array
+     */
+    public static function rename(array &$array, string $from, string $to, bool $overwrite = true): bool
+    {
+        if (!self::has($array, $from)) {
+            return false;
+        }
+
+        if (!$overwrite && self::has($array, $to)) {
+            return false;
+        }
+
+        $value = self::get($array, $from);
+        self::set($array, $to, $value, $overwrite);
+        self::forget($array, $from);
+
+        return true;
     }
 
     /**
@@ -296,5 +414,18 @@ trait DotNotationPublicApiTrait
         $callback($array);
 
         return $array;
+    }
+
+    private static function containsResolvedValue(mixed $value, object $missing): bool
+    {
+        if ($value === $missing) {
+            return false;
+        }
+
+        if (!is_array($value)) {
+            return true;
+        }
+
+        return array_any($value, fn($item) => self::containsResolvedValue($item, $missing));
     }
 }

@@ -11,11 +11,24 @@ final class DotNotationPathOps
      */
     public static function accessSegment(mixed $target, int|string $segment, object $missing): mixed
     {
-        return match (true) {
-            is_array($target) && ArraySingle::exists($target, $segment) => $target[$segment],
-            is_object($target) && isset($target->{$segment}) => $target->{$segment},
-            default => $missing,
-        };
+        if (is_array($target) && ArraySingle::exists($target, $segment)) {
+            return $target[$segment];
+        }
+
+        if (!is_object($target)) {
+            return $missing;
+        }
+
+        $property = (string) $segment;
+        if (!property_exists($target, $property) && !isset($target->{$property})) {
+            return $missing;
+        }
+
+        try {
+            return $target->{$property};
+        } catch (\Error) {
+            return $missing;
+        }
     }
 
     /**
@@ -61,8 +74,6 @@ final class DotNotationPathOps
     {
         /** @var array<string, array<int, string>> $cache */
         static $cache = [];
-        /** @var array<int, string> $cacheKeys */
-        static $cacheKeys = [];
         $maxEntries = 1024;
 
         if (isset($cache[$path])) {
@@ -106,12 +117,11 @@ final class DotNotationPathOps
 
         $segments[] = $current;
 
-        $cache[$path] = $segments;
-        $cacheKeys[] = $path;
-        if (count($cacheKeys) > $maxEntries) {
-            $evicted = array_shift($cacheKeys);
-            unset($cache[$evicted]);
+        if (count($cache) >= $maxEntries) {
+            $cache = [];
         }
+
+        $cache[$path] = $segments;
 
         return $segments;
     }
@@ -122,13 +132,43 @@ final class DotNotationPathOps
      * @param array<int, string> $segments
      * @param callable(mixed): mixed $defaultResolver
      */
-    public static function traverseGet(mixed $target, array $segments, mixed $default, object $missing, callable $defaultResolver): mixed
-    {
+    public static function traverseGet(
+        mixed $target,
+        array $segments,
+        mixed $default,
+        object $missing,
+        callable $defaultResolver,
+        int $maxDepth = 0,
+        int $maxNodes = 0,
+        bool $throwOnTooDeep = false,
+        int $currentDepth = 1,
+        int &$visitedNodes = 0,
+    ): mixed {
+        if ($maxDepth > 0 && $currentDepth > $maxDepth) {
+            return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max depth.');
+        }
+
+        $visitedNodes++;
+        if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
+            return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max node count.');
+        }
+
         foreach ($segments as $index => $segment) {
             unset($segments[$index]);
 
             if ($segment === '*') {
-                return self::traverseWildcard($target, $segments, $default, $missing, $defaultResolver);
+                return self::traverseWildcard(
+                    $target,
+                    $segments,
+                    $default,
+                    $missing,
+                    $defaultResolver,
+                    $maxDepth,
+                    $maxNodes,
+                    $throwOnTooDeep,
+                    $currentDepth,
+                    $visitedNodes,
+                );
             }
 
             $normalized = self::normalizeSegment($segment, $target);
@@ -157,6 +197,15 @@ final class DotNotationPathOps
             ['*', '{first}', '{last}'],
             $unescaped,
         );
+    }
+
+    private static function handleTraversalLimit(object $missing, bool $throwOnTooDeep, string $message): mixed
+    {
+        if ($throwOnTooDeep) {
+            throw new \RuntimeException($message);
+        }
+
+        return $missing;
     }
 
     /**
@@ -207,8 +256,18 @@ final class DotNotationPathOps
      * @param array<int, string> $segments
      * @param callable(mixed): mixed $defaultResolver
      */
-    private static function traverseWildcard(mixed $target, array $segments, mixed $default, object $missing, callable $defaultResolver): mixed
-    {
+    private static function traverseWildcard(
+        mixed $target,
+        array $segments,
+        mixed $default,
+        object $missing,
+        callable $defaultResolver,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+        int $currentDepth,
+        int &$visitedNodes,
+    ): mixed {
         $target = is_object($target) && method_exists($target, 'all') ? $target->all() : $target;
 
         if (!is_array($target)) {
@@ -217,7 +276,18 @@ final class DotNotationPathOps
 
         $result = [];
         foreach ($target as $item) {
-            $resolved = self::traverseGet($item, $segments, $default, $missing, $defaultResolver);
+            $resolved = self::traverseGet(
+                $item,
+                $segments,
+                $default,
+                $missing,
+                $defaultResolver,
+                $maxDepth,
+                $maxNodes,
+                $throwOnTooDeep,
+                $currentDepth + 1,
+                $visitedNodes,
+            );
             $result[] = $resolved === $missing ? $defaultResolver($default) : $resolved;
         }
         if (in_array('*', $segments, true)) {

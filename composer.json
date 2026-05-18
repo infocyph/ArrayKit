@@ -27,8 +27,7 @@
             "Infocyph\\ArrayKit\\": "src/"
         },
         "files": [
-            "src/namespaced-functions.php",
-            "src/functions.php"
+            "src/namespaced-functions.php"
         ]
     },
     "autoload-dev": {

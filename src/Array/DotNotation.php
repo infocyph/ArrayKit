@@ -80,19 +80,18 @@ class DotNotation
      */
     private static function getValue(mixed $target, int|string $key, mixed $default): mixed
     {
-        if (is_array($target) && (is_int($key) || ArraySingle::exists($target, $key))) {
-            return $target[$key];
-        }
+        return self::resolveValue($target, $key, $default);
+    }
 
-        $keyPath = (string) $key;
-        if (!str_contains($keyPath, '.') && !str_contains($keyPath, '\\')) {
-            return self::value($default);
-        }
-
-        $missing = self::missing();
-        $resolved = self::traverseGet($target, self::splitPath($keyPath), $default, $missing);
-
-        return $resolved === $missing ? self::value($default) : $resolved;
+    private static function getValueSafe(
+        mixed $target,
+        int|string $key,
+        mixed $default,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+    ): mixed {
+        return self::resolveValue($target, $key, $default, $maxDepth, $maxNodes, $throwOnTooDeep);
     }
 
     /**
@@ -128,6 +127,39 @@ class DotNotation
         }
 
         return $missing;
+    }
+
+    private static function resolveValue(
+        mixed $target,
+        int|string $key,
+        mixed $default,
+        ?int $maxDepth = null,
+        ?int $maxNodes = null,
+        bool $throwOnTooDeep = false,
+    ): mixed {
+        if (is_array($target) && ArraySingle::exists($target, $key)) {
+            return $target[$key];
+        }
+
+        $keyPath = (string) $key;
+        if (!str_contains($keyPath, '.') && !str_contains($keyPath, '\\')) {
+            return self::value($default);
+        }
+
+        $missing = self::missing();
+        $resolved = ($maxDepth === null || $maxNodes === null)
+            ? self::traverseGet($target, self::splitPath($keyPath), $default, $missing)
+            : self::traverseGetWithLimits(
+                $target,
+                self::splitPath($keyPath),
+                $default,
+                $missing,
+                $maxDepth,
+                $maxNodes,
+                $throwOnTooDeep,
+            );
+
+        return $resolved === $missing ? self::value($default) : $resolved;
     }
 
     /**
@@ -221,14 +253,15 @@ class DotNotation
     private static function setValueObject(object &$target, string $segment, array $segments, mixed $value, bool $overwrite): void
     {
         $segment = self::unescapeSegment($segment);
+        $propertyExists = property_exists($target, $segment);
 
         if (!empty($segments)) {
-            if (!isset($target->{$segment})) {
+            if (!$propertyExists) {
                 $target->{$segment} = [];
             }
             self::setValueBySegments($target->{$segment}, $segments, $value, $overwrite);
         } else {
-            if ($overwrite || !isset($target->{$segment})) {
+            if ($overwrite || !$propertyExists) {
                 $target->{$segment} = $value;
             }
         }
@@ -272,6 +305,34 @@ class DotNotation
             $default,
             $missing,
             static fn(mixed $value): mixed => self::value($value),
+        );
+    }
+
+    /**
+     * @param array<int, string> $segments
+     */
+    private static function traverseGetWithLimits(
+        mixed $target,
+        array $segments,
+        mixed $default,
+        object $missing,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+    ): mixed {
+        $visitedNodes = 0;
+
+        return DotNotationPathOps::traverseGet(
+            $target,
+            $segments,
+            $default,
+            $missing,
+            static fn(mixed $value): mixed => self::value($value),
+            $maxDepth,
+            $maxNodes,
+            $throwOnTooDeep,
+            1,
+            $visitedNodes,
         );
     }
 

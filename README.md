@@ -23,7 +23,10 @@ real-world PHP projects.
 - **Unified Facade (`ArrayKit`)**
 - **Traits for DTO & Hooking**
 - **Pipeline for Collection Ops**
-- **Global Helpers (`functions.php`)**
+- **LazyCollection for Generator-Based Flows**
+- **ArrayShape Validation Helper**
+- **Laravel Compatibility Layer (`LaravelCompat\\Arr`, `LaravelCompat\\Collection`)**
+- **Namespaced Helpers + Optional Globals**
 
 ## Modules
 
@@ -34,6 +37,7 @@ real-world PHP projects.
 | **ArraySingle**     | Helpers for single-dimensional arrays (set ops, mapWithKeys, countBy, min/max, paginate, duplicates, averages). |
 | **ArrayMulti**      | Helpers for multi-dimensional arrays (flatten, collapse, depth, keyBy/indexBy, firstWhere, recursive sort/filter). |
 | **DotNotation**     | Get/set/remove values using dot keys; wildcard support; escaped literal-dot paths; flatten & expand. |
+| **ArrayShape**      | Lightweight array-shape assertions for row validation (`require`).                                     |
 | **BaseArrayHelper** | Internal shared base for consistent API across helpers.                                            |
 | **ArraySharedOps**  | Internal shared operations used by `ArraySingle` and `ArrayMulti` (`each/every/partition/skip*`). |
 
@@ -53,6 +57,7 @@ real-world PHP projects.
 | **Collection**          | OOP array wrapper implementing `ArrayAccess`, `IteratorAggregate`, `Countable`, `JsonSerializable`. |
 | **HookedCollection**    | Extends `Collection` with **on-get/on-set hooks** for real-time transformation of values.  |
 | **Pipeline**            | Functional-style pipeline for chaining operations on collections.                          |
+| **LazyCollection**      | Generator-backed lazy operations (`mapLazy`, `filterLazy`, `chunkLazy`, `take`, `takeUntil`). |
 | **BaseCollectionTrait** | Shared collection behavior.                                                                |
 
 
@@ -64,11 +69,12 @@ real-world PHP projects.
 | **DTOTrait**  | Utility trait for DTO-like behavior: populate, extract, cast arrays/objects easily.            |
 
 
-### Global Helpers
+### Helper Functions
 
-| File              | Description                                                |
-|-------------------|------------------------------------------------------------|
-| **functions.php** | Global shortcut functions for frequent array/config tasks. |
+| Helper Surface | Description |
+|----------------|-------------|
+| **`Infocyph\ArrayKit\*`** | Namespaced helper functions (`compare`, `array_get`, `array_set`, `collect`, `chain`) autoloaded by default. |
+| **`functions.php`** | Optional global helper variants (manual include when needed). |
 
 ### ➤ Facade
 
@@ -85,6 +91,18 @@ real-world PHP projects.
 
 ```bash
 composer require infocyph/arraykit
+```
+
+```php
+<?php
+// Namespaced helpers are autoloaded by default.
+use function Infocyph\ArrayKit\array_get;
+use function Infocyph\ArrayKit\array_set;
+use function Infocyph\ArrayKit\collect;
+use function Infocyph\ArrayKit\chain;
+
+// Optional: enable global helpers in projects that explicitly want them.
+require_once __DIR__ . '/vendor/infocyph/arraykit/src/functions.php';
 ```
 
 ## Quick Examples
@@ -115,6 +133,10 @@ $isList = ArraySingle::isList($list); // true
 // Duplicates
 $dupes = ArraySingle::duplicates($list); // [2]
 
+// Contains checks
+$hasAll = ArraySingle::containsAll($list, [1, 2]); // true
+$hasAny = ArraySingle::containsAny($list, [99, 2]); // true
+
 // Pagination
 $page = ArraySingle::paginate($list, page:1, perPage:2); // [1, 2]
 ```
@@ -128,6 +150,19 @@ $data = [ [1, 2], [3, [4, 5]] ];
 
 // Flatten to one level
 $flat = ArrayMulti::flatten($data); // [1, 2, 3, 4, 5]
+$flatZero = ArrayMulti::flatten($data, 0); // [[1, 2], [3, [4, 5]]]
+$flatOne = ArrayMulti::flatten($data, 1); // [1, 2, 3, [4, 5]]
+
+// Multi-column and query helpers
+$sortedMany = ArrayMulti::sortByMany($rows, [
+    ['status', 'asc'],
+    ['created_at', 'desc'],
+]);
+$active = ArrayMulti::whereStartsWith($rows, 'status', 'act', false);
+$match = ArrayMulti::whereLike($rows, 'email', '%@example.com');
+$first = ArrayMulti::firstWhereIn($rows, 'role', ['admin', 'editor']);
+$uniqueUsers = ArrayMulti::uniqueBy($rows, 'email');
+$dupeUsers = ArrayMulti::duplicatesBy($rows, fn ($row) => strtolower((string) ($row['email'] ?? '')));
 
 // Collapse one level
 $collapsed = ArrayMulti::collapse($data); // [1, 2, 3, [4, 5]]
@@ -182,6 +217,13 @@ $config->onGet('secure.key', fn($v) => decrypt($v));
 // Use it
 $config->setWithHooks('auth.password', 'secret123');
 $hashed = $config->getWithHooks('auth.password');
+
+// Typed getters + state helpers
+$port = $config->getInt('db.port', 3306);
+$config->snapshot('before-runtime');
+$config->merge(['app' => ['env' => 'production']]);
+$changed = $config->changed('before-runtime');
+$config->restore('before-runtime');
 ```
 
 ### Hooked Collection
@@ -218,7 +260,42 @@ class UserDTO {
 $user = new UserDTO();
 $user->fromArray(['name' => 'Alice', 'email' => 'alice@example.com']);
 $array = $user->toArray();
+
+// Advanced hydration / export
+$user->hydrate(['name' => 'Alice'], mapping: ['name' => 'full_name']);
+$deep = $user->toArrayDeep();
 ```
+
+### Lazy + Shape + Compat
+
+```php
+use Infocyph\ArrayKit\Array\ArrayShape;
+use Infocyph\ArrayKit\ArrayKit;
+use Infocyph\ArrayKit\LaravelCompat\Arr;
+
+$lazy = ArrayKit::lazyCollection(range(1, 10))
+    ->filterLazy(fn ($v) => $v % 2 === 0)
+    ->take(3)
+    ->all(); // [2, 4, 6]
+
+$row = ArrayShape::require(
+    ['id' => 1, 'email' => 'a@example.com', 'roles' => ['admin']],
+    ['id' => 'int', 'email' => 'string', 'roles' => 'list<string>'],
+);
+
+$data = ['user' => ['name' => 'Alice']];
+Arr::set($data, 'user.role', 'admin');
+```
+
+## Behavior Notes
+
+- `ArrayMulti::flatten($array, 0)` keeps top-level values unchanged; `1` flattens one level; `INF` fully flattens.
+- `ArraySingle::avg()`, `sum()`, `isPositive()`, and `isNegative()` only consider numeric values (non-numeric values are ignored).
+- `ArraySingle::paginate()` requires `page >= 1` and `perPage >= 1` (throws `InvalidArgumentException` otherwise).
+- Callback-based row helpers (`ArrayMulti::sortBy()`, `sum()`, `maxBy()`, `minBy()`) support `($row, $key)`.
+- `DotNotation` treats existing `null` keys/properties as present (does not fall back to defaults).
+- `DotNotation::hasWildcard()`, `paths()`, `matches()`, `rename()`, and `move()` are available for wildcard/path operations.
+- For untrusted/deep payloads, use bounded traversal variants: `DotNotation::getSafe()`, `ArrayMulti::depthGuarded()`, `flattenGuarded()`, and `sortRecursiveGuarded()`.
 
 ## Security
 
