@@ -188,13 +188,9 @@ trait ArrayMultiQuerySortTrait
      */
     public static function max(array $array, string|callable $keyOrCallback): float|int|null
     {
-        $max = self::selectExtremeValue($array, $keyOrCallback, pickMax: true);
-
-        if ($max === null) {
-            return null;
-        }
-
-        return fmod($max, 1.0) === 0.0 ? (int) $max : $max;
+        return self::formatNumericResult(
+            self::selectExtremeValue($array, $keyOrCallback, pickMax: true),
+        );
     }
 
     /**
@@ -214,13 +210,9 @@ trait ArrayMultiQuerySortTrait
      */
     public static function min(array $array, string|callable $keyOrCallback): float|int|null
     {
-        $min = self::selectExtremeValue($array, $keyOrCallback, pickMax: false);
-
-        if ($min === null) {
-            return null;
-        }
-
-        return fmod($min, 1.0) === 0.0 ? (int) $min : $min;
+        return self::formatNumericResult(
+            self::selectExtremeValue($array, $keyOrCallback, pickMax: false),
+        );
     }
 
     /**
@@ -532,6 +524,15 @@ trait ArrayMultiQuerySortTrait
         }
 
         return 0.0;
+    }
+
+    private static function formatNumericResult(?float $value): float|int|null
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return fmod($value, 1.0) === 0.0 ? (int) $value : $value;
     }
 
     private static function normalizeArrayKey(mixed $value): int|string

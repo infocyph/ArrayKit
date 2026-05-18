@@ -1,11 +1,11 @@
 # ArrayKit
 
-[![Security & Standards](https://github.com/infocyph/arraykit/actions/workflows/security-standards.yml/badge.svg)](https://github.com/infocyph/arraykit/actions/workflows/security-standards.yml)
-![Packagist Downloads](https://img.shields.io/packagist/dt/infocyph/arraykit?color=green\&link=https%3A%2F%2Fpackagist.org%2Fpackages%2Finfocyph%2Farraykit)
+[![Security & Standards](https://github.com/infocyph/arraykit/actions/workflows/security-standards.yml/badge.svg)](https://github.com/infocyph/ArrayKit/actions/workflows/security-standards.yml)
+![Packagist Downloads](https://img.shields.io/packagist/dt/infocyph/ArrayKit?color=green\&link=https%3A%2F%2Fpackagist.org%2Fpackages%2Finfocyph%2FArrayKit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-![Packagist Version](https://img.shields.io/packagist/v/infocyph/arraykit)
-![Packagist PHP Version](https://img.shields.io/packagist/dependency-v/infocyph/arraykit/php)
-![GitHub Code Size](https://img.shields.io/github/languages/code-size/infocyph/arraykit)
+![Packagist Version](https://img.shields.io/packagist/v/infocyph/ArrayKit)
+![Packagist PHP Version](https://img.shields.io/packagist/dependency-v/infocyph/ArrayKit/php)
+![GitHub Code Size](https://img.shields.io/github/languages/code-size/infocyph/ArrayKit)
 [![Documentation](https://img.shields.io/badge/Documentation-ArrayKit-blue?logo=readthedocs&logoColor=white)](https://docs.infocyph.com/projects/arraykit/)
 
 **ArrayKit** is a modern **PHP 8.4+** library for elegant, high-performance **array manipulation**, **dot notation
@@ -13,7 +13,7 @@ utilities**, **dynamic configuration**, **hookable collections**, and more.
 From shallow single arrays to deeply nested data structures — **ArrayKit** provides a fluent, reliable toolkit for
 real-world PHP projects.
 
-## 📦 Features at a Glance
+## Features at a Glance
 
 - **Single-Dimensional Helpers**
 - **Multi-Dimensional Helpers**
@@ -25,9 +25,9 @@ real-world PHP projects.
 - **Pipeline for Collection Ops**
 - **Global Helpers (`functions.php`)**
 
-## 📚 Modules
+## Modules
 
-### ➤ Array Helpers
+### Array Helpers
 
 | Helper              | Description                                                                                        |
 |---------------------|----------------------------------------------------------------------------------------------------|
@@ -37,7 +37,7 @@ real-world PHP projects.
 | **BaseArrayHelper** | Internal shared base for consistent API across helpers.                                            |
 | **ArraySharedOps**  | Internal shared operations used by `ArraySingle` and `ArrayMulti` (`each/every/partition/skip*`). |
 
-### ➤ Config System
+### Config System
 
 | Class               | Description                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------|
@@ -46,7 +46,7 @@ real-world PHP projects.
 | **BaseConfigTrait** | Shared config logic.                                                                                                |
 
 
-### ➤ Collections
+### Collections
 
 | Class                   | Description                                                                                |
 |-------------------------|--------------------------------------------------------------------------------------------|
@@ -56,7 +56,7 @@ real-world PHP projects.
 | **BaseCollectionTrait** | Shared collection behavior.                                                                |
 
 
-### ➤ Traits
+### Traits
 
 | Trait         | Description                                                                                    |
 |---------------|------------------------------------------------------------------------------------------------|
@@ -64,7 +64,7 @@ real-world PHP projects.
 | **DTOTrait**  | Utility trait for DTO-like behavior: populate, extract, cast arrays/objects easily.            |
 
 
-### ➤ Global Helpers
+### Global Helpers
 
 | File              | Description                                                |
 |-------------------|------------------------------------------------------------|
@@ -76,20 +76,20 @@ real-world PHP projects.
 |-------------------|-----------------------------------------------------------------------------------------------|
 | **ArrayKit**      | Single entry point for arrays, dot tools, config, and collections (`single()`, `multi()`, etc.). |
 
-## ✅ Requirements
+## Requirements
 
 * **PHP 8.4** or higher
 
 
-## ⚡ Installation
+## Installation
 
 ```bash
 composer require infocyph/arraykit
 ```
 
-## 🚀 Quick Examples
+## Quick Examples
 
-### 🔹 One Facade Entry Point
+### One Facade Entry Point
 
 ```php
 use Infocyph\ArrayKit\ArrayKit;
@@ -102,7 +102,7 @@ $config = ArrayKit::config(['app' => ['env' => 'local']]);
 $env = $config->get('app.env');                            // local
 ```
 
-### 🔹 Single-Dimensional Helpers
+### Single-Dimensional Helpers
 
 ```php
 use Infocyph\ArrayKit\Array\ArraySingle;
@@ -119,7 +119,7 @@ $dupes = ArraySingle::duplicates($list); // [2]
 $page = ArraySingle::paginate($list, page:1, perPage:2); // [1, 2]
 ```
 
-### 🔹 Multi-Dimensional Helpers
+### Multi-Dimensional Helpers
 
 ```php
 use Infocyph\ArrayKit\Array\ArrayMulti;
@@ -139,7 +139,7 @@ $depth = ArrayMulti::depth($data); // 3
 $sorted = ArrayMulti::sortRecursive($data);
 ```
 
-### 🔹 Dot Notation
+### Dot Notation
 
 ```php
 use Infocyph\ArrayKit\Array\DotNotation;
@@ -163,7 +163,7 @@ DotNotation::set($user, 'users.*.active', true);
 // [ 'profile.name' => 'Alice', 'profile.email' => 'alice@example.com' ]
 ```
 
-### 🔹 Config Hooks (Explicit)
+### Config Hooks (Explicit)
 
 ```php
 use Infocyph\ArrayKit\Config\Config;
@@ -184,7 +184,7 @@ $config->setWithHooks('auth.password', 'secret123');
 $hashed = $config->getWithHooks('auth.password');
 ```
 
-### 🔹 Hooked Collection
+### Hooked Collection
 
 ```php
 use Infocyph\ArrayKit\Collection\HookedCollection;
@@ -220,11 +220,19 @@ $user->fromArray(['name' => 'Alice', 'email' => 'alice@example.com']);
 $array = $user->toArray();
 ```
 
-## 🤝 Support
+## Security
 
-Have a bug or feature idea? Please [open an issue](https://github.com/infocyph/arraykit/issues).
+Protected by [PHPForge](https://github.com/infocyph/PHPForge) — an automated quality and security gate for PHP projects.
 
-## 📄 License
+---
 
-Licensed under the **MIT License** — use it freely for personal or commercial projects. See [LICENSE](LICENSE) for
-details.
+<div align="center">
+  <sub><strong>Made with ❤️ for the PHP community</strong></sub><br />
+  <sub><a href="LICENSE">MIT Licensed</a></sub><br />
+  <a href="https://docs.infocyph.com/projects/ArrayKit">Documentation</a> •
+  <a href="SECURITY.md">Security</a> •
+  <a href="CODE_OF_CONDUCT.md">Code of Conduct</a> •
+  <a href="CONTRIBUTING.md">Contributing</a> •
+  <a href="https://github.com/infocyph/ArrayKit/issues">Report Bug</a> •
+  <a href="https://github.com/infocyph/ArrayKit/issues">Request Feature</a>
+</div>

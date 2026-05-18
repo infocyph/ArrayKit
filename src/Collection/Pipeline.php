@@ -297,9 +297,9 @@ class Pipeline
      */
     public function mergeRecursiveDistinct(array $overlay): Collection
     {
-        $this->working = ArrayMulti::mergeRecursiveDistinct($this->working, $overlay);
-
-        return $this->collection;
+        return $this->mutateWorking(
+            fn(array $working): array => ArrayMulti::mergeRecursiveDistinct($working, $overlay),
+        );
     }
 
     /**
@@ -704,6 +704,18 @@ class Pipeline
     public function wrap(): Collection
     {
         $this->working = BaseArrayHelper::wrap($this->working);
+
+        return $this->collection;
+    }
+
+    /**
+     * Apply a transform to the current working set and keep the chain alive.
+     *
+     * @param callable(array<array-key, mixed>): array<array-key, mixed> $transform
+     */
+    private function mutateWorking(callable $transform): Collection
+    {
+        $this->working = $transform($this->working);
 
         return $this->collection;
     }
