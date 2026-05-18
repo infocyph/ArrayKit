@@ -38,6 +38,12 @@ it('calculates average of numeric values', function () {
     expect(ArraySingle::avg($nums))->toBe(5);
 });
 
+it('ignores non-numeric values when calculating average', function () {
+    $values = [2, '4', 'x', null, 6];
+
+    expect(ArraySingle::avg($values))->toBe(4);
+});
+
 it('searches an array for a callback condition', function () {
     $data = [1, 2, 3, 4];
     $key  = ArraySingle::search($data, fn ($value) => $value === 3);
@@ -60,6 +66,14 @@ it('sums the array using sum()', function () {
         ->toBe(6)
         ->and(ArraySingle::sum($arr, fn ($v) => $v * 2))
         ->toBe(12);
+});
+
+it('ignores non-numeric values in sum() and supports callback keys', function () {
+    $arr = [2 => 1, 4 => '2', 8 => 'x'];
+
+    expect(ArraySingle::sum($arr))->toBe(3)
+        ->and(ArraySingle::sum($arr, fn ($value, $key) => is_numeric($value) ? ((float) $value + $key) : null))
+        ->toBe(9);
 });
 
 it('filters non-empty values without crashing on mixed data', function () {
@@ -155,6 +169,26 @@ it('supports countBy, min/max, minBy/maxBy, mapWithKeys, values and rekey helper
         ->and(ArraySingle::mapWithKeys($rows, fn (array $row) => [$row['id'] => $row['score']]))->toBe([1 => 10, 2 => 30, 3 => 20])
         ->and(ArraySingle::values(['x' => 1, 'y' => 2]))->toBe([1, 2])
         ->and(ArraySingle::rekey(['first_name' => 'Ada'], ['first_name' => 'firstName']))->toBe(['firstName' => 'Ada']);
+});
+
+it('evaluates positivity and negativity using numeric values only', function () {
+    expect(ArraySingle::isPositive(['2', 3, 'x']))->toBeTrue()
+        ->and(ArraySingle::isPositive(['2', 0, 'x']))->toBeFalse()
+        ->and(ArraySingle::isNegative(['-2', -3, 'x']))->toBeTrue()
+        ->and(ArraySingle::isNegative(['-2', 1, 'x']))->toBeFalse()
+        ->and(ArraySingle::isPositive(['x', null]))->toBeFalse()
+        ->and(ArraySingle::isNegative(['x', null]))->toBeFalse();
+});
+
+it('validates paginate() arguments', function () {
+    expect(fn () => ArraySingle::paginate([1, 2, 3], 0, 2))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => ArraySingle::paginate([1, 2, 3], 1, 0))->toThrow(InvalidArgumentException::class);
+});
+
+it('paginates arrays for valid page and per-page values', function () {
+    $arr = [1, 2, 3, 4, 5];
+
+    expect(ArraySingle::paginate($arr, 2, 2))->toBe([2 => 3, 3 => 4]);
 });
 
 it('supports intersect, diff, symmetricDiff and same helpers', function () {

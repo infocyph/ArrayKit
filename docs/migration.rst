@@ -12,12 +12,22 @@ Recent Additions
 - ``Collection`` now implements ``IteratorAggregate`` semantics for safe nested iteration and provides ``copy()`` / ``immutable()`` snapshots.
 - ``Config`` / ``LazyFileConfig`` now include ``replace()``, ``reload()``, and ``getOrFail()``.
 - ``LazyFileConfig`` includes ``loaded()`` alias for ``isLoaded()``.
-- Namespaced helper alternatives are available in ``Infocyph\ArrayKit\*`` alongside global helpers.
+- Namespaced helpers (``Infocyph\ArrayKit\*``) are now the default autoloaded helper surface; globals are optional via manual include of ``src/functions.php``.
+- ``ArrayMulti::flatten($array, 0)`` now returns unchanged top-level values.
+- ``ArraySingle::avg()``, ``sum()``, ``isPositive()``, and ``isNegative()`` now ignore non-numeric values consistently.
+- ``ArraySingle::paginate()`` now validates ``$page``/``$perPage`` and throws for values below ``1``.
+- ``ArrayMulti`` callback-based sort/sum/min/max-by helpers support ``($row, $key)``.
+- ``ArrayMulti`` adds ``uniqueBy()``, ``duplicatesBy()``, ``sortByMany()``, ``whereBetween()``, ``whereLike()``, ``whereStartsWith()``, ``whereEndsWith()``, ``whereContains()``, and ``firstWhereIn()``.
+- ``DotNotation`` adds ``hasWildcard()``, ``paths()``, ``matches()``, ``rename()``, and ``move()``.
+- ``Config`` adds typed getters (``getString/getInt/getFloat/getBool/getArray/getList/getEnum``), merge/state helpers (``merge/overlay/snapshot/restore/changed``), and ``readonly()`` mode.
+- ``Collection`` adds ``immutableProcess()`` / ``pipeImmutable()`` explicit immutable-style pipeline entry.
+- ``ArrayKit`` facade adds ``lazyCollection()`` and package now includes ``LazyCollection`` (generator-backed operations).
+- New optional helpers: ``ArrayShape`` validator and Laravel-compat layer (``LaravelCompat\\Arr``, ``LaravelCompat\\Collection``).
 
 Compatibility Notes
 -------------------
 
-- ``unWrap()`` remains supported; ``unwrap()`` is now the preferred alias in helper and pipeline usage.
+- ``unWrap()`` is the current helper/pipeline method name.
 - Pipeline methods are mutable by design: most transformation methods update the same collection instance and return it.
 - Use ``copy()`` or ``immutable()`` before pipeline operations when functional immutability is preferred.
 

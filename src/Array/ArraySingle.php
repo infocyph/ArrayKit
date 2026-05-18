@@ -9,18 +9,35 @@ use InvalidArgumentException;
 class ArraySingle
 {
     /**
-     * Calculate the average of an array of numbers.
+     * Calculate the average of numeric values in an array.
      *
-     * @param array<array-key, mixed> $array The array of numbers to average.
-     * @return float|int The average of the numbers in the array. If the array is empty, 0 is returned.
+     * Non-numeric values are ignored.
+     *
+     * @param array<array-key, mixed> $array The array to average.
+     * @return float|int The average of numeric values. If no numeric values exist, 0 is returned.
      */
     public static function avg(array $array): float|int
     {
-        if (empty($array)) {
-            return 0;
+        $total = 0.0;
+        $count = 0;
+
+        foreach ($array as $value) {
+            $numeric = self::toNumericOrNull($value);
+            if ($numeric === null) {
+                continue;
+            }
+
+            $total += $numeric;
+            $count++;
         }
 
-        return array_sum($array) / count($array);
+        if ($count === 0) {
+            return 0.0;
+        }
+
+        $avg = $total / $count;
+
+        return fmod($avg, 1.0) === 0.0 ? (int) $avg : $avg;
     }
 
     /**
@@ -291,7 +308,21 @@ class ArraySingle
      */
     public static function isNegative(array $array): bool
     {
-        return !empty($array) && max($array) < 0;
+        $hasNumeric = false;
+
+        foreach ($array as $value) {
+            $numeric = self::toNumericOrNull($value);
+            if ($numeric === null) {
+                continue;
+            }
+
+            $hasNumeric = true;
+            if ($numeric >= 0) {
+                return false;
+            }
+        }
+
+        return $hasNumeric;
     }
 
     /**
@@ -302,7 +333,21 @@ class ArraySingle
      */
     public static function isPositive(array $array): bool
     {
-        return !empty($array) && min($array) > 0;
+        $hasNumeric = false;
+
+        foreach ($array as $value) {
+            $numeric = self::toNumericOrNull($value);
+            if ($numeric === null) {
+                continue;
+            }
+
+            $hasNumeric = true;
+            if ($numeric <= 0) {
+                return false;
+            }
+        }
+
+        return $hasNumeric;
     }
 
     /**
@@ -367,6 +412,8 @@ class ArraySingle
     /**
      * Return the largest numeric value in the array.
      *
+     * Non-numeric values are ignored.
+     *
      * @param array<array-key, mixed> $array
      */
     public static function max(array $array): float|int|null
@@ -419,6 +466,8 @@ class ArraySingle
 
     /**
      * Return the smallest numeric value in the array.
+     *
+     * Non-numeric values are ignored.
      *
      * @param array<array-key, mixed> $array
      */
@@ -549,13 +598,23 @@ class ArraySingle
      * @param int $page The page number to retrieve (1-indexed).
      * @param int $perPage The number of items per page.
      *
+     * @throws InvalidArgumentException If page/per-page are less than 1.
+     *
      * @return array<array-key, mixed> The paginated slice of the array.
      */
     public static function paginate(array $array, int $page, int $perPage): array
     {
+        if ($page < 1) {
+            throw new InvalidArgumentException('Page must be greater than or equal to 1.');
+        }
+
+        if ($perPage < 1) {
+            throw new InvalidArgumentException('Per-page value must be greater than or equal to 1.');
+        }
+
         return array_slice(
             $array,
-            max(0, ($page - 1) * $perPage),
+            ($page - 1) * $perPage,
             $perPage,
             true,
         );
@@ -856,10 +915,10 @@ class ArraySingle
     }
 
     /**
-     * Return the sum of all the elements in the array.
+     * Return the sum of numeric values in the array.
      *
-     * If a callback is provided, it will be executed for each element in the
-     * array and the return value will be added to the total.
+     * If a callback is provided, it is executed for each element and key.
+     * Non-numeric values are ignored in both direct and callback modes.
      *
      * @param array<array-key, mixed> $array The array to sum.
      * @param callable|null $callback The callback to execute for each element.
@@ -867,16 +926,29 @@ class ArraySingle
      */
     public static function sum(array $array, ?callable $callback = null): float|int
     {
+        $total = 0.0;
+
         if ($callback === null) {
-            return array_sum($array);
+            foreach ($array as $value) {
+                $numeric = self::toNumericOrNull($value);
+                if ($numeric === null) {
+                    continue;
+                }
+
+                $total += $numeric;
+            }
+
+            return fmod($total, 1.0) === 0.0 ? (int) $total : $total;
         }
 
-        $total = 0;
-        foreach ($array as $value) {
-            $result = $callback($value);
-            if (is_numeric($result)) {
-                $total += (float) $result;
+        foreach ($array as $key => $value) {
+            $result = self::invokeValueCallback($callback, $value, $key);
+            $numeric = self::toNumericOrNull($result);
+            if ($numeric === null) {
+                continue;
             }
+
+            $total += $numeric;
         }
 
         return fmod($total, 1.0) === 0.0 ? (int) $total : $total;
@@ -938,13 +1010,33 @@ class ArraySingle
      */
     public static function where(array $array, ?callable $callback = null): array
     {
-        $flag = ($callback !== null) ? \ARRAY_FILTER_USE_BOTH : 0;
+        return ArraySingleOps::where($array, $callback);
+    }
 
-        return array_filter($array, $callback ?? fn($val) => (bool) $val, $flag);
+    private static function invokeValueCallback(callable $callback, mixed $value, int|string $key): mixed
+    {
+        try {
+            return $callback($value, $key);
+        } catch (\ArgumentCountError) {
+            return $callback($value);
+        }
     }
 
     private static function normalizeArrayKey(mixed $value): int|string
     {
         return ArraySharedOps::normalizeArrayKey($value);
+    }
+
+    private static function toNumericOrNull(mixed $value): ?float
+    {
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return null;
     }
 }

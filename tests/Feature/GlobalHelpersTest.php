@@ -10,14 +10,21 @@ use function Infocyph\ArrayKit\chain as ns_chain;
 use function Infocyph\ArrayKit\collect as ns_collect;
 use function Infocyph\ArrayKit\compare as ns_compare;
 
-it('guards global helper declarations with function_exists checks', function () {
+it('autoloads only namespaced helper functions by default', function () {
+    $composer = json_decode((string) file_get_contents(__DIR__ . '/../../composer.json'), true, 512, JSON_THROW_ON_ERROR);
+
+    expect($composer['autoload']['files'])->toBe(['src/namespaced-functions.php']);
+});
+
+it('keeps global helper declarations guarded in optional file', function () {
     $source = file_get_contents(__DIR__ . '/../../src/functions.php');
 
     expect($source)->toContain("if (!function_exists('compare'))")
         ->and($source)->toContain("if (!function_exists('array_get'))")
         ->and($source)->toContain("if (!function_exists('array_set'))")
         ->and($source)->toContain("if (!function_exists('collect'))")
-        ->and($source)->toContain("if (!function_exists('chain'))");
+        ->and($source)->toContain("if (!function_exists('chain'))")
+        ->and($source)->not->toContain("if (!function_exists('isCallable'))");
 });
 
 it('provides namespaced helper alternatives', function () {

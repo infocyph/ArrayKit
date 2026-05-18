@@ -63,6 +63,22 @@ Reading Values
     $hasAny = $config->hasAny(['missing.path', 'queue.driver']); // true
     $required = $config->getOrFail('app.name');               // throws if missing
 
+Typed Getters
+-------------
+
+Use nullable/default-friendly typed getters when you want soft type access:
+
+.. code-block:: php
+
+    <?php
+    $name = $config->getString('app.name');
+    $port = $config->getInt('db.port', 3306);
+    $ratio = $config->getFloat('metrics.sample_ratio', 0.5);
+    $debug = $config->getBool('app.debug', false);
+    $hosts = $config->getList('cluster.hosts', []);
+    $cache = $config->getArray('cache', []);
+    $mode = $config->getEnum('app.mode', AppMode::class, AppMode::Prod);
+
 Writing Values
 --------------
 
@@ -117,6 +133,24 @@ Removing Values
     <?php
     $config->forget('cache.prefix');
     $config->forget(['mail.host', 'mail.port']);
+
+Merging, Snapshots, and Read-Only Mode
+--------------------------------------
+
+.. code-block:: php
+
+    <?php
+    $config->snapshot('before-runtime');
+
+    $config->merge(['app' => ['env' => 'production']]);   // deep merge
+    $config->overlay(['features' => ['beta' => true]]);   // top-level overlay
+
+    $changed = $config->changed('before-runtime');         // true/false
+    $config->restore('before-runtime');                    // rollback
+
+    $config->readonly();                                   // lock writes
+    $locked = $config->isReadonly();                       // true
+    $config->readonly(false);                              // unlock
 
 Array-Value Helpers
 -------------------
@@ -219,6 +253,7 @@ Important behavior:
 - Namespace file must return an array.
 - Missing namespace file returns the provided default.
 - ``replace()`` and ``reload()`` reset resolved-namespace tracking.
+- read-only mode applies to ``set/fill/forget/replace/reload``-style mutators.
 
 Method Summary
 --------------
@@ -231,6 +266,10 @@ Config methods:
 - ``set()``, ``fill()``, ``forget()``
 - ``prepend()``, ``append()``
 - ``replace()``, ``reload()``
+- ``getString()/getInt()/getFloat()/getBool()/getArray()/getList()/getEnum()``
+- ``merge()``, ``overlay()``
+- ``snapshot()``, ``restore()``, ``changed()``
+- ``readonly()``, ``isReadonly()``
 
 LazyFileConfig methods:
 

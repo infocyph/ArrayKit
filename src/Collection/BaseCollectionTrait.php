@@ -321,6 +321,14 @@ trait BaseCollectionTrait
     }
 
     /**
+     * Create a pipeline that operates on a copied collection instance.
+     */
+    public function immutableProcess(): Pipeline
+    {
+        return $this->copy()->process();
+    }
+
+    /**
      * Determine if the collection is empty.
      */
     public function isEmpty(): bool
@@ -507,6 +515,14 @@ trait BaseCollectionTrait
         if (is_string($offset) || is_int($offset)) {
             unset($this->data[$offset]);
         }
+    }
+
+    /**
+     * Alias of immutableProcess().
+     */
+    public function pipeImmutable(): Pipeline
+    {
+        return $this->immutableProcess();
     }
 
     /**

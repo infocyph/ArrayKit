@@ -26,6 +26,8 @@ final class CoreBench
 
     private array $queryRows = [];
 
+    private array $queryRowsLarge = [];
+
     private array $single = [];
 
     private array $singleAssoc = [];
@@ -65,6 +67,20 @@ final class CoreBench
             ['id' => 5, 'role' => 'viewer'],
         ];
 
+        $this->queryRowsLarge = [];
+        for ($i = 0; $i < 10000; $i++) {
+            $this->queryRowsLarge[] = [
+                'id' => $i + 1,
+                'group' => 'group-' . ($i % 100),
+                'role' => match ($i % 4) {
+                    0 => 'admin',
+                    1 => 'editor',
+                    2 => 'viewer',
+                    default => null,
+                },
+            ];
+        }
+
         $this->dot = [
             'app' => ['name' => 'ArrayKit', 'env' => 'local'],
             'db' => [
@@ -93,15 +109,43 @@ final class CoreBench
     }
 
     #[Subject]
+    public function benchArrayMultiFlattenDeep(): void
+    {
+        ArrayMulti::flatten([[[[1, 2], 3], [4, [5, [6]]]], 7]);
+    }
+
+    #[Subject]
     public function benchArrayMultiKeyBy(): void
     {
         ArrayMulti::keyBy($this->nested, 'id');
     }
 
     #[Subject]
+    public function benchArrayMultiKeyBy10k(): void
+    {
+        ArrayMulti::keyBy($this->queryRowsLarge, 'id');
+    }
+
+    #[Subject]
     public function benchArrayMultiSkipUntil(): void
     {
         ArrayMulti::skipUntil($this->nested, static fn(array $row): bool => ($row['id'] ?? 0) >= 3);
+    }
+
+    #[Subject]
+    public function benchArrayMultiUniqueNested(): void
+    {
+        ArrayMulti::unique([
+            ['id' => 1, 'meta' => ['x' => 1]],
+            ['id' => 1, 'meta' => ['x' => 1]],
+            ['id' => 2, 'meta' => ['x' => 2]],
+        ], true);
+    }
+
+    #[Subject]
+    public function benchArrayMultiWhereIn10k(): void
+    {
+        ArrayMulti::whereIn($this->queryRowsLarge, 'role', ['admin', 'editor']);
     }
 
     #[Subject]
@@ -156,5 +200,17 @@ final class CoreBench
     public function benchDotNotationGet(): void
     {
         DotNotation::get($this->dot, 'db.options.timeout');
+    }
+
+    #[Subject]
+    public function benchDotNotationWildcardGet(): void
+    {
+        DotNotation::get([
+            'users' => [
+                ['name' => 'Alice'],
+                ['name' => 'Bob'],
+                ['name' => 'Cara'],
+            ],
+        ], 'users.*.name');
     }
 }

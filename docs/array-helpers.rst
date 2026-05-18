@@ -98,14 +98,17 @@ ArraySingle: Search, Partition, Aggregation
     <?php
     use Infocyph\ArrayKit\Array\ArraySingle;
 
-    $arr = [1, 2, 2, 3, 4, 5];
+    $arr = [1, 2, 2, 3, 4, 5, 'x'];
 
     $foundKey = ArraySingle::search($arr, fn ($v) => $v === 3); // 3
+    $hasTwo = ArraySingle::contains($arr, 2);               // true
+    $hasAll = ArraySingle::containsAll($arr, [1, 2, 3]);    // true
+    $hasAny = ArraySingle::containsAny($arr, [99, 3]);      // true
     [$even, $odd] = ArraySingle::partition($arr, fn ($v) => $v % 2 === 0);
     $dupes = ArraySingle::duplicates($arr);              // [2]
     $unique = ArraySingle::unique($arr);                 // [1,2,3,4,5]
-    $sum = ArraySingle::sum($arr);                       // 17
-    $avg = ArraySingle::avg($arr);                       // 17/6
+    $sum = ArraySingle::sum($arr);                       // 17 (non-numeric ignored)
+    $avg = ArraySingle::avg($arr);                       // 17/6 (non-numeric ignored)
     $median = ArraySingle::median($arr);                 // 2.5
     $mode = ArraySingle::mode($arr);                     // [2]
 
@@ -117,13 +120,13 @@ ArraySingle: Numeric and Value Helpers
     <?php
     use Infocyph\ArrayKit\Array\ArraySingle;
 
-    $values = [-2, -1, 0, 1, 2, 3];
+    $values = [-2, -1, 0, 1, 2, 3, 'x'];
 
     $positive = ArraySingle::positive($values);  // [1,2,3]
     $negative = ArraySingle::negative($values);  // [-2,-1]
     $isInt = ArraySingle::isInt([1, 2, 3]);      // true
-    $isPositive = ArraySingle::isPositive([1, 2]); // true
-    $isNegative = ArraySingle::isNegative([-1, -2]); // true
+    $isPositive = ArraySingle::isPositive([1, 2, 'x']); // true
+    $isNegative = ArraySingle::isNegative([-1, -2, 'x']); // true
 
 ArrayMulti: Flattening and Shape
 --------------------------------
@@ -137,6 +140,7 @@ ArrayMulti: Flattening and Shape
 
     $collapse = ArrayMulti::collapse($nested);          // [1, 2, 3, [4, 5]]
     $flat = ArrayMulti::flatten($nested);               // [1,2,3,4,5]
+    $flatZero = ArrayMulti::flatten($nested, 0);        // [[1, 2], [3, [4, 5]]]
     $flatOne = ArrayMulti::flatten($nested, 1);         // flatten one level
     $depth = ArrayMulti::depth($nested);                // 3
     $flatByKey = ArrayMulti::flattenByKey($nested);     // flattened values
@@ -161,7 +165,13 @@ ArrayMulti: Row Filtering
     $nullRole = ArrayMulti::whereNull($rows, 'role');
     $notNullRole = ArrayMulti::whereNotNull($rows, 'role');
     $between = ArrayMulti::between($rows, 'age', 22, 30);
+    $betweenAlias = ArrayMulti::whereBetween($rows, 'age', 22, 30);
+    $starts = ArrayMulti::whereStartsWith($rows, 'name', 'Al');
+    $ends = ArrayMulti::whereEndsWith($rows, 'name', 'ce');
+    $contains = ArrayMulti::whereContains($rows, 'name', 'li');
+    $like = ArrayMulti::whereLike($rows, 'name', 'A%');
     $custom = ArrayMulti::whereCallback($rows, fn ($row) => $row['name'] === 'Alice');
+    $firstRole = ArrayMulti::firstWhereIn($rows, 'role', ['editor', 'admin']);
 
 ArrayMulti: Grouping, Ordering, and Projection
 ----------------------------------------------
@@ -181,6 +191,11 @@ ArrayMulti: Grouping, Ordering, and Projection
     $indexed = ArrayMulti::keyBy($rows, 'team');
     $counts = ArrayMulti::countBy($rows, 'team');
     $sorted = ArrayMulti::sortBy($rows, 'score', true);      // desc
+    $sortedByKey = ArrayMulti::sortBy($rows, fn ($row, $key) => $key); // callback receives row + key
+    $sortedMany = ArrayMulti::sortByMany($rows, [
+        ['team', 'asc'],
+        ['score', 'desc'],
+    ]);
     $sortedRecursive = ArrayMulti::sortRecursive($rows);
     $scores = ArrayMulti::pluck($rows, 'score');             // [10,30,20]
     $transposed = ArrayMulti::transpose($rows);
@@ -200,6 +215,8 @@ ArrayMulti: Row Set Operations
     ];
 
     $unique = ArrayMulti::unique($rows);
+    $uniqueByName = ArrayMulti::uniqueBy($rows, 'name');
+    $dupesByName = ArrayMulti::duplicatesBy($rows, 'name');
     $minScore = ArrayMulti::min($rows, 'id');
     $maxScore = ArrayMulti::max($rows, 'id');
     $firstHigh = ArrayMulti::firstWhere($rows, 'id', '>=', 2);
@@ -208,6 +225,30 @@ ArrayMulti: Row Set Operations
     $mappedKeys = ArrayMulti::mapWithKeys($rows, fn ($row) => [$row['id'] => $row['name']]);
     $reduced = ArrayMulti::reduce($rows, fn ($carry, $row) => $carry + $row['id'], 0);
     $sumById = ArrayMulti::sum($rows, 'id');
+    $sumByCallback = ArrayMulti::sum($rows, fn ($row, $key) => $row['id'] + $key);
+
+ArrayShape Validation
+---------------------
+
+Use ``ArrayShape`` for lightweight shape assertions in row pipelines.
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Array\ArrayShape;
+
+    $row = [
+        'id' => 10,
+        'email' => 'a@example.com',
+        'roles' => ['admin', 'editor'],
+    ];
+
+    ArrayShape::require($row, [
+        'id' => 'int',
+        'email' => 'string',
+        'roles' => 'list<string>',
+        'nickname?' => 'string', // optional key
+    ]);
 
 BaseArrayHelper
 ---------------
@@ -282,6 +323,11 @@ Behavior Notes
 - ``ArraySingle::isAssoc([])`` is ``false``; empty arrays are treated as non-associative.
 - ``ArraySingle::nth($array, $step, $offset)`` starts at ``$offset`` then takes every ``$step`` item.
 - ``ArraySingle::unique()`` has loose mode (default) and strict mode.
+- ``ArraySingle::avg()``, ``sum()``, ``isPositive()``, and ``isNegative()`` ignore non-numeric values.
+- ``ArraySingle::paginate()`` requires ``$page >= 1`` and ``$perPage >= 1``.
 - ``ArrayMulti::whereIn()`` / ``whereNotIn()`` treat ``null`` as a real value when the key exists.
-- ``ArrayMulti::where()`` uses the global ``compare()`` helper semantics for operators.
+- ``ArrayMulti::flatten($array, 0)`` returns unchanged top-level values.
+- Use ``depthGuarded()``, ``flattenGuarded()``, and ``sortRecursiveGuarded()`` when processing untrusted/deep inputs.
+- ``ArrayMulti`` callback helpers such as ``sortBy()``, ``sum()``, ``maxBy()``, ``minBy()`` support ``($row, $key)``.
+- ``ArrayMulti::where()`` uses ``Infocyph\ArrayKit\compare()`` semantics for operators.
 - ``BaseArrayHelper::random()`` throws ``InvalidArgumentException`` when requested count exceeds array size.

@@ -138,8 +138,20 @@ it('returns default value if key is not found', function () {
     expect(DotNotation::get($data, 'b', 'default'))->toBe('default');
 });
 
+it('returns default for a missing integer key', function () {
+    $data = [0 => 'zero'];
+
+    expect(DotNotation::get($data, 1, 'fallback'))->toBe('fallback');
+});
+
 it('returns null when key exists with null value', function () {
     $data = ['user' => ['middle_name' => null]];
+
+    expect(DotNotation::get($data, 'user.middle_name', 'fallback'))->toBeNull();
+});
+
+it('returns null for existing object properties with null values', function () {
+    $data = ['user' => (object) ['middle_name' => null]];
 
     expect(DotNotation::get($data, 'user.middle_name', 'fallback'))->toBeNull();
 });
@@ -228,6 +240,14 @@ it('does not overwrite existing keys when fill() is used', function () {
     expect($data['user']['name'])->toBe('Frank');
 });
 
+it('does not overwrite existing null object properties when fill() is used', function () {
+    $data = ['user' => (object) ['middle_name' => null]];
+
+    DotNotation::fill($data, 'user.middle_name', 'George');
+
+    expect($data['user']->middle_name)->toBeNull();
+});
+
 it('fills missing keys when fill() is used', function () {
     $data = ['user' => []];
     DotNotation::fill($data, 'user.email', 'frank@example.com');
@@ -261,6 +281,31 @@ it('supports wildcard set and wildcard forget', function () {
             ['name' => 'Bob', 'active' => true],
         ],
     ]);
+});
+
+it('supports hasWildcard, paths and matches helpers', function () {
+    $data = [
+        'users' => [
+            ['name' => 'Alice'],
+            ['name' => 'Bob'],
+        ],
+        'meta' => ['count' => 2],
+    ];
+
+    expect(DotNotation::hasWildcard('users.*.name'))->toBeTrue()
+        ->and(DotNotation::hasWildcard('users.0.name'))->toBeFalse()
+        ->and(DotNotation::paths($data))->toContain('users.0.name', 'users.1.name', 'meta.count')
+        ->and(DotNotation::matches($data, 'users.*.name'))->toBeTrue()
+        ->and(DotNotation::matches($data, 'users.*.email'))->toBeFalse();
+});
+
+it('supports rename and move helpers', function () {
+    $data = ['user' => ['name' => 'Alice', 'role' => 'admin']];
+
+    expect(DotNotation::rename($data, 'user.role', 'user.type'))->toBeTrue()
+        ->and($data)->toBe(['user' => ['name' => 'Alice', 'type' => 'admin']])
+        ->and(DotNotation::move($data, 'user.type', 'profile.kind'))->toBeTrue()
+        ->and($data)->toBe(['user' => ['name' => 'Alice'], 'profile' => ['kind' => 'admin']]);
 });
 
 //
@@ -378,4 +423,27 @@ it('unsets a value using offsetUnset()', function () {
     expect(isset($data['a']))
         ->toBeFalse()
         ->and($data)->toBe(['b' => 2]);
+});
+
+it('supports safe get traversal limits with graceful fallback', function () {
+    $data = [
+        'users' => [
+            ['name' => 'Alice'],
+            ['name' => 'Bob'],
+        ],
+    ];
+
+    expect(DotNotation::getSafe($data, 'users.*.name', 'missing', maxDepth: 1))->toBe(['missing', 'missing']);
+});
+
+it('can throw on safe get traversal limit overflow', function () {
+    $data = [
+        'users' => [
+            ['name' => 'Alice'],
+            ['name' => 'Bob'],
+        ],
+    ];
+
+    expect(fn () => DotNotation::getSafe($data, 'users.*.name', 'missing', maxDepth: 1, throwOnTooDeep: true))
+        ->toThrow(RuntimeException::class);
 });

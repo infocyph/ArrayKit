@@ -69,3 +69,14 @@ it('supports copy and immutable snapshots', function () {
     expect($copy->all())->toBe(['a' => 1, 'b' => 2])
         ->and($immutable->all())->toBe(['a' => 1, 'b' => 2]);
 });
+
+it('supports immutableProcess and pipeImmutable pipeline entrypoints', function () {
+    $collection = new Collection([1, 2, 3, 4]);
+
+    $processed = $collection->immutableProcess()->filter(fn (int $v) => $v % 2 === 0)->all();
+    $processedAlias = $collection->pipeImmutable()->filter(fn (int $v) => $v > 2)->all();
+
+    expect($processed)->toBe([1 => 2, 3 => 4])
+        ->and($processedAlias)->toBe([2 => 3, 3 => 4])
+        ->and($collection->all())->toBe([1, 2, 3, 4]);
+});

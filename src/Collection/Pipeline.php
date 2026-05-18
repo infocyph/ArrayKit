@@ -21,8 +21,7 @@ class Pipeline
     ) {}
 
     /**
-     * Quick example: Check if at least one item passes a truth test, from ArraySingle::some or ArrayMulti::some
-     * Not chainable, returns bool.
+     * Check if at least one item passes a truth test.
      */
     public function any(callable $callback): bool
     {
@@ -119,8 +118,19 @@ class Pipeline
         return $this->collection;
     }
 
-    /** Remove keys (inverse of only) */
     /**
+     * Keep duplicate rows for a derived key.
+     */
+    public function duplicatesBy(string|callable $keyOrCallback, bool $strict = false): Collection
+    {
+        return $this->mutateWorking(
+            fn(array $working): array => ArrayMulti::duplicatesBy($working, $keyOrCallback, $strict),
+        );
+    }
+
+    /**
+     * Remove keys (inverse of only).
+     *
      * @param array<int, string|int>|string $keys
      */
     public function except(array|string $keys): Collection
@@ -142,8 +152,7 @@ class Pipeline
     }
 
     /**
-     * Return the first item in a 2D array, or single-dim array, depending on usage.
-     * from ArrayMulti::first or direct approach.
+     * Return the first item from the working set.
      */
     public function first(?callable $callback = null, mixed $default = null): mixed
     {
@@ -158,6 +167,16 @@ class Pipeline
         return ArrayMulti::firstWhere($this->working, $key, $operator, $value, $default);
     }
 
+    /**
+     * Return the first row where key value is inside a list.
+     *
+     * @param array<array-key, mixed> $values
+     */
+    public function firstWhereIn(string $key, array $values, bool $strict = false, mixed $default = null): mixed
+    {
+        return ArrayMulti::firstWhereIn($this->working, $key, $values, $strict, $default);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | ArrayMulti-based chainable methods (Multi-Dimensional usage)
@@ -169,9 +188,9 @@ class Pipeline
      */
     public function flatten(float|int $depth = \INF): Collection
     {
-        $this->working = ArrayMulti::flatten($this->working, $depth);
-
-        return $this->collection;
+        return $this->mutateWorking(
+            fn(array $working): array => ArrayMulti::flatten($working, $depth),
+        );
     }
 
     /**
@@ -179,9 +198,9 @@ class Pipeline
      */
     public function flattenByKey(): Collection
     {
-        $this->working = ArrayMulti::flattenByKey($this->working);
-
-        return $this->collection;
+        return $this->mutateWorking(
+            fn(array $working): array => ArrayMulti::flattenByKey($working),
+        );
     }
 
     /**
@@ -189,9 +208,9 @@ class Pipeline
      */
     public function groupBy(string|callable $groupBy, bool $preserveKeys = false): Collection
     {
-        $this->working = ArrayMulti::groupBy($this->working, $groupBy, $preserveKeys);
-
-        return $this->collection;
+        return $this->mutateWorking(
+            fn(array $working): array => ArrayMulti::groupBy($working, $groupBy, $preserveKeys),
+        );
     }
 
     /**
@@ -199,9 +218,9 @@ class Pipeline
      */
     public function indexBy(string|callable $indexBy): Collection
     {
-        $this->working = ArrayMulti::indexBy($this->working, $indexBy);
-
-        return $this->collection;
+        return $this->mutateWorking(
+            fn(array $working): array => ArrayMulti::indexBy($working, $indexBy),
+        );
     }
 
     /**
@@ -253,9 +272,9 @@ class Pipeline
      */
     public function map(callable $callback): Collection
     {
-        $this->working = ArraySingle::map($this->working, $callback);
-
-        return $this->collection;
+        return $this->mutateWorking(
+            fn(array $working): array => ArraySingle::map($working, $callback),
+        );
     }
 
     /**
@@ -263,9 +282,9 @@ class Pipeline
      */
     public function mapWithKeys(callable $callback): Collection
     {
-        $this->working = ArraySingle::mapWithKeys($this->working, $callback);
-
-        return $this->collection;
+        return $this->mutateWorking(
+            fn(array $working): array => ArraySingle::mapWithKeys($working, $callback),
+        );
     }
 
     /**
@@ -297,9 +316,9 @@ class Pipeline
      */
     public function mergeRecursiveDistinct(array $overlay): Collection
     {
-        return $this->mutateWorking(
-            fn(array $working): array => ArrayMulti::mergeRecursiveDistinct($working, $overlay),
-        );
+        $this->working = ArrayMulti::mergeRecursiveDistinct($this->working, $overlay);
+
+        return $this->collection;
     }
 
     /**
@@ -318,8 +337,9 @@ class Pipeline
         return $this->selectExtremeBy($keyOrCallback, pickMax: false);
     }
 
-    /** Return the statistical mode(s) – TERMINATES chain (array) */
     /**
+     * Return the statistical mode(s) – TERMINATES chain.
+     *
      * @return array<array-key, mixed>
      */
     public function mode(): array
@@ -521,6 +541,18 @@ class Pipeline
     }
 
     /**
+     * Sort rows by multiple column/callback criteria.
+     *
+     * @param array<int, array<int, mixed>> $criteria
+     */
+    public function sortByMany(array $criteria): Collection
+    {
+        $this->working = ArrayMulti::sortByMany($this->working, $criteria);
+
+        return $this->collection;
+    }
+
+    /**
      * Recursively sort the array by keys/values, using ArrayMulti::sortRecursive.
      */
     public function sortRecursive(int $options = SORT_REGULAR, bool $descending = false): Collection
@@ -588,6 +620,16 @@ class Pipeline
     }
 
     /**
+     * Keep first rows for each unique derived key.
+     */
+    public function uniqueBy(string|callable $keyOrCallback, bool $strict = false): Collection
+    {
+        return $this->mutateWorking(
+            fn(array $working): array => ArrayMulti::uniqueBy($working, $keyOrCallback, $strict),
+        );
+    }
+
+    /**
      * Inverse of when(): only run if $condition is false.
      */
     public function unless(bool $condition, callable $callback, ?callable $default = null): Collection
@@ -644,12 +686,42 @@ class Pipeline
     }
 
     /**
+     * Filter rows where key value is in the given range.
+     */
+    public function whereBetween(string $key, float|int $from, float|int $to): Collection
+    {
+        $this->working = ArrayMulti::whereBetween($this->working, $key, $from, $to);
+
+        return $this->collection;
+    }
+
+    /**
      * Filter using a custom callback on each row, using ArrayMulti::whereCallback.
      */
     public function whereCallback(?callable $callback = null, mixed $default = null): Collection
     {
         $result = ArrayMulti::whereCallback($this->working, $callback, $default);
         $this->working = is_array($result) ? $result : [$result];
+
+        return $this->collection;
+    }
+
+    /**
+     * Filter rows where key contains a substring.
+     */
+    public function whereContains(string $key, string $needle, bool $caseSensitive = true): Collection
+    {
+        $this->working = ArrayMulti::whereContains($this->working, $key, $needle, $caseSensitive);
+
+        return $this->collection;
+    }
+
+    /**
+     * Filter rows where key ends with a suffix.
+     */
+    public function whereEndsWith(string $key, string $suffix, bool $caseSensitive = true): Collection
+    {
+        $this->working = ArrayMulti::whereEndsWith($this->working, $key, $suffix, $caseSensitive);
 
         return $this->collection;
     }
@@ -662,6 +734,16 @@ class Pipeline
     public function whereIn(string $key, array $values, bool $strict = false): Collection
     {
         $this->working = ArrayMulti::whereIn($this->working, $key, $values, $strict);
+
+        return $this->collection;
+    }
+
+    /**
+     * Filter rows by SQL-like pattern matching.
+     */
+    public function whereLike(string $key, string $pattern, bool $caseSensitive = false): Collection
+    {
+        $this->working = ArrayMulti::whereLike($this->working, $key, $pattern, $caseSensitive);
 
         return $this->collection;
     }
@@ -683,9 +765,9 @@ class Pipeline
      */
     public function whereNotNull(string $key): Collection
     {
-        $this->working = ArrayMulti::whereNotNull($this->working, $key);
-
-        return $this->collection;
+        return $this->mutateWorking(
+            fn(array $working): array => ArrayMulti::whereNotNull($working, $key),
+        );
     }
 
     /**
@@ -693,7 +775,17 @@ class Pipeline
      */
     public function whereNull(string $key): Collection
     {
-        $this->working = ArrayMulti::whereNull($this->working, $key);
+        return $this->mutateWorking(
+            fn(array $working): array => ArrayMulti::whereNull($working, $key),
+        );
+    }
+
+    /**
+     * Filter rows where key starts with a prefix.
+     */
+    public function whereStartsWith(string $key, string $prefix, bool $caseSensitive = true): Collection
+    {
+        $this->working = ArrayMulti::whereStartsWith($this->working, $key, $prefix, $caseSensitive);
 
         return $this->collection;
     }
@@ -703,9 +795,9 @@ class Pipeline
      */
     public function wrap(): Collection
     {
-        $this->working = BaseArrayHelper::wrap($this->working);
-
-        return $this->collection;
+        return $this->mutateWorking(
+            fn(array $working): array => BaseArrayHelper::wrap($working),
+        );
     }
 
     /**

@@ -13,6 +13,7 @@ Available classes:
 - ``Infocyph\ArrayKit\Collection\Collection``
 - ``Infocyph\ArrayKit\Collection\HookedCollection``
 - ``Infocyph\ArrayKit\Collection\Pipeline``
+- ``Infocyph\ArrayKit\Collection\LazyCollection``
 
 Creating Collections
 --------------------
@@ -21,6 +22,7 @@ Creating Collections
 
     <?php
     use Infocyph\ArrayKit\Collection\Collection;
+    use function Infocyph\ArrayKit\collect;
 
     // Constructor
     $c1 = new Collection(['a' => 1, 'b' => 2]);
@@ -29,7 +31,7 @@ Creating Collections
     $c2 = Collection::make(['x' => 10]);
     $c3 = Collection::from(['y' => 20]);
 
-    // Global helper (autoloaded from src/functions.php)
+    // Namespaced helper (autoloaded by default)
     $c4 = collect(['z' => 30]);
 
 Reading and Writing
@@ -145,6 +147,7 @@ Every transformation method is exposed through ``Pipeline``.
 You can start it either with ``process()`` or directly by calling pipeline methods on collection (via ``__call``).
 Pipeline methods mutate the current collection instance and return that same instance for chaining.
 Use ``copy()`` or ``immutable()`` before chaining when you need functional-style non-mutating behavior.
+You can also force immutable-style pipeline entry using ``immutableProcess()`` / ``pipeImmutable()``.
 
 .. code-block:: php
 
@@ -170,8 +173,10 @@ Selection and filtering:
 - ``filter()``, ``reject()``
 - ``where()``, ``whereCallback()``
 - ``whereIn()``, ``whereNotIn()``, ``whereNull()``, ``whereNotNull()``
-- ``between()``
+- ``between()``, ``whereBetween()``
+- ``whereLike()``, ``whereStartsWith()``, ``whereEndsWith()``, ``whereContains()``
 - ``firstWhere()``
+- ``firstWhereIn()``
 
 Slicing and positional:
 
@@ -183,12 +188,13 @@ Structure and reshape:
 - ``flatten()``, ``flattenByKey()``, ``collapse()``
 - ``groupBy()``, ``keyBy()``, ``indexBy()``, ``pluck()``, ``transpose()``
 - ``mapWithKeys()``, ``values()``, ``rekey()``
-- ``wrap()``, ``unWrap()``, ``unwrap()``
+- ``wrap()``, ``unWrap()``
 
 Ordering and uniqueness:
 
 - ``sortBy()``, ``sortRecursive()``, ``shuffle()``
-- ``unique()``, ``duplicates()``, ``partition()``
+- ``sortByMany()``
+- ``unique()``, ``duplicates()``, ``uniqueBy()``, ``duplicatesBy()``, ``partition()``
 - ``intersect()``, ``diff()``, ``symmetricDiff()``, ``same()``
 
 Terminal methods (end chain with scalar/array/bool):
@@ -226,7 +232,9 @@ Slicing and paging:
 .. code-block:: php
 
     <?php
-    $list = collect([10, 20, 30, 40, 50, 60]);
+    use Infocyph\ArrayKit\Collection\Collection;
+
+    $list = Collection::make([10, 20, 30, 40, 50, 60]);
 
     $page1 = $list->paginate(1, 2)->all();         // first 2 items
     $everySecond = $list->nth(2)->all();
@@ -238,7 +246,9 @@ Grouping and reshaping:
 .. code-block:: php
 
     <?php
-    $rows = collect([
+    use Infocyph\ArrayKit\Collection\Collection;
+
+    $rows = Collection::make([
         ['team' => 'A', 'score' => 10],
         ['team' => 'B', 'score' => 20],
         ['team' => 'A', 'score' => 30],
@@ -247,13 +257,37 @@ Grouping and reshaping:
     $grouped = $rows->groupBy('team')->all();
     $scores = $rows->pluck('score')->all();         // [10, 20, 30]
     $sorted = $rows->sortBy('score', desc: true)->all();
+    $sortedMany = $rows->sortByMany([
+        ['team', 'asc'],
+        ['score', 'desc'],
+    ])->all();
+
+LazyCollection
+--------------
+
+Use ``LazyCollection`` for generator-backed transformations over large iterables.
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\ArrayKit;
+
+    $result = ArrayKit::lazyCollection(range(1, 1000))
+        ->filterLazy(fn ($v) => $v % 2 === 0)
+        ->mapLazy(fn ($v) => $v * 10)
+        ->take(5)
+        ->all();
+
+    // [20, 40, 60, 80, 100]
 
 Terminal calculations:
 
 .. code-block:: php
 
     <?php
-    $numbers = collect([1, 2, 3, 4, 5]);
+    use Infocyph\ArrayKit\Collection\Collection;
+
+    $numbers = Collection::make([1, 2, 3, 4, 5]);
 
     $sum = $numbers->process()->sum();              // 15
     $median = $numbers->process()->median();        // 3
@@ -267,3 +301,6 @@ Behavior Notes
 - Terminal methods return scalar/array/bool and stop the chain.
 - Dot-notation works in collection accessors and in ``HookedCollection`` get/set overrides.
 - ``merge()`` follows PHP ``array_merge`` semantics (string-key overwrite, numeric append/reindex).
+- ``paginate()`` throws ``InvalidArgumentException`` when ``page < 1`` or ``perPage < 1``.
+- ``flatten(0)`` keeps top-level values unchanged; ``flatten(1)`` flattens one level.
+- ``sum()`` and numeric min/max flows ignore non-numeric values.

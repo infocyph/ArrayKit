@@ -44,6 +44,8 @@ class LazyFileConfig extends Config
      */
     public function fill(string|array $key, mixed $value = null): bool
     {
+        $this->assertWritable();
+
         if (is_array($key)) {
             foreach ($key as $path => $entry) {
                 if (!is_string($path)) {
@@ -65,6 +67,8 @@ class LazyFileConfig extends Config
      */
     public function forget(string|int|array $key): bool
     {
+        $this->assertWritable();
+
         if (is_array($key)) {
             foreach ($key as $path) {
                 $this->forgetPath((string) $path);
@@ -178,6 +182,7 @@ class LazyFileConfig extends Config
      */
     public function reload(array|string $source): bool
     {
+        $this->assertWritable();
         $this->loadedNamespaces = [];
 
         return parent::reload($source);
@@ -189,6 +194,7 @@ class LazyFileConfig extends Config
      */
     public function replace(array $items): bool
     {
+        $this->assertWritable();
         $this->loadedNamespaces = [];
 
         return parent::replace($items);
@@ -200,6 +206,8 @@ class LazyFileConfig extends Config
      */
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
+        $this->assertWritable();
+
         if ($key === null) {
             throw new RuntimeException('At least one key is required for LazyFileConfig::set().');
         }

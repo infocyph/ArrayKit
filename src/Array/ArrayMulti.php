@@ -64,6 +64,26 @@ class ArrayMulti
     }
 
     /**
+     * Safe depth calculation with recursion/node guards.
+     *
+     * @param array<array-key, mixed> $array
+     */
+    public static function depthGuarded(
+        array $array,
+        int $maxDepth = 256,
+        int $maxNodes = 100000,
+        bool $throwOnTooDeep = false,
+    ): int {
+        if (empty($array)) {
+            return 0;
+        }
+
+        $visitedNodes = 0;
+
+        return self::measureDepthGuarded($array, 1, $visitedNodes, $maxDepth, $maxNodes, $throwOnTooDeep);
+    }
+
+    /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
      */
@@ -100,10 +120,16 @@ class ArrayMulti
 
     /**
      * @param array<array-key, mixed> $array
+     *                                       Depth semantics: 0 = unchanged top-level values, 1 = flatten one level, INF = fully flatten.
+     *
      * @return array<array-key, mixed>
      */
     public static function flatten(array $array, float|int $depth = \INF): array
     {
+        if ($depth <= 0) {
+            return array_values($array);
+        }
+
         $result = [];
         foreach ($array as $item) {
             if (!is_array($item)) {
@@ -132,6 +158,28 @@ class ArrayMulti
         self::flattenByKeyInto($array, $results);
 
         return $results;
+    }
+
+    /**
+     * Safe flatten with recursion/node guards.
+     *
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    public static function flattenGuarded(
+        array $array,
+        float|int $depth = \INF,
+        int $maxDepth = 256,
+        int $maxNodes = 100000,
+        bool $throwOnTooDeep = false,
+    ): array {
+        if ($depth <= 0) {
+            return array_values($array);
+        }
+
+        $visitedNodes = 0;
+
+        return self::flattenIntoGuarded($array, $depth, 1, $visitedNodes, $maxDepth, $maxNodes, $throwOnTooDeep);
     }
 
     /**
@@ -314,14 +362,16 @@ class ArrayMulti
      */
     public static function unique(array $array, bool $strict = false): array
     {
-        $seen = [];
+        $seenFingerprints = [];
         $results = [];
         foreach ($array as $key => $row) {
-            $compareValue = is_array($row) ? serialize($row) : $row;
-            if (!in_array($compareValue, $seen, $strict)) {
-                $seen[] = $compareValue;
-                $results[$key] = $row;
+            $fingerprint = ArraySingleOps::fingerprint($row, $strict);
+            if (isset($seenFingerprints[$fingerprint])) {
+                continue;
             }
+
+            $seenFingerprints[$fingerprint] = true;
+            $results[$key] = $row;
         }
 
         return $results;
@@ -336,6 +386,29 @@ class ArrayMulti
     public static function values(array $array): array
     {
         return array_values($array);
+    }
+
+    private static function assertTraversalWithinLimits(
+        int $currentDepth,
+        int &$visitedNodes,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+    ): bool {
+        if ($maxDepth > 0 && $currentDepth > $maxDepth) {
+            self::handleTraversalLimit($throwOnTooDeep, 'Array traversal exceeded max depth.');
+
+            return false;
+        }
+
+        $visitedNodes++;
+        if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
+            self::handleTraversalLimit($throwOnTooDeep, 'Array traversal exceeded max node count.');
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -357,6 +430,50 @@ class ArrayMulti
 
     /**
      * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    private static function flattenIntoGuarded(
+        array $array,
+        float|int $depth,
+        int $currentDepth,
+        int &$visitedNodes,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+    ): array {
+        if (!self::assertTraversalWithinLimits($currentDepth, $visitedNodes, $maxDepth, $maxNodes, $throwOnTooDeep)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($array as $item) {
+            if (!is_array($item)) {
+                $result[] = $item;
+
+                continue;
+            }
+
+            $values = ($depth === 1)
+                ? array_values($item)
+                : self::flattenIntoGuarded($item, $depth - 1, $currentDepth + 1, $visitedNodes, $maxDepth, $maxNodes, $throwOnTooDeep);
+
+            foreach ($values as $value) {
+                $result[] = $value;
+            }
+        }
+
+        return $result;
+    }
+
+    private static function handleTraversalLimit(bool $throwOnTooDeep, string $message): void
+    {
+        if ($throwOnTooDeep) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
      */
     private static function measureDepth(array $array): int
     {
@@ -369,5 +486,35 @@ class ArrayMulti
         }
 
         return $maxDepth;
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     */
+    private static function measureDepthGuarded(
+        array $array,
+        int $currentDepth,
+        int &$visitedNodes,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+    ): int {
+        if (!self::assertTraversalWithinLimits($currentDepth, $visitedNodes, $maxDepth, $maxNodes, $throwOnTooDeep)) {
+            return 0;
+        }
+
+        $resolvedMaxDepth = 1;
+        foreach ($array as $value) {
+            if (!is_array($value) || $value === []) {
+                continue;
+            }
+
+            $resolvedMaxDepth = max(
+                $resolvedMaxDepth,
+                self::measureDepthGuarded($value, $currentDepth + 1, $visitedNodes, $maxDepth, $maxNodes, $throwOnTooDeep) + 1,
+            );
+        }
+
+        return $resolvedMaxDepth;
     }
 }

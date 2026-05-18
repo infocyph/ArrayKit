@@ -68,3 +68,39 @@ it('supports values, rekey, deep merge helpers, and unwrap alias', function () {
         ->and($single->copy()->unWrap()->all())->toBe(['only'])
         ->and($single->copy()->values()->all())->toBe(['only']);
 });
+
+it('supports sortByMany and row-query convenience helpers in pipelines', function () {
+    $rows = Collection::make([
+        ['id' => 1, 'name' => 'Alice Cooper', 'age' => 25, 'role' => 'admin'],
+        ['id' => 2, 'name' => 'Bob Stone', 'age' => 19, 'role' => 'editor'],
+        ['id' => 3, 'name' => 'Carol Jones', 'age' => 31, 'role' => 'viewer'],
+        ['id' => 4, 'name' => 'Alex King', 'age' => 25, 'role' => 'viewer'],
+    ]);
+
+    expect($rows->copy()->sortByMany([
+        ['age', 'asc'],
+        ['id', 'desc'],
+    ])->all())->toBe([
+        1 => ['id' => 2, 'name' => 'Bob Stone', 'age' => 19, 'role' => 'editor'],
+        3 => ['id' => 4, 'name' => 'Alex King', 'age' => 25, 'role' => 'viewer'],
+        0 => ['id' => 1, 'name' => 'Alice Cooper', 'age' => 25, 'role' => 'admin'],
+        2 => ['id' => 3, 'name' => 'Carol Jones', 'age' => 31, 'role' => 'viewer'],
+    ])
+        ->and($rows->copy()->whereBetween('age', 20, 26)->all())->toBe([
+            0 => ['id' => 1, 'name' => 'Alice Cooper', 'age' => 25, 'role' => 'admin'],
+            3 => ['id' => 4, 'name' => 'Alex King', 'age' => 25, 'role' => 'viewer'],
+        ])
+        ->and($rows->copy()->whereStartsWith('name', 'Al')->all())->toBe([
+            0 => ['id' => 1, 'name' => 'Alice Cooper', 'age' => 25, 'role' => 'admin'],
+            3 => ['id' => 4, 'name' => 'Alex King', 'age' => 25, 'role' => 'viewer'],
+        ])
+        ->and($rows->copy()->whereContains('name', 'Stone')->all())->toBe([
+            1 => ['id' => 2, 'name' => 'Bob Stone', 'age' => 19, 'role' => 'editor'],
+        ])
+        ->and($rows->process()->firstWhereIn('role', ['viewer']))->toBe([
+            'id' => 3,
+            'name' => 'Carol Jones',
+            'age' => 31,
+            'role' => 'viewer',
+        ]);
+});

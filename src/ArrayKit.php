@@ -10,6 +10,7 @@ use Infocyph\ArrayKit\Array\BaseArrayHelper;
 use Infocyph\ArrayKit\Array\DotNotation;
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Collection\HookedCollection;
+use Infocyph\ArrayKit\Collection\LazyCollection;
 use Infocyph\ArrayKit\Collection\Pipeline;
 use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
@@ -64,6 +65,14 @@ final class ArrayKit
     public static function hookedCollection(mixed $data = []): HookedCollection
     {
         return HookedCollection::make($data);
+    }
+
+    /**
+     * @return LazyCollection<array-key, mixed>
+     */
+    public static function lazyCollection(mixed $data = []): LazyCollection
+    {
+        return LazyCollection::make($data);
     }
 
     /**

@@ -1,11 +1,12 @@
-Traits and Global Helpers
-=========================
+Traits and Helpers
+==================
 
 This page covers reusable building blocks outside the core helper classes:
 
 - ``DTOTrait`` for data-transfer object hydration
 - ``HookTrait`` for key-based get/set transforms
-- global helper functions from ``src/functions.php``
+- namespaced helper functions (autoloaded by default)
+- optional global helper functions from ``src/functions.php``
 
 DTOTrait
 --------
@@ -16,7 +17,11 @@ Main methods:
 
 - ``create(array $values): static`` (static constructor)
 - ``fromArray(array $values): static`` (hydrate current instance)
+- ``hydrate(array $values, array $mapping = [], bool $coerce = false): static``
+- ``hydrateNested(array $values, array $mapping = [], bool $coerce = false): static``
 - ``toArray(): array`` (export public properties)
+- ``toArrayDeep(): array`` (recursive export)
+- ``replaceFromArray(array $values, array $mapping = [], bool $coerce = false): static``
 
 Basic DTO Flow
 ~~~~~~~~~~~~~~
@@ -132,27 +137,34 @@ Hooks run in registration order:
 
     $config->setWithHooks('username', '  ALICE  '); // becomes "alice"
 
-Global Helper Functions
------------------------
+Helper Functions
+----------------
 
-Global helpers are autoloaded by Composer (``autoload.files``).
+By default, Composer autoloads the namespaced helper functions
+(``Infocyph\ArrayKit\*``). Global helper functions are optional.
 
-Available helpers:
+Namespaced helpers (autoloaded):
+
+- ``Infocyph\ArrayKit\compare(mixed $retrieved, mixed $value, ?string $operator = null): bool``
+- ``Infocyph\ArrayKit\array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed``
+- ``Infocyph\ArrayKit\array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool``
+- ``Infocyph\ArrayKit\collect(mixed $data = []): Collection``
+- ``Infocyph\ArrayKit\chain(mixed $data): Pipeline``
+
+Optional global helpers (manual include):
 
 - ``compare(mixed $retrieved, mixed $value, ?string $operator = null): bool``
-- ``isCallable(mixed $value): bool``
 - ``array_get(array $array, int|string|array|null $key = null, mixed $default = null): mixed``
 - ``array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool``
 - ``collect(mixed $data = []): Collection``
 - ``chain(mixed $data): Pipeline``
 
-Namespaced alternatives are also available to avoid global symbol collisions:
+To enable optional global helpers:
 
-- ``Infocyph\ArrayKit\compare()``
-- ``Infocyph\ArrayKit\array_get()``
-- ``Infocyph\ArrayKit\array_set()``
-- ``Infocyph\ArrayKit\collect()``
-- ``Infocyph\ArrayKit\chain()``
+.. code-block:: php
+
+    <?php
+    require_once __DIR__ . '/vendor/infocyph/arraykit/src/functions.php';
 
 array_get / array_set
 ~~~~~~~~~~~~~~~~~~~~~
@@ -160,6 +172,9 @@ array_get / array_set
 .. code-block:: php
 
     <?php
+    use function Infocyph\ArrayKit\array_get;
+    use function Infocyph\ArrayKit\array_set;
+
     $data = ['user' => ['name' => 'Alice']];
 
     $name = array_get($data, 'user.name');            // Alice
@@ -177,6 +192,9 @@ collect / chain
 .. code-block:: php
 
     <?php
+    use function Infocyph\ArrayKit\chain;
+    use function Infocyph\ArrayKit\collect;
+
     $c = collect([1, 2, 3, 4]);
     $evens = $c->filter(fn ($v) => $v % 2 === 0)->all(); // [1 => 2, 3 => 4]
 
@@ -188,25 +206,37 @@ compare Helper
 .. code-block:: php
 
     <?php
+    use function Infocyph\ArrayKit\compare;
+
     compare(10, 5, '>');   // true
     compare(10, 10, '==='); // true
     compare('5', 5, '!=='); // true
     compare(10, 10);        // true (default ==)
-
-isCallable Helper
-~~~~~~~~~~~~~~~~~
-
-``isCallable()`` is stricter than ``is_callable()`` for strings:
-
-.. code-block:: php
-
-    <?php
-    isCallable(fn () => true);   // true
-    isCallable('strlen');        // false
 
 When to Use These Helpers
 -------------------------
 
 - Use ``DTOTrait`` for lightweight request/response data objects.
 - Use ``HookTrait`` consumers when you need transparent value transforms.
-- Use global functions for concise scripting-style access in app code.
+- Use namespaced helper functions by default; include global helpers only when explicitly desired.
+
+Laravel Compatibility Layer
+---------------------------
+
+ArrayKit also ships optional Laravel-style wrappers:
+
+- ``Infocyph\ArrayKit\LaravelCompat\Arr``
+- ``Infocyph\ArrayKit\LaravelCompat\Collection``
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\LaravelCompat\Arr;
+    use Infocyph\ArrayKit\LaravelCompat\Collection as CompatCollection;
+
+    $data = ['user' => ['name' => 'Alice']];
+    Arr::set($data, 'user.role', 'admin');
+    $name = Arr::get($data, 'user.name');
+
+    $c = new CompatCollection([1, 2, 3]);
+    $all = $c->all();
