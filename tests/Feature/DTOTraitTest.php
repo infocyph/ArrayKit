@@ -7,25 +7,30 @@ use Infocyph\ArrayKit\traits\DTOTrait;
 final class DTOTraitAddress
 {
     use DTOTrait;
+
     public string $city = '';
 }
 
 final class DTOTraitUser
 {
     use DTOTrait;
+
     public DTOTraitAddress $address;
 
     public function __construct()
     {
-        $this->address = new DTOTraitAddress();
+        $this->address = new DTOTraitAddress;
     }
 }
 
 it('can create a DTO from an array', function () {
     // Define a quick test class inline
-    $dtoClass = new class {
+    $dtoClass = new class
+    {
         use DTOTrait;
+
         public string $name;
+
         public int $age;
     };
 
@@ -35,14 +40,17 @@ it('can create a DTO from an array', function () {
     $data = $dto->toArray();
     expect($data)->toBe([
         'name' => 'Alice',
-        'age'  => 30,
+        'age' => 30,
     ]);
 });
 
 it('can hydrate an existing DTO instance from an array', function () {
-    $dto = new class {
+    $dto = new class
+    {
         use DTOTrait;
+
         public string $name = '';
+
         public int $age = 0;
     };
 
@@ -55,9 +63,12 @@ it('can hydrate an existing DTO instance from an array', function () {
 });
 
 it('supports hydrate mapping and scalar coercion', function () {
-    $dto = new class {
+    $dto = new class
+    {
         use DTOTrait;
+
         public string $name = '';
+
         public int $age = 0;
     };
 
@@ -70,7 +81,7 @@ it('supports hydrate mapping and scalar coercion', function () {
 });
 
 it('supports nested DTO hydration and deep export', function () {
-    $dto = new DTOTraitUser();
+    $dto = new DTOTraitUser;
     $dto->hydrateNested(['address' => ['city' => 'Paris']]);
 
     expect($dto->toArrayDeep())->toBe([

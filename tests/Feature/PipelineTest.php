@@ -16,7 +16,7 @@ it('supports keyBy/indexBy/mapWithKeys/countBy in pipelines', function () {
         2 => ['id' => 2, 'team' => 'B', 'score' => 50],
         3 => ['id' => 3, 'team' => 'A', 'score' => 40],
     ])
-        ->and($rows->copy()->indexBy(fn (array $row) => 'r' . $row['id'])->all())->toBe([
+        ->and($rows->copy()->indexBy(fn (array $row) => 'r'.$row['id'])->all())->toBe([
             'r1' => ['id' => 1, 'team' => 'A', 'score' => 30],
             'r2' => ['id' => 2, 'team' => 'B', 'score' => 50],
             'r3' => ['id' => 3, 'team' => 'A', 'score' => 40],

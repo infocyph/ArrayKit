@@ -25,7 +25,7 @@ real-world PHP projects.
 - **Pipeline for Collection Ops**
 - **LazyCollection for Generator-Based Flows**
 - **ArrayShape Validation Helper**
-- **Laravel Compatibility Layer (`LaravelCompat\\Arr`, `LaravelCompat\\Collection`)**
+- **Compiled Config + Lazy Namespace Cache**
 - **Namespaced Helpers + Optional Globals**
 
 ## Modules
@@ -45,8 +45,8 @@ real-world PHP projects.
 
 | Class               | Description                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------|
-| **Config**          | Dot-access configuration loader with explicit hook-aware variants (`getWithHooks`, `setWithHooks`, `fillWithHooks`). |
-| **LazyFileConfig**  | First-segment lazy loader (`db.host` loads `db.php` on demand) for lower memory usage on large config trees.      |
+| **Config**          | Dot-access configuration loader with explicit hook-aware variants (`getWithHooks`, `setWithHooks`, `fillWithHooks`) plus compiled cache export/load and read memoization. |
+| **LazyFileConfig**  | First-segment lazy loader (`db.host` loads `db.php` on demand) with namespace cache files for structural reads and a flat leaf-index cache for exact scalar lookups.      |
 | **BaseConfigTrait** | Shared config logic.                                                                                                |
 
 
@@ -224,6 +224,11 @@ $config->snapshot('before-runtime');
 $config->merge(['app' => ['env' => 'production']]);
 $changed = $config->changed('before-runtime');
 $config->restore('before-runtime');
+
+// Compiled cache export / load
+$config->exportCache(__DIR__ . '/bootstrap/cache/config.php');
+$cached = new Config();
+$cached->loadCache(__DIR__ . '/bootstrap/cache/config.php');
 ```
 
 ### Hooked Collection
@@ -266,12 +271,12 @@ $user->hydrate(['name' => 'Alice'], mapping: ['name' => 'full_name']);
 $deep = $user->toArrayDeep();
 ```
 
-### Lazy + Shape + Compat
+### Lazy + Shape + Cache
 
 ```php
 use Infocyph\ArrayKit\Array\ArrayShape;
 use Infocyph\ArrayKit\ArrayKit;
-use Infocyph\ArrayKit\LaravelCompat\Arr;
+use Infocyph\ArrayKit\Config\LazyFileConfig;
 
 $lazy = ArrayKit::lazyCollection(range(1, 10))
     ->filterLazy(fn ($v) => $v % 2 === 0)
@@ -283,8 +288,11 @@ $row = ArrayShape::require(
     ['id' => 'int', 'email' => 'string', 'roles' => 'list<string>'],
 );
 
-$data = ['user' => ['name' => 'Alice']];
-Arr::set($data, 'user.role', 'admin');
+$config = new LazyFileConfig(__DIR__ . '/config', namespaceCacheDirectory: __DIR__ . '/bootstrap/cache/config');
+$config->warmNamespaceCache(['db', 'cache']);
+
+// Exact scalar leaf reads can hit bootstrap/cache/config/__flat.php first.
+$host = $config->get('db.host');
 ```
 
 ## Behavior Notes
@@ -296,6 +304,7 @@ Arr::set($data, 'user.role', 'admin');
 - `DotNotation` treats existing `null` keys/properties as present (does not fall back to defaults).
 - `DotNotation::hasWildcard()`, `paths()`, `matches()`, `rename()`, and `move()` are available for wildcard/path operations.
 - For untrusted/deep payloads, use bounded traversal variants: `DotNotation::getSafe()`, `ArrayMulti::depthGuarded()`, `flattenGuarded()`, and `sortRecursiveGuarded()`.
+- `LazyFileConfig` namespace cache writes one cache file per namespace plus a shared `__flat.php` file containing only final scalar/null leaf values for exact-key fast paths.
 
 ## Security
 

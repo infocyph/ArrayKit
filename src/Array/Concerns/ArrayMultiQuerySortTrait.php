@@ -194,7 +194,14 @@ trait ArrayMultiQuerySortTrait
             return empty($array) ? $default : end($array);
         }
 
-        return static::first(array_reverse($array, true), $callback, $default);
+        $resolved = $default;
+        foreach ($array as $key => $row) {
+            if ($callback($row, $key)) {
+                $resolved = $row;
+            }
+        }
+
+        return $resolved;
     }
 
     /**

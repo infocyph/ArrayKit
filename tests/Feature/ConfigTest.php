@@ -10,9 +10,9 @@ enum ConfigMode: string
     case Prod = 'prod';
 }
 
-$config = new Config();
+$config = new Config;
 
-it('can load an array into config', function () use ($config)  {
+it('can load an array into config', function () use ($config) {
     $success = $config->loadArray(['app' => ['name' => 'ArrayKit']]);
     expect($success)
         ->toBeTrue()
@@ -36,7 +36,7 @@ it('checks if a config key exists', function () use ($config) {
 });
 
 it('supports replace and reload operations', function () {
-    $cfg = new Config();
+    $cfg = new Config;
     $cfg->loadArray(['app' => ['name' => 'ArrayKit']]);
 
     $cfg->replace(['app' => ['name' => 'ArrayKitX']]);
@@ -48,7 +48,7 @@ it('supports replace and reload operations', function () {
 });
 
 it('supports getOrFail for required keys', function () {
-    $cfg = new Config();
+    $cfg = new Config;
     $cfg->loadArray(['app' => ['name' => 'ArrayKit']]);
 
     expect($cfg->getOrFail('app.name'))->toBe('ArrayKit')
@@ -56,7 +56,7 @@ it('supports getOrFail for required keys', function () {
 });
 
 it('supports typed getters with default fallbacks', function () {
-    $cfg = new Config();
+    $cfg = new Config;
     $cfg->loadArray([
         'app' => ['name' => 'ArrayKit', 'debug' => true],
         'port' => 8080,
@@ -74,7 +74,7 @@ it('supports typed getters with default fallbacks', function () {
 });
 
 it('supports merge/overlay/snapshot/restore/changed/readonly', function () {
-    $cfg = new Config();
+    $cfg = new Config;
     $cfg->loadArray(['db' => ['host' => 'localhost', 'port' => 3306]]);
     $cfg->snapshot('baseline');
 
@@ -95,9 +95,49 @@ it('supports merge/overlay/snapshot/restore/changed/readonly', function () {
 });
 
 it('supports getEnum for backed enums', function () {
-    $cfg = new Config();
+    $cfg = new Config;
     $cfg->loadArray(['app' => ['mode' => 'prod']]);
 
     expect($cfg->getEnum('app.mode', ConfigMode::class))->toBe(ConfigMode::Prod)
         ->and($cfg->getEnum('app.missing', ConfigMode::class, ConfigMode::Local))->toBe(ConfigMode::Local);
+});
+
+it('supports compiled config cache export and reload', function () {
+    $cfg = new Config;
+    $cfg->loadArray([
+        'app' => ['name' => 'ArrayKit'],
+        'db' => ['host' => 'localhost'],
+    ]);
+
+    $cachePath = sys_get_temp_dir().DIRECTORY_SEPARATOR.'arraykit-config-cache-'.uniqid('', true).'.php';
+
+    try {
+        expect($cfg->exportCache($cachePath))->toBeTrue();
+
+        $loaded = new Config;
+        expect($loaded->loadCache($cachePath))->toBeTrue()
+            ->and($loaded->get('app.name'))->toBe('ArrayKit')
+            ->and($loaded->get('db.host'))->toBe('localhost');
+
+        $loaded->reload(['db' => ['host' => 'db.internal']]);
+        expect($loaded->get('db.host'))->toBe('db.internal');
+    } finally {
+        if (is_file($cachePath)) {
+            unlink($cachePath);
+        }
+    }
+});
+
+it('memoizes reads without returning stale values after mutation', function () {
+    $cfg = new Config;
+    $cfg->loadArray(['app' => ['name' => 'ArrayKit']]);
+
+    expect($cfg->readCacheEnabled())->toBeTrue()
+        ->and($cfg->get('app.name'))->toBe('ArrayKit');
+
+    $cfg->set('app.name', 'ArrayKitX');
+    expect($cfg->get('app.name'))->toBe('ArrayKitX')
+        ->and($cfg->has('app.name'))->toBeTrue()
+        ->and($cfg->readCache(false)->readCacheEnabled())->toBeFalse()
+        ->and($cfg->get('app.name'))->toBe('ArrayKitX');
 });

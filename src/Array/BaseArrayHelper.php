@@ -99,7 +99,6 @@ class BaseArrayHelper
      *
      * @param array<array-key, mixed> $array The array to search.
      * @param callable $callback The callback to use for searching.
-     *
      * @return int|string|null The key of the value if found, or null if not found.
      */
     public static function findKey(array $array, callable $callback): int|string|null
@@ -135,7 +134,6 @@ class BaseArrayHelper
      *
      * @param array<array-key, mixed> $array The array to search.
      * @param int|string|array<int, int|string> $keys The key(s) to check for existence.
-     *
      * @return bool True if all the given keys exist in the array, false otherwise.
      */
     public static function has(array $array, int|string|array $keys): bool
@@ -221,7 +219,6 @@ class BaseArrayHelper
      * @param array<array-key, mixed> $array The array from which to retrieve random items.
      * @param int|null $number The number of items to retrieve. If null, a single item is returned.
      * @param bool $preserveKeys Whether to preserve the keys from the original array.
-     *
      * @return mixed The retrieved item(s) from the array.
      *
      * @throws InvalidArgumentException If the user requested more items than the array contains.

@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
+use Infocyph\ArrayKit\ArrayKit;
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Collection\HookedCollection;
 use Infocyph\ArrayKit\Collection\LazyCollection;
 use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
 use Infocyph\ArrayKit\Facade\ModuleProxy;
-use Infocyph\ArrayKit\ArrayKit;
 
 function arrayKitWriteArrayFile(string $directory, string $name, array $contents): void
 {
     $export = var_export($contents, true);
     file_put_contents(
-        $directory . DIRECTORY_SEPARATOR . $name . '.php',
+        $directory.DIRECTORY_SEPARATOR.$name.'.php',
         "<?php\n\nreturn {$export};\n",
     );
 }
 
 function arrayKitDeleteDirectory(string $directory): void
 {
-    if (!is_dir($directory)) {
+    if (! is_dir($directory)) {
         return;
     }
 
@@ -35,10 +35,11 @@ function arrayKitDeleteDirectory(string $directory): void
             continue;
         }
 
-        $path = $directory . DIRECTORY_SEPARATOR . $entry;
+        $path = $directory.DIRECTORY_SEPARATOR.$entry;
 
         if (is_dir($path)) {
             arrayKitDeleteDirectory($path);
+
             continue;
         }
 
@@ -50,9 +51,9 @@ function arrayKitDeleteDirectory(string $directory): void
 
 beforeEach(function () {
     $this->configPath = sys_get_temp_dir()
-        . DIRECTORY_SEPARATOR
-        . 'arraykit-facade-'
-        . uniqid('', true);
+        .DIRECTORY_SEPARATOR
+        .'arraykit-facade-'
+        .uniqid('', true);
 
     mkdir($this->configPath, 0777, true);
 });
@@ -82,10 +83,11 @@ it('creates config instances from the facade', function () {
 it('creates lazy config instances from the facade', function () {
     arrayKitWriteArrayFile($this->configPath, 'db', ['host' => 'localhost']);
 
-    $config = ArrayKit::lazyConfig($this->configPath);
+    $config = ArrayKit::lazyConfig($this->configPath, namespaceCacheDirectory: $this->configPath.DIRECTORY_SEPARATOR.'cache');
 
     expect($config)->toBeInstanceOf(LazyFileConfig::class)
-        ->and($config->get('db.host'))->toBe('localhost');
+        ->and($config->get('db.host'))->toBe('localhost')
+        ->and($config->namespaceCacheDirectory())->toBe($this->configPath.DIRECTORY_SEPARATOR.'cache');
 });
 
 it('creates collection and pipeline helpers from the facade', function () {

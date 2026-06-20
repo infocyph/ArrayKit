@@ -17,6 +17,7 @@ use JsonSerializable;
  * Inherits most of its behavior from BaseCollectionTrait.
  *
  * @phpstan-consistent-constructor
+ *
  * @implements ArrayAccess<array-key, mixed>
  * @implements IteratorAggregate<array-key, mixed>
  */

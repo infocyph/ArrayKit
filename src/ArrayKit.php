@@ -78,9 +78,13 @@ final class ArrayKit
     /**
      * @param array<array-key, mixed> $items
      */
-    public static function lazyConfig(string $directory, string $extension = 'php', array $items = []): LazyFileConfig
-    {
-        return new LazyFileConfig($directory, $extension, $items);
+    public static function lazyConfig(
+        string $directory,
+        string $extension = 'php',
+        array $items = [],
+        ?string $namespaceCacheDirectory = null,
+    ): LazyFileConfig {
+        return new LazyFileConfig($directory, $extension, $items, $namespaceCacheDirectory);
     }
 
     public static function multi(): ModuleProxy

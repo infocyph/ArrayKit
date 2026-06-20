@@ -24,3 +24,17 @@ it('supports mapLazy/filterLazy/take/takeUntil/chunkLazy/cursor', function () {
     $cursor = iterator_to_array($lazy->cursor(), true);
     expect($cursor)->toBe([1, 2, 3, 4, 5, 6]);
 });
+
+it('does not advance the source when take(0) is requested', function () {
+    $visited = 0;
+
+    $lazy = LazyCollection::from((function () use (&$visited) {
+        $visited++;
+        yield 1;
+        $visited++;
+        yield 2;
+    })());
+
+    expect($lazy->take(0)->all())->toBe([])
+        ->and($visited)->toBe(0);
+});

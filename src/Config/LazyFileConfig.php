@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Config;
 
 use Infocyph\ArrayKit\Array\DotNotation;
+use Infocyph\ArrayKit\Config\Concerns\LazyFileConfigCacheTrait;
 use InvalidArgumentException;
 use RuntimeException;
 use UnexpectedValueException;
 
 class LazyFileConfig extends Config
 {
+    use LazyFileConfigCacheTrait;
+
+    private const string FLAT_INDEX_FILE = '__flat.php';
+
     /**
      * @var array<string, bool>
      */
@@ -23,10 +28,15 @@ class LazyFileConfig extends Config
         protected string $directory,
         protected string $extension = 'php',
         array $items = [],
+        ?string $namespaceCacheDirectory = null,
     ) {
         $this->directory = rtrim($directory, DIRECTORY_SEPARATOR);
         $this->extension = ltrim($extension, '.');
         $this->items = $items;
+        $this->namespaceCacheDirectory = $namespaceCacheDirectory !== null
+            ? rtrim($namespaceCacheDirectory, DIRECTORY_SEPARATOR)
+            : null;
+        $this->syncLoadedNamespacesFromItems();
     }
 
     #[\Override]
@@ -45,6 +55,7 @@ class LazyFileConfig extends Config
     public function fill(string|array $key, mixed $value = null): bool
     {
         $this->assertWritable();
+        $this->flushReadCache();
 
         if (is_array($key)) {
             foreach ($key as $path => $entry) {
@@ -68,6 +79,7 @@ class LazyFileConfig extends Config
     public function forget(string|int|array $key): bool
     {
         $this->assertWritable();
+        $this->flushReadCache();
 
         if (is_array($key)) {
             foreach ($key as $path) {
@@ -101,13 +113,13 @@ class LazyFileConfig extends Config
 
             $results = [];
             foreach ($key as $path) {
-                $results[(string) $path] = $this->getPath((string) $path, $default);
+                $results[(string) $path] = $this->getResolvedValue((string) $path, $default);
             }
 
             return $results;
         }
 
-        return $this->getPath($key, $default);
+        return $this->getResolvedValue($key, $default);
     }
 
     #[\Override]
@@ -121,7 +133,7 @@ class LazyFileConfig extends Config
             return false;
         }
 
-        return array_all($keys, fn($path) => $this->hasPath($path));
+        return array_all($keys, fn($path) => $this->hasResolvedValue($path));
     }
 
     #[\Override]
@@ -135,7 +147,7 @@ class LazyFileConfig extends Config
             return false;
         }
 
-        return array_any($keys, fn($path) => $this->hasPath($path));
+        return array_any($keys, fn($path) => $this->hasResolvedValue($path));
     }
 
     /**
@@ -144,6 +156,20 @@ class LazyFileConfig extends Config
     public function isLoaded(string $namespace): bool
     {
         return isset($this->loadedNamespaces[$this->normalizeNamespace($namespace)]);
+    }
+
+    #[\Override]
+    /**
+     * @param array<array-key, mixed> $resource
+     */
+    public function loadArray(array $resource): bool
+    {
+        $loaded = parent::loadArray($resource);
+        if ($loaded) {
+            $this->syncLoadedNamespacesFromItems();
+        }
+
+        return $loaded;
     }
 
     /**
@@ -160,6 +186,31 @@ class LazyFileConfig extends Config
     public function loadedNamespaces(): array
     {
         return array_keys($this->loadedNamespaces);
+    }
+
+    #[\Override]
+    public function loadFile(string $path): bool
+    {
+        $loaded = parent::loadFile($path);
+        if ($loaded) {
+            $this->syncLoadedNamespacesFromItems();
+        }
+
+        return $loaded;
+    }
+
+    #[\Override]
+    /**
+     * @param array<array-key, mixed> $items
+     */
+    public function merge(array $items): bool
+    {
+        $merged = parent::merge($items);
+        if ($merged) {
+            $this->syncLoadedNamespacesFromItems();
+        }
+
+        return $merged;
     }
 
     /**
@@ -183,9 +234,12 @@ class LazyFileConfig extends Config
     public function reload(array|string $source): bool
     {
         $this->assertWritable();
-        $this->loadedNamespaces = [];
+        $reloaded = parent::reload($source);
+        if ($reloaded) {
+            $this->syncLoadedNamespacesFromItems();
+        }
 
-        return parent::reload($source);
+        return $reloaded;
     }
 
     #[\Override]
@@ -195,9 +249,23 @@ class LazyFileConfig extends Config
     public function replace(array $items): bool
     {
         $this->assertWritable();
-        $this->loadedNamespaces = [];
+        $replaced = parent::replace($items);
+        if ($replaced) {
+            $this->syncLoadedNamespacesFromItems();
+        }
 
-        return parent::replace($items);
+        return $replaced;
+    }
+
+    #[\Override]
+    public function restore(string $name = 'default'): bool
+    {
+        $restored = parent::restore($name);
+        if ($restored) {
+            $this->syncLoadedNamespacesFromItems();
+        }
+
+        return $restored;
     }
 
     #[\Override]
@@ -207,6 +275,7 @@ class LazyFileConfig extends Config
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
         $this->assertWritable();
+        $this->flushReadCache();
 
         if ($key === null) {
             throw new RuntimeException('At least one key is required for LazyFileConfig::set().');
@@ -255,11 +324,7 @@ class LazyFileConfig extends Config
         $this->loadNamespace($namespace);
 
         if (!array_key_exists($namespace, $this->items)) {
-            if ($default instanceof \Closure) {
-                return $default();
-            }
-
-            return $default;
+            return $this->resolveDefault($default);
         }
 
         if ($rest === null || $rest === '') {
@@ -267,7 +332,7 @@ class LazyFileConfig extends Config
         }
 
         if (!is_array($this->items[$namespace])) {
-            return $default;
+            return $this->resolveDefault($default);
         }
 
         return DotNotation::get($this->items[$namespace], $rest, $default);
@@ -301,7 +366,7 @@ class LazyFileConfig extends Config
 
         $this->loadedNamespaces[$namespace] = true;
 
-        $file = $this->resolveNamespaceFile($namespace);
+        $file = $this->resolveCachedNamespaceFile($namespace) ?? $this->resolveNamespaceFile($namespace);
         if ($file === null) {
             return;
         }
@@ -332,6 +397,61 @@ class LazyFileConfig extends Config
         return $trimmed;
     }
 
+    protected function resolveCachedNamespaceFile(string $namespace): ?string
+    {
+        $path = $this->cachedNamespacePath($namespace);
+
+        if ($path === null || !is_file($path) || !is_readable($path)) {
+            return null;
+        }
+
+        return $path;
+    }
+
+    protected function resolveLazyRawValue(string $path): mixed
+    {
+        [$namespace, $rest] = $this->splitPath($path);
+
+        if (array_key_exists($namespace, $this->items)) {
+            if ($rest === null || $rest === '') {
+                return $this->items[$namespace];
+            }
+
+            if (!is_array($this->items[$namespace])) {
+                return $this->missingValueMarker();
+            }
+
+            return DotNotation::get($this->items[$namespace], $rest, $this->missingValueMarker());
+        }
+
+        if ($this->isLoaded($namespace)) {
+            return $this->missingValueMarker();
+        }
+
+        if ($rest !== null && $this->isEligibleFlatLookupPath($path)) {
+            $flatValue = $this->flatLeafValue($path);
+            if ($flatValue !== $this->missingValueMarker()) {
+                return $flatValue;
+            }
+        }
+
+        $this->loadNamespace($namespace);
+
+        if (!array_key_exists($namespace, $this->items)) {
+            return $this->missingValueMarker();
+        }
+
+        if ($rest === null || $rest === '') {
+            return $this->items[$namespace];
+        }
+
+        if (!is_array($this->items[$namespace])) {
+            return $this->missingValueMarker();
+        }
+
+        return DotNotation::get($this->items[$namespace], $rest, $this->missingValueMarker());
+    }
+
     protected function resolveNamespaceFile(string $namespace): ?string
     {
         $file = $this->directory . DIRECTORY_SEPARATOR . $namespace . '.' . $this->extension;
@@ -341,6 +461,25 @@ class LazyFileConfig extends Config
         }
 
         return $file;
+    }
+
+    #[\Override]
+    protected function resolveRawValue(int|string $key): mixed
+    {
+        if (!is_string($key)) {
+            return parent::resolveRawValue($key);
+        }
+
+        if (!$this->readCacheEnabled()) {
+            return $this->resolveLazyRawValue($key);
+        }
+
+        $cacheKey = $this->valueCacheKey($key);
+        if (array_key_exists($cacheKey, $this->resolvedValueCache)) {
+            return $this->resolvedValueCache[$cacheKey];
+        }
+
+        return $this->resolvedValueCache[$cacheKey] = $this->resolveLazyRawValue($key);
     }
 
     protected function setPath(string $path, mixed $value, bool $overwrite): void
@@ -386,5 +525,19 @@ class LazyFileConfig extends Config
         $rest = substr($trimmed, $dotPosition + 1);
 
         return [$namespace, $rest === '' ? null : $rest];
+    }
+
+    protected function syncLoadedNamespacesFromItems(): void
+    {
+        parent::flushReadCache();
+        $this->loadedNamespaces = [];
+
+        foreach (array_keys($this->items) as $namespace) {
+            if (!is_string($namespace) || !preg_match('/^[A-Za-z0-9_-]+$/', $namespace)) {
+                continue;
+            }
+
+            $this->loadedNamespaces[$namespace] = true;
+        }
     }
 }

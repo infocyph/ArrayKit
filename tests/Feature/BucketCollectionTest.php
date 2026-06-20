@@ -10,7 +10,7 @@ it('can be instantiated with array data', function () {
 });
 
 it('supports array access', function () {
-    $collection = new Collection();
+    $collection = new Collection;
     $collection['x'] = 42;
     expect($collection['x'])->toBe(42);
 });
@@ -49,7 +49,7 @@ it('provides a merge method', function () {
 
 it('can filter and return a new collection', function () {
     $collection = new Collection([1, 2, 3, 4]);
-    $even       = $collection->filter(fn ($val) => $val % 2 === 0);
+    $even = $collection->filter(fn ($val) => $val % 2 === 0);
     expect($even->all())->toBe([1 => 2, 3 => 4]);
 });
 

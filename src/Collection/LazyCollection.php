@@ -11,6 +11,7 @@ use Traversable;
 /**
  * @template TKey of array-key
  * @template TValue
+ *
  * @implements IteratorAggregate<TKey, TValue>
  */
 final readonly class LazyCollection implements IteratorAggregate
@@ -23,6 +24,7 @@ final readonly class LazyCollection implements IteratorAggregate
     /**
      * @template TFromKey of array-key
      * @template TFromValue
+     *
      * @param iterable<TFromKey, TFromValue> $source
      * @return self<TFromKey, TFromValue>
      */
@@ -125,6 +127,7 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @template TMapped
+     *
      * @param callable(TValue, TKey): TMapped $callback
      * @return self<TKey, TMapped>
      */
@@ -144,6 +147,10 @@ final readonly class LazyCollection implements IteratorAggregate
     {
         if ($limit < 0) {
             throw new \InvalidArgumentException('Take limit must be zero or greater.');
+        }
+
+        if ($limit === 0) {
+            return self::from([]);
         }
 
         return new self(function () use ($limit): Generator {

@@ -121,7 +121,6 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $array
      *                                       Depth semantics: 0 = unchanged top-level values, 1 = flatten one level, INF = fully flatten.
-     *
      * @return array<array-key, mixed>
      */
     public static function flatten(array $array, float|int $depth = \INF): array

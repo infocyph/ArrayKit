@@ -223,20 +223,9 @@ When to Use These Helpers
 Laravel Compatibility Layer
 ---------------------------
 
-ArrayKit also ships optional Laravel-style wrappers:
+ArrayKit's default helper surface is namespaced:
 
-- ``Infocyph\ArrayKit\LaravelCompat\Arr``
-- ``Infocyph\ArrayKit\LaravelCompat\Collection``
-
-.. code-block:: php
-
-    <?php
-    use Infocyph\ArrayKit\LaravelCompat\Arr;
-    use Infocyph\ArrayKit\LaravelCompat\Collection as CompatCollection;
-
-    $data = ['user' => ['name' => 'Alice']];
-    Arr::set($data, 'user.role', 'admin');
-    $name = Arr::get($data, 'user.name');
-
-    $c = new CompatCollection([1, 2, 3]);
-    $all = $c->all();
+- ``Infocyph\ArrayKit\array_get``
+- ``Infocyph\ArrayKit\array_set``
+- ``Infocyph\ArrayKit\collect``
+- ``Infocyph\ArrayKit\chain``
