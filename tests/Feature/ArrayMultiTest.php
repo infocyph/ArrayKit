@@ -31,7 +31,7 @@ it('returns top-level values unchanged when flatten depth is zero', function () 
 
 it('can get the depth of a nested array', function () {
     $source = [1, [2, [3]], 4];
-    $depth  = ArrayMulti::depth($source);
+    $depth = ArrayMulti::depth($source);
     expect($depth)->toBe(3);
 });
 
@@ -168,7 +168,7 @@ it('returns the first item that matches the callback using first()', function ()
         ['a' => 2],
         ['a' => 3],
     ];
-    $result = ArrayMulti::first($data, fn($row) => $row['a'] > 1, 'default');
+    $result = ArrayMulti::first($data, fn ($row) => $row['a'] > 1, 'default');
     expect($result)->toBe(['a' => 2]);
 });
 
@@ -188,8 +188,7 @@ it('returns the last item that matches the callback using last()', function () {
         ['a' => 2],
         ['a' => 3],
     ];
-    // When using last() with a callback, the array is reversed. The first element in reversed order matching the callback is returned.
-    $result = ArrayMulti::last($data, fn($row) => $row['a'] < 3, 'default');
+    $result = ArrayMulti::last($data, fn ($row) => $row['a'] < 3, 'default');
     expect($result)->toBe(['a' => 2]);
 });
 
@@ -215,7 +214,7 @@ it('filters a 2D array using whereCallback()', function () {
         ['a' => 2],
         ['a' => 3],
     ];
-    $result = ArrayMulti::whereCallback($data, fn($row) => $row['a'] > 1);
+    $result = ArrayMulti::whereCallback($data, fn ($row) => $row['a'] > 1);
     expect($result)->toBe([
         1 => ['a' => 2],
         2 => ['a' => 3],
@@ -260,7 +259,7 @@ it('maps over a 2D array using map()', function () {
         ['num' => 2],
         ['num' => 3],
     ];
-    $result = ArrayMulti::map($data, fn($row) => $row['num'] * 10);
+    $result = ArrayMulti::map($data, fn ($row) => $row['num'] * 10);
     expect($result)->toBe([
         0 => 10,
         1 => 20,
@@ -289,7 +288,7 @@ it('reduces a 2D array to a single value using reduce()', function () {
         ['num' => 3],
         ['num' => 4],
     ];
-    $result = ArrayMulti::reduce($data, fn($carry, $row) => $carry + $row['num'], 0);
+    $result = ArrayMulti::reduce($data, fn ($carry, $row) => $carry + $row['num'], 0);
     expect($result)->toBe(9);
 });
 
@@ -300,7 +299,7 @@ it('returns true for some() if at least one row matches', function () {
         ['flag' => false],
         ['flag' => true],
     ];
-    expect(ArrayMulti::some($data, fn($row) => $row['flag']))->toBeTrue();
+    expect(ArrayMulti::some($data, fn ($row) => $row['flag']))->toBeTrue();
 });
 
 // every()
@@ -309,13 +308,13 @@ it('returns true for every() if all rows match', function () {
         ['pass' => true],
         ['pass' => true],
     ];
-    expect(ArrayMulti::every($data, fn($row) => $row['pass']))->toBeTrue();
+    expect(ArrayMulti::every($data, fn ($row) => $row['pass']))->toBeTrue();
     $data[1]['pass'] = false;
-    expect(ArrayMulti::every($data, fn($row) => $row['pass']))->toBeFalse();
+    expect(ArrayMulti::every($data, fn ($row) => $row['pass']))->toBeFalse();
 });
 
 // contains()
-//it('checks that contains() works with both value and callable', function () {
+// it('checks that contains() works with both value and callable', function () {
 //    $data = [
 //        ['id' => 1],
 //        ['id' => 2],
@@ -324,7 +323,7 @@ it('returns true for every() if all rows match', function () {
 //    expect(ArrayMulti::contains($data, 2))->toBeTrue();
 //    expect(ArrayMulti::contains($data, 4))->toBeFalse();
 //    expect(ArrayMulti::contains($data, fn($row) => $row['id'] === 3))->toBeTrue();
-//});
+// });
 
 // sum()
 it('calculates the sum from a 2D array using sum()', function () {
@@ -352,7 +351,7 @@ it('partitions a 2D array using partition()', function () {
         ['score' => 50],
         ['score' => 90],
     ];
-    [$pass, $fail] = ArrayMulti::partition($data, fn($row) => $row['score'] >= 60);
+    [$pass, $fail] = ArrayMulti::partition($data, fn ($row) => $row['score'] >= 60);
     expect($pass)->toBe([
         0 => ['score' => 80],
         2 => ['score' => 90],
@@ -399,7 +398,7 @@ it('supports keyBy/indexBy/countBy/firstWhere/mapWithKeys helpers', function () 
         11 => ['id' => 11, 'team' => 'B', 'score' => 70],
         12 => ['id' => 12, 'team' => 'A', 'score' => 55],
     ])
-        ->and(ArrayMulti::indexBy($rows, fn (array $row) => 'row_' . $row['id']))->toBe([
+        ->and(ArrayMulti::indexBy($rows, fn (array $row) => 'row_'.$row['id']))->toBe([
             'row_10' => ['id' => 10, 'team' => 'A', 'score' => 40],
             'row_11' => ['id' => 11, 'team' => 'B', 'score' => 70],
             'row_12' => ['id' => 12, 'team' => 'A', 'score' => 55],
@@ -430,7 +429,7 @@ it('passes row key to sortBy/maxBy/minBy callbacks', function () {
 
     $sorted = ArrayMulti::sortBy(
         $rows,
-        fn (array $row, string $key) => $key . ':' . $row['id'],
+        fn (array $row, string $key) => $key.':'.$row['id'],
         false,
         SORT_STRING,
     );
@@ -570,9 +569,9 @@ it('can throw when guarded recursion limits are exceeded', function () {
     $deep = [[[['value']]]];
 
     expect(fn () => ArrayMulti::depthGuarded($deep, maxDepth: 2, throwOnTooDeep: true))
-        ->toThrow(\RuntimeException::class)
+        ->toThrow(RuntimeException::class)
         ->and(fn () => ArrayMulti::flattenGuarded($deep, \INF, maxDepth: 2, throwOnTooDeep: true))
-        ->toThrow(\RuntimeException::class)
+        ->toThrow(RuntimeException::class)
         ->and(fn () => ArrayMulti::sortRecursiveGuarded($deep, maxDepth: 2, throwOnTooDeep: true))
-        ->toThrow(\RuntimeException::class);
+        ->toThrow(RuntimeException::class);
 });

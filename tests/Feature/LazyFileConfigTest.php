@@ -8,14 +8,14 @@ function lazyConfigWriteArrayFile(string $directory, string $name, array $conten
 {
     $export = var_export($contents, true);
     file_put_contents(
-        $directory . DIRECTORY_SEPARATOR . $name . '.php',
+        $directory.DIRECTORY_SEPARATOR.$name.'.php',
         "<?php\n\nreturn {$export};\n",
     );
 }
 
 function lazyConfigDeleteDirectory(string $directory): void
 {
-    if (!is_dir($directory)) {
+    if (! is_dir($directory)) {
         return;
     }
 
@@ -29,10 +29,11 @@ function lazyConfigDeleteDirectory(string $directory): void
             continue;
         }
 
-        $path = $directory . DIRECTORY_SEPARATOR . $entry;
+        $path = $directory.DIRECTORY_SEPARATOR.$entry;
 
         if (is_dir($path)) {
             lazyConfigDeleteDirectory($path);
+
             continue;
         }
 
@@ -50,17 +51,41 @@ function lazyConfigItems(LazyFileConfig $config): array
     return (fn (): array => $this->items)->call($config);
 }
 
+/**
+ * @return array<string, scalar|null>
+ */
+function lazyConfigFlatIndex(string $directory): array
+{
+    $path = $directory.DIRECTORY_SEPARATOR.'__flat.php';
+
+    if (! is_file($path)) {
+        return [];
+    }
+
+    /** @var array<string, scalar|null> $index */
+    $index = include $path;
+
+    return $index;
+}
+
 beforeEach(function () {
     $this->configPath = sys_get_temp_dir()
-        . DIRECTORY_SEPARATOR
-        . 'arraykit-lazy-config-'
-        . uniqid('', true);
+        .DIRECTORY_SEPARATOR
+        .'arraykit-lazy-config-'
+        .uniqid('', true);
+
+    $this->cachePath = sys_get_temp_dir()
+        .DIRECTORY_SEPARATOR
+        .'arraykit-lazy-cache-'
+        .uniqid('', true);
 
     mkdir($this->configPath, 0777, true);
+    mkdir($this->cachePath, 0777, true);
 });
 
 afterEach(function () {
     lazyConfigDeleteDirectory($this->configPath);
+    lazyConfigDeleteDirectory($this->cachePath);
 });
 
 it('loads only the first namespace file on first dot-path access', function () {
@@ -172,9 +197,18 @@ it('returns default for missing namespace file without side effects', function (
         ->and(lazyConfigItems($config))->toBe([]);
 });
 
+it('evaluates closure defaults for missing or non-array nested paths', function () {
+    $config = new LazyFileConfig($this->configPath, items: [
+        'db' => 'scalar',
+    ]);
+
+    expect($config->get('cache.driver', fn () => 'file'))->toBe('file')
+        ->and($config->get('db.host', fn () => 'fallback-host'))->toBe('fallback-host');
+});
+
 it('throws when a namespace file does not return an array', function () {
     file_put_contents(
-        $this->configPath . DIRECTORY_SEPARATOR . 'db.php',
+        $this->configPath.DIRECTORY_SEPARATOR.'db.php',
         "<?php\n\nreturn 'invalid';\n",
     );
 
@@ -193,8 +227,8 @@ it('supports hook-aware lazy get and set variants', function () {
     lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost']);
 
     $config = new LazyFileConfig($this->configPath);
-    $config->onSet('db.host', fn($value) => strtoupper((string) $value));
-    $config->onGet('db.host', fn($value) => strtolower((string) $value));
+    $config->onSet('db.host', fn ($value) => strtoupper((string) $value));
+    $config->onGet('db.host', fn ($value) => strtolower((string) $value));
 
     $config->setWithHooks('db.host', 'INTERNAL');
 
@@ -206,8 +240,8 @@ it('supports hook-aware lazy bulk operations', function () {
     lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost', 'port' => 3306]);
 
     $config = new LazyFileConfig($this->configPath);
-    $config->onSet('db.host', fn($value) => strtoupper((string) $value));
-    $config->onGet('db.host', fn($value) => strtolower((string) $value));
+    $config->onSet('db.host', fn ($value) => strtoupper((string) $value));
+    $config->onGet('db.host', fn ($value) => strtolower((string) $value));
 
     $config->setWithHooks([
         'db.host' => 'INTERNAL',
@@ -233,4 +267,98 @@ it('supports replace/reload and required key access in lazy config', function ()
 
     $config->reload(['cache' => ['driver' => 'file']]);
     expect($config->get('cache.driver'))->toBe('file');
+});
+
+it('treats seeded in-memory namespaces as already resolved', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'app', ['name' => 'from-file', 'debug' => true]);
+
+    $config = new LazyFileConfig($this->configPath, items: [
+        'app' => ['name' => 'from-memory'],
+    ]);
+
+    expect($config->loaded('app'))->toBeTrue()
+        ->and($config->get('app'))->toBe(['name' => 'from-memory']);
+});
+
+it('does not re-merge namespace files after replace merge or reload with in-memory data', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'app', [
+        'name' => 'from-file',
+        'debug' => true,
+    ]);
+
+    $config = new LazyFileConfig($this->configPath);
+
+    $config->replace([
+        'app' => ['name' => 'replaced'],
+    ]);
+    expect($config->get('app'))->toBe(['name' => 'replaced']);
+
+    $config->merge([
+        'cache' => ['driver' => 'array'],
+    ]);
+    expect($config->get('cache'))->toBe(['driver' => 'array']);
+
+    $config->reload([
+        'app' => ['name' => 'reloaded'],
+    ]);
+    expect($config->get('app'))->toBe(['name' => 'reloaded']);
+});
+
+it('supports namespace cache warmup and fallback retrieval', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'db', [
+        'host' => 'localhost',
+        'port' => 3306,
+        'options' => ['timeout' => 5],
+    ]);
+
+    $config = new LazyFileConfig($this->configPath);
+    $config->namespaceCache($this->cachePath)->warmNamespaceCache('db');
+
+    unlink($this->configPath.DIRECTORY_SEPARATOR.'db.php');
+
+    $fresh = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+
+    expect($fresh->get('db.host'))->toBe('localhost')
+        ->and($fresh->get('db.port'))->toBe(3306)
+        ->and($fresh->get('db.options'))->toBe(['timeout' => 5]);
+});
+
+it('writes a flat leaf index containing only final scalar values', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'db', [
+        'host' => 'localhost',
+        'port' => 3306,
+        'options' => ['timeout' => 5],
+        'replicas' => ['db-1', 'db-2'],
+    ]);
+
+    $config = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+    $config->warmNamespaceCache('db');
+
+    expect(lazyConfigFlatIndex($this->cachePath))->toBe([
+        'db.host' => 'localhost',
+        'db.options.timeout' => 5,
+        'db.port' => 3306,
+        'db.replicas.0' => 'db-1',
+        'db.replicas.1' => 'db-2',
+    ]);
+});
+
+it('can resolve exact scalar paths from the flat index when namespace structure is unavailable', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'db', [
+        'host' => 'localhost',
+        'options' => ['timeout' => 5],
+    ]);
+
+    $config = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+    $config->warmNamespaceCache('db');
+
+    unlink($this->configPath.DIRECTORY_SEPARATOR.'db.php');
+    unlink($this->cachePath.DIRECTORY_SEPARATOR.'db.php');
+
+    $fresh = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+
+    expect($fresh->get('db.host'))->toBe('localhost')
+        ->and($fresh->get('db.options.timeout'))->toBe(5)
+        ->and($fresh->get('db.options', 'missing'))->toBe('missing')
+        ->and($fresh->get('db', 'missing'))->toBe('missing');
 });

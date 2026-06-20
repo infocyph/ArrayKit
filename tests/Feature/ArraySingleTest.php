@@ -12,13 +12,13 @@ it('checks if a key exists in a single-dimensional array', function () {
 });
 
 it('retrieves only specified keys', function () {
-    $data   = ['name' => 'Alice', 'age' => 30, 'job' => 'Developer'];
+    $data = ['name' => 'Alice', 'age' => 30, 'job' => 'Developer'];
     $subset = ArraySingle::only($data, ['name', 'job']);
     expect($subset)->toBe(['name' => 'Alice', 'job' => 'Developer']);
 });
 
 it('can detect if array is a list', function () {
-    $list  = [10, 20, 30];
+    $list = [10, 20, 30];
     $assoc = ['a' => 1, 'b' => 2];
     expect(ArraySingle::isList($list))
         ->toBeTrue()
@@ -46,7 +46,7 @@ it('ignores non-numeric values when calculating average', function () {
 
 it('searches an array for a callback condition', function () {
     $data = [1, 2, 3, 4];
-    $key  = ArraySingle::search($data, fn ($value) => $value === 3);
+    $key = ArraySingle::search($data, fn ($value) => $value === 3);
     expect($key)->toBe(2);
 });
 
@@ -92,7 +92,7 @@ it('filters non-empty values without crashing on mixed data', function () {
 it('removes duplicates from the array using unique()', function () {
     $arr = [1, 2, 2, 3, 3, 4];
     expect(ArraySingle::unique($arr))
-        ->toBe([1, 2, 3, 4])
+        ->toBe([0 => 1, 1 => 2, 3 => 3, 5 => 4])
         ->and(ArraySingle::unique([1, '1', 2, 3], true))
         ->toBe([1, '1', 2, 3]); // Strict comparison
 });
@@ -100,8 +100,21 @@ it('removes duplicates from the array using unique()', function () {
 it('handles unique() with mixed values in loose and strict modes', function () {
     $arr = [1, '1', true, [1], ['1']];
 
-    expect(ArraySingle::unique($arr))->toBe([1, [1]])
+    expect(ArraySingle::unique($arr))->toBe([0 => 1, 3 => [1]])
         ->and(ArraySingle::unique($arr, true))->toBe([1, '1', true, [1], ['1']]);
+});
+
+it('preserves original keys when removing duplicates', function () {
+    $assoc = ['a' => 1, 'b' => 1, 'c' => '1', 'd' => 2];
+
+    expect(ArraySingle::unique($assoc))->toBe([
+        'a' => 1,
+        'd' => 2,
+    ])->and(ArraySingle::unique($assoc, true))->toBe([
+        'a' => 1,
+        'c' => '1',
+        'd' => 2,
+    ]);
 });
 it('slices the array using slice()', function () {
     $arr = [1, 2, 3, 4, 5];

@@ -129,7 +129,7 @@ ArrayKit Facade
     public static function helper(): ModuleProxy
     public static function dot(): ModuleProxy
     public static function config(array $items = []): Config
-    public static function lazyConfig(string $directory, string $extension = 'php', array $items = []): LazyFileConfig
+    public static function lazyConfig(string $directory, string $extension = 'php', array $items = [], ?string $namespaceCacheDirectory = null): LazyFileConfig
     public static function collection(mixed $data = []): Collection
     public static function hookedCollection(mixed $data = []): HookedCollection
     public static function lazyCollection(mixed $data = []): LazyCollection
@@ -514,6 +514,11 @@ Config uses ``BaseConfigTrait``. Public API:
     public function reload(array|string $source): bool
     public function merge(array $items): bool
     public function overlay(array $overlay): bool
+    public function exportCache(string $path): bool
+    public function loadCache(string $path): bool
+    public function readCache(bool $enabled = true): static
+    public function readCacheEnabled(): bool
+    public function flushReadCache(): static
     public function snapshot(string $name = 'default'): bool
     public function restore(string $name = 'default'): bool
     public function changed(string $snapshot = 'default'): bool
@@ -537,6 +542,10 @@ LazyFileConfig loads top-level config files on first keyed access:
     public function isLoaded(string $namespace): bool
     public function loaded(string $namespace): bool
     public function loadedNamespaces(): array
+    public function namespaceCache(?string $directory): static
+    public function namespaceCacheDirectory(): ?string
+    public function warmNamespaceCache(string|array|null $namespaces = null): static
+    public function flushNamespaceCache(string|array|null $namespaces = null): static
     public function all(): array // throws (design choice)
 
 Config Hook-Aware Variants
@@ -588,18 +597,3 @@ LazyCollection
     public function take(int $limit): self
     public function takeUntil(callable $callback): self
     public function all(): array
-
-Laravel Compatibility
-----------------------------------
-
-.. code-block:: php
-
-    // Infocyph\ArrayKit\LaravelCompat\Arr
-    public static function get(iterable $array, string|int|array|null $key = null, mixed $default = null): mixed
-    public static function set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
-    public static function has(iterable $array, int|string|array $keys): bool
-    public static function hasAny(iterable $array, int|string|array $keys): bool
-    public static function only(iterable $array, array|string $keys): array
-    public static function except(iterable $array, array|string $keys): array
-
-    // Infocyph\ArrayKit\LaravelCompat\Collection extends Collection

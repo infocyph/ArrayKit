@@ -17,18 +17,18 @@ it('wraps a non-array value', function () {
 
 it('checks if at least one item meets a condition', function () {
     $data = [1, 2, 3];
-    $res  = BaseArrayHelper::haveAny($data, fn($val) => $val > 2);
+    $res = BaseArrayHelper::haveAny($data, fn ($val) => $val > 2);
     expect($res)->toBeTrue();
 });
 
 it('checks if all items meet a condition', function () {
     $data = [2, 4, 6];
-    $res  = BaseArrayHelper::isAll($data, fn($val) => $val % 2 === 0);
+    $res = BaseArrayHelper::isAll($data, fn ($val) => $val % 2 === 0);
     expect($res)->toBeTrue();
 });
 
 it('finds the first key matching a callback', function () {
     $data = ['a' => 10, 'b' => 15, 'c' => 20];
-    $key  = BaseArrayHelper::findKey($data, fn($val) => $val > 10);
+    $key = BaseArrayHelper::findKey($data, fn ($val) => $val > 10);
     expect($key)->toBe('b');
 });

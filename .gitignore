@@ -1,6 +1,7 @@
 .idea
 .psalm-cache
 .phpunit.cache
+.arraykit-cache
 .vscode
 .windsurf
 *~
@@ -16,3 +17,4 @@ patch.php
 test.php
 var
 vendor
+.codex

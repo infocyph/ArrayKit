@@ -50,7 +50,6 @@ class ArraySingle
      * @param array<array-key, mixed> $array The array to be chunked.
      * @param int $size The size of each chunk.
      * @param bool $preserveKeys Whether to preserve the keys in the chunks.
-     *
      * @return array<array-key, mixed> An array of arrays, each representing a chunk of the original array.
      */
     public static function chunk(array $array, int $size, bool $preserveKeys = false): array
@@ -71,7 +70,6 @@ class ArraySingle
      *
      * @param array<array-key, mixed> $keys The array of keys.
      * @param array<array-key, mixed> $values The array of values.
-     *
      * @return array<array-key, mixed> The combined array.
      */
     public static function combine(array $keys, array $values): array
@@ -199,7 +197,6 @@ class ArraySingle
      *
      * @param array<array-key, mixed> $array The array to be iterated over.
      * @param callable $callback The callback function to apply to each element.
-     *
      * @return array<array-key, mixed> The original array.
      */
     public static function each(array $array, callable $callback): array
@@ -370,7 +367,6 @@ class ArraySingle
      *
      * @param array<array-key, mixed> $array The array to be mapped over.
      * @param callable $callback The callback function to apply to each element.
-     *
      * @return array<array-key, mixed> The array with each element transformed by the callback.
      */
     public static function map(array $array, callable $callback): array
@@ -548,8 +544,8 @@ class ArraySingle
      * @param array<array-key, mixed> $array The array to slice.
      * @param int $step The "step" value (i.e. the interval between selected elements).
      * @param int $offset The offset from which to begin selecting elements.
-     *
      * @return array<array-key, mixed> The sliced array.
+     *
      * @throws InvalidArgumentException If step is less than 1.
      */
     public static function nth(array $array, int $step, int $offset = 0): array
@@ -597,10 +593,9 @@ class ArraySingle
      * @param array<array-key, mixed> $array The array to paginate.
      * @param int $page The page number to retrieve (1-indexed).
      * @param int $perPage The number of items per page.
+     * @return array<array-key, mixed> The paginated slice of the array.
      *
      * @throws InvalidArgumentException If page/per-page are less than 1.
-     *
-     * @return array<array-key, mixed> The paginated slice of the array.
      */
     public static function paginate(array $array, int $page, int $perPage): array
     {
@@ -766,7 +761,6 @@ class ArraySingle
      * @param array<array-key, mixed> $array The array to search.
      * @param mixed $needle The value to search for, or a callable to use for
      *                      searching.
-     *
      * @return int|string|null The key of the value if found, or null if not found.
      */
     public static function search(array $array, mixed $needle): int|string|null
@@ -792,6 +786,7 @@ class ArraySingle
      *
      * @param array<array-key, mixed> $array The array to split.
      * @return array<array-key, mixed> A new array containing two child arrays: 'keys' and 'values'.
+     *
      * @example
      *      $data = ['a' => 1, 'b' => 2, 'c' => 3];
      *      $keysAndValues = ArraySingle::separate($data);
@@ -1005,7 +1000,6 @@ class ArraySingle
      *                                This function should take two arguments, the value and the key of each
      *                                element in the array. The function should return true for elements that
      *                                should be kept, and false for elements that should be discarded.
-     *
      * @return array<array-key, mixed> The filtered array.
      */
     public static function where(array $array, ?callable $callback = null): array

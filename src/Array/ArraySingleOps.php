@@ -212,22 +212,22 @@ final class ArraySingleOps
     public static function unique(array $array, bool $strict): array
     {
         if (!$strict) {
-            /** @var array<int, mixed> $unique */
-            $unique = array_values(array_unique($array, \SORT_REGULAR));
+            /** @var array<array-key, mixed> $unique */
+            $unique = array_unique($array, \SORT_REGULAR);
 
             return $unique;
         }
 
         $seen = [];
         $result = [];
-        foreach ($array as $item) {
+        foreach ($array as $key => $item) {
             $fingerprint = self::fingerprintStrict($item);
             if (isset($seen[$fingerprint])) {
                 continue;
             }
 
             $seen[$fingerprint] = true;
-            $result[] = $item;
+            $result[$key] = $item;
         }
 
         return $result;

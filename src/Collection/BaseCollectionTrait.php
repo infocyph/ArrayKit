@@ -43,6 +43,7 @@ trait BaseCollectionTrait
      * @param string $method The name of the method being called.
      * @param array<int, mixed> $arguments The arguments to pass to the method.
      * @return mixed The result of the method call.
+     *
      * @throws BadMethodCallException If the method does not exist.
      */
     public function __call(string $method, array $arguments): mixed

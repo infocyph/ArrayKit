@@ -41,7 +41,8 @@ it('supports skip, skipWhile, and skipUntil with key preservation', function () 
 });
 
 it('normalizes array keys from mixed values', function () {
-    $stringable = new class() {
+    $stringable = new class
+    {
         public function __toString(): string
         {
             return 'obj-key';

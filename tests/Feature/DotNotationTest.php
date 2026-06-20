@@ -6,24 +6,24 @@ use Infocyph\ArrayKit\Array\DotNotation;
 
 it('flattens a multi-level array into dot notation', function () {
     $source = ['user' => ['name' => 'Alice', 'roles' => ['admin', 'editor']]];
-    $flat   = DotNotation::flatten($source);
+    $flat = DotNotation::flatten($source);
     expect($flat)->toBe([
-        'user.name'      => 'Alice',
-        'user.roles.0'   => 'admin',
-        'user.roles.1'   => 'editor',
+        'user.name' => 'Alice',
+        'user.roles.0' => 'admin',
+        'user.roles.1' => 'editor',
     ]);
 });
 
 it('expands a dot-notation array back to nested structure', function () {
     $dotArray = [
         'app.name' => 'MyApp',
-        'app.env'  => 'local',
+        'app.env' => 'local',
     ];
     $expanded = DotNotation::expand($dotArray);
     expect($expanded)->toBe([
         'app' => [
             'name' => 'MyApp',
-            'env'  => 'local',
+            'env' => 'local',
         ],
     ]);
 });
@@ -210,7 +210,7 @@ it('sets a nested value using dot notation', function () {
     $data = [];
     DotNotation::set($data, 'user.name', 'Diana');
     expect($data)->toBe([
-        'user' => ['name' => 'Diana']
+        'user' => ['name' => 'Diana'],
     ]);
 });
 
@@ -224,13 +224,13 @@ it('sets multiple key-value pairs when given an array in set()', function () {
     $data = [];
     DotNotation::set($data, [
         'user.name' => 'Eve',
-        'user.email' => 'eve@example.com'
+        'user.email' => 'eve@example.com',
     ]);
     expect($data)->toBe([
         'user' => [
             'name' => 'Eve',
-            'email' => 'eve@example.com'
-        ]
+            'email' => 'eve@example.com',
+        ],
     ]);
 });
 

@@ -12,6 +12,8 @@ Recent Additions
 - ``Collection`` now implements ``IteratorAggregate`` semantics for safe nested iteration and provides ``copy()`` / ``immutable()`` snapshots.
 - ``Config`` / ``LazyFileConfig`` now include ``replace()``, ``reload()``, and ``getOrFail()``.
 - ``LazyFileConfig`` includes ``loaded()`` alias for ``isLoaded()``.
+- ``Config`` now supports compiled cache export/load plus in-memory read memoization.
+- ``LazyFileConfig`` adds namespace-cache warming and full compiled-cache generation.
 - Namespaced helpers (``Infocyph\ArrayKit\*``) are now the default autoloaded helper surface; globals are optional via manual include of ``src/functions.php``.
 - ``ArrayMulti::flatten($array, 0)`` now returns unchanged top-level values.
 - ``ArraySingle::avg()``, ``sum()``, ``isPositive()``, and ``isNegative()`` now ignore non-numeric values consistently.
@@ -22,7 +24,7 @@ Recent Additions
 - ``Config`` adds typed getters (``getString/getInt/getFloat/getBool/getArray/getList/getEnum``), merge/state helpers (``merge/overlay/snapshot/restore/changed``), and ``readonly()`` mode.
 - ``Collection`` adds ``immutableProcess()`` / ``pipeImmutable()`` explicit immutable-style pipeline entry.
 - ``ArrayKit`` facade adds ``lazyCollection()`` and package now includes ``LazyCollection`` (generator-backed operations).
-- New optional helpers: ``ArrayShape`` validator and Laravel-compat layer (``LaravelCompat\\Arr``, ``LaravelCompat\\Collection``).
+- New optional helper: ``ArrayShape`` validator.
 
 Compatibility Notes
 -------------------

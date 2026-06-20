@@ -38,6 +38,8 @@ Important behavior:
 - If already loaded, they return ``false`` and do not overwrite existing items.
 - ``replace()`` always replaces in-memory config items.
 - ``reload()`` replaces from array or readable file path.
+- ``exportCache()`` writes a compiled PHP cache file of current items.
+- ``loadCache()`` loads a compiled PHP cache file through the normal file loader.
 - Facade-based config creation is documented in :doc:`facade`.
 
 Reading Values
@@ -218,6 +220,30 @@ Use config as a mutable runtime container for app setup:
     $config->setWithHooks('app.timezone', ' utc ');
     $tz = $config->getWithHooks('app.timezone'); // UTC
 
+Compiled Cache + Read Memoization
+---------------------------------
+
+``Config`` also supports two cache layers:
+
+- in-memory read memoization for repeated dot-path lookups
+- compiled cache export/load through PHP files
+
+.. code-block:: php
+
+    <?php
+    $config = new Config();
+    $config->loadArray([
+        'app' => ['name' => 'ArrayKit'],
+        'db' => ['host' => 'localhost'],
+    ]);
+
+    $config->readCache(); // enabled by default
+    $config->exportCache(__DIR__.'/bootstrap/cache/config.php');
+
+    $cached = new Config();
+    $cached->loadCache(__DIR__.'/bootstrap/cache/config.php');
+    $name = $cached->get('app.name');
+
 LazyFileConfig
 --------------
 
@@ -254,6 +280,21 @@ Important behavior:
 - Missing namespace file returns the provided default.
 - ``replace()`` and ``reload()`` reset resolved-namespace tracking.
 - read-only mode applies to ``set/fill/forget/replace/reload``-style mutators.
+- ``namespaceCache()`` configures an optional per-namespace cache directory.
+- ``warmNamespaceCache()`` writes cached namespace files and a shared ``__flat.php`` exact-leaf index.
+- Exact-key scalar reads check ``__flat.php`` first; structural, wildcard, and namespace reads fall back to namespace cache files.
+- Runtime writes only affect in-memory state until cache files are explicitly rebuilt.
+
+.. code-block:: php
+
+    <?php
+    $config = new LazyFileConfig(
+        __DIR__.'/config',
+        namespaceCacheDirectory: __DIR__.'/bootstrap/cache/config'
+    );
+
+    $config->warmNamespaceCache(['db', 'cache']);
+    $host = $config->get('db.host');
 
 Method Summary
 --------------
@@ -266,6 +307,8 @@ Config methods:
 - ``set()``, ``fill()``, ``forget()``
 - ``prepend()``, ``append()``
 - ``replace()``, ``reload()``
+- ``exportCache()``, ``loadCache()``
+- ``readCache()``, ``readCacheEnabled()``, ``flushReadCache()``
 - ``getString()/getInt()/getFloat()/getBool()/getArray()/getList()/getEnum()``
 - ``merge()``, ``overlay()``
 - ``snapshot()``, ``restore()``, ``changed()``
@@ -277,7 +320,10 @@ LazyFileConfig methods:
 - ``has()``, ``hasAny()``
 - ``set()``, ``fill()``, ``forget()``
 - ``preload()``, ``isLoaded()``, ``loaded()``, ``loadedNamespaces()``
+- ``namespaceCache()``, ``namespaceCacheDirectory()``
+- ``warmNamespaceCache()``, ``flushNamespaceCache()``
 - ``replace()``, ``reload()``
+- ``exportCache()``, ``loadCache()``
 - ``all()`` (throws by design)
 
 Hook-aware methods (Config and LazyFileConfig):

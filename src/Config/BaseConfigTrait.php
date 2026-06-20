@@ -17,7 +17,14 @@ trait BaseConfigTrait
      */
     protected array $items = [];
 
+    protected bool $readCacheEnabled = true;
+
     protected bool $readOnly = false;
+
+    /**
+     * @var array<string, mixed>
+     */
+    protected array $resolvedValueCache = [];
 
     /**
      * @var array<string, array<array-key, mixed>>
@@ -67,6 +74,18 @@ trait BaseConfigTrait
         return $this->snapshots[$snapshot] != $this->items;
     }
 
+    public function exportCache(string $path): bool
+    {
+        $directory = dirname($path);
+        if ($directory !== '' && $directory !== '.' && !is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+            return false;
+        }
+
+        $export = var_export($this->items, true);
+
+        return file_put_contents($path, "<?php\n\nreturn {$export};\n") !== false;
+    }
+
     /**
      * "Fill" config data where it's missing, i.e. DotNotation's fill logic.
      *
@@ -77,9 +96,17 @@ trait BaseConfigTrait
     {
         $this->assertWritable();
 
+        $this->flushReadCache();
         DotNotation::fill($this->items, $key, $value);
 
         return true;
+    }
+
+    public function flushReadCache(): static
+    {
+        $this->resolvedValueCache = [];
+
+        return $this;
     }
 
     /**
@@ -92,6 +119,7 @@ trait BaseConfigTrait
     {
         $this->assertWritable();
 
+        $this->flushReadCache();
         DotNotation::forget($this->items, $key);
 
         return true;
@@ -107,7 +135,20 @@ trait BaseConfigTrait
      */
     public function get(string|int|array|null $key = null, mixed $default = null): mixed
     {
-        return DotNotation::get($this->items, $key, $default);
+        if ($key === null) {
+            return $this->items;
+        }
+
+        if (is_array($key)) {
+            $results = [];
+            foreach ($key as $path) {
+                $results[(string) $path] = $this->getResolvedValue($path, $default);
+            }
+
+            return $results;
+        }
+
+        return $this->getResolvedValue($key, $default);
     }
 
     /**
@@ -140,6 +181,7 @@ trait BaseConfigTrait
      * Get an enum instance from a scalar stored config value.
      *
      * @template TEnum of \UnitEnum
+     *
      * @param string|int|array<int, string|int>|null $key
      * @param class-string<TEnum> $enumClass
      * @param TEnum|null $default
@@ -255,7 +297,7 @@ trait BaseConfigTrait
      */
     public function has(string|array $keys): bool
     {
-        return DotNotation::has($this->items, $keys);
+        return array_all((array) $keys, fn($key) => $this->hasResolvedValue($key));
     }
 
     /**
@@ -266,7 +308,7 @@ trait BaseConfigTrait
      */
     public function hasAny(string|array $keys): bool
     {
-        return DotNotation::hasAny($this->items, $keys);
+        return array_any((array) $keys, fn($key) => $this->hasResolvedValue($key));
     }
 
     public function isReadonly(): bool
@@ -286,11 +328,17 @@ trait BaseConfigTrait
 
         if (count($this->items) === 0) {
             $this->items = $resource;
+            $this->flushReadCache();
 
             return true;
         }
 
         return false;
+    }
+
+    public function loadCache(string $path): bool
+    {
+        return $this->loadFile($path);
     }
 
     /**
@@ -310,6 +358,7 @@ trait BaseConfigTrait
             }
 
             $this->items = $loaded;
+            $this->flushReadCache();
 
             return true;
         }
@@ -325,6 +374,7 @@ trait BaseConfigTrait
     public function merge(array $items): bool
     {
         $this->assertWritable();
+        $this->flushReadCache();
         $this->items = array_replace_recursive($this->items, $items);
 
         return true;
@@ -360,6 +410,22 @@ trait BaseConfigTrait
         array_unshift($array, $value);
 
         return $this->set($key, $array);
+    }
+
+    public function readCache(bool $enabled = true): static
+    {
+        $this->readCacheEnabled = $enabled;
+
+        if (!$enabled) {
+            $this->flushReadCache();
+        }
+
+        return $this;
+    }
+
+    public function readCacheEnabled(): bool
+    {
+        return $this->readCacheEnabled;
     }
 
     /**
@@ -406,6 +472,7 @@ trait BaseConfigTrait
     {
         $this->assertWritable();
 
+        $this->flushReadCache();
         $this->items = $items;
 
         return true;
@@ -421,6 +488,7 @@ trait BaseConfigTrait
             return false;
         }
 
+        $this->flushReadCache();
         $this->items = $this->snapshots[$name];
 
         return true;
@@ -441,6 +509,8 @@ trait BaseConfigTrait
     {
         $this->assertWritable();
 
+        $this->flushReadCache();
+
         return DotNotation::set($this->items, $key, $value, $overwrite);
     }
 
@@ -459,5 +529,52 @@ trait BaseConfigTrait
         if ($this->readOnly) {
             throw new RuntimeException('Configuration is read-only.');
         }
+    }
+
+    protected function getResolvedValue(int|string $key, mixed $default = null): mixed
+    {
+        $resolved = $this->resolveRawValue($key);
+
+        return $resolved === $this->missingValueMarker() ? $this->resolveDefault($default) : $resolved;
+    }
+
+    protected function hasResolvedValue(int|string $key): bool
+    {
+        return $this->resolveRawValue($key) !== $this->missingValueMarker();
+    }
+
+    protected function missingValueMarker(): object
+    {
+        static $missing;
+
+        if (!is_object($missing)) {
+            $missing = new \stdClass();
+        }
+
+        return $missing;
+    }
+
+    protected function resolveDefault(mixed $default): mixed
+    {
+        return $default instanceof \Closure ? $default() : $default;
+    }
+
+    protected function resolveRawValue(int|string $key): mixed
+    {
+        if (!$this->readCacheEnabled) {
+            return DotNotation::get($this->items, $key, $this->missingValueMarker());
+        }
+
+        $cacheKey = $this->valueCacheKey($key);
+        if (array_key_exists($cacheKey, $this->resolvedValueCache)) {
+            return $this->resolvedValueCache[$cacheKey];
+        }
+
+        return $this->resolvedValueCache[$cacheKey] = DotNotation::get($this->items, $key, $this->missingValueMarker());
+    }
+
+    protected function valueCacheKey(int|string $key): string
+    {
+        return is_int($key) ? 'i:' . $key : 's:' . $key;
     }
 }
