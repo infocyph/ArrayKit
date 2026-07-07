@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Collection;
 
 use Infocyph\ArrayKit\Array\DotNotation;
-use Infocyph\ArrayKit\traits\HookTrait;
+use Infocyph\ArrayKit\Concerns\HookTrait;
 
 /**
  * Class HookedCollection

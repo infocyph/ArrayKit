@@ -27,6 +27,8 @@ These methods return a lightweight ``ModuleProxy`` that forwards calls to static
     $flat = ArrayKit::multi()->flatten([[1], [2, [3]]]);
     $wrapped = ArrayKit::helper()->wrap('x');
     $name = ArrayKit::dot()->get(['user' => ['name' => 'Alice']], 'user.name');
+    $env = ArrayKit::env()->get('APP_ENV', 'local');
+    $dotenv = ArrayKit::dotenv()->parseFile(__DIR__.'/.env');
 
 Factory Entry Points
 --------------------
@@ -50,6 +52,8 @@ Behavior Notes
 --------------
 
 - ``single()``, ``multi()``, ``helper()``, and ``dot()`` return cached proxies.
+- ``env()`` reads the current runtime environment.
+- ``dotenv()`` exposes the ``.env`` file parser.
 - Proxy calls map directly to target static methods.
 - Calling a missing method via proxy throws ``BadMethodCallException``.
 
@@ -60,3 +64,4 @@ Related Guides
 - Dot notation: :doc:`dot-notation`
 - Collections: :doc:`collection`
 - Configuration: :doc:`config`
+- Lazy file configuration: :doc:`lazy-config`

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Infocyph\ArrayKit\Config\Config;
+use Infocyph\ArrayKit\Config\Support\Environment;
 
 enum ConfigMode: string
 {
@@ -122,6 +123,38 @@ it('supports compiled config cache export and reload', function () {
         $loaded->reload(['db' => ['host' => 'db.internal']]);
         expect($loaded->get('db.host'))->toBe('db.internal');
     } finally {
+        if (is_file($cachePath)) {
+            unlink($cachePath);
+        }
+    }
+});
+
+it('materializes environment references and closures when exporting cache', function () {
+    $_ENV['ARRAYKIT_CACHE_HOST'] = 'cache.internal';
+
+    $cfg = new Config;
+    $cfg->loadArray([
+        'db' => [
+            'host' => Environment::ref('ARRAYKIT_CACHE_HOST', 'localhost'),
+            'port' => fn (): int => 5432,
+            'missing' => Environment::ref('ARRAYKIT_CACHE_MISSING', 'fallback'),
+        ],
+    ]);
+
+    $cachePath = sys_get_temp_dir().DIRECTORY_SEPARATOR.'arraykit-config-cache-'.uniqid('', true).'.php';
+
+    try {
+        expect($cfg->exportCache($cachePath))->toBeTrue();
+
+        unset($_ENV['ARRAYKIT_CACHE_HOST']);
+
+        $loaded = new Config;
+        expect($loaded->loadCache($cachePath))->toBeTrue()
+            ->and($loaded->get('db.host'))->toBe('cache.internal')
+            ->and($loaded->get('db.port'))->toBe(5432)
+            ->and($loaded->get('db.missing'))->toBe('fallback');
+    } finally {
+        unset($_ENV['ARRAYKIT_CACHE_HOST']);
         if (is_file($cachePath)) {
             unlink($cachePath);
         }

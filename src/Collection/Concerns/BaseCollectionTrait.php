@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Infocyph\ArrayKit\Collection;
+namespace Infocyph\ArrayKit\Collection\Concerns;
 
 use ArrayIterator;
 use BadMethodCallException;
 use Infocyph\ArrayKit\Array\DotNotation;
+use Infocyph\ArrayKit\Collection\Pipeline;
 use JsonSerializable;
 use Traversable;
 

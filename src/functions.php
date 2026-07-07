@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Collection\Pipeline;
+use Infocyph\ArrayKit\Facade\ModuleProxy;
 
 use function Infocyph\ArrayKit\array_get as arraykit_array_get;
 use function Infocyph\ArrayKit\array_set as arraykit_array_set;
 use function Infocyph\ArrayKit\chain as arraykit_chain;
 use function Infocyph\ArrayKit\collect as arraykit_collect;
 use function Infocyph\ArrayKit\compare as arraykit_compare;
+use function Infocyph\ArrayKit\dotenv as arraykit_dotenv;
+use function Infocyph\ArrayKit\env as arraykit_env;
 
 // Optional global helpers:
 // this file is intentionally not autoloaded by default to avoid global symbol pressure.
@@ -91,5 +94,25 @@ if (!function_exists('chain')) {
     function chain(mixed $data): Pipeline
     {
         return arraykit_chain($data);
+    }
+}
+
+if (!function_exists('env')) {
+    /**
+     * Read the current environment from $_ENV, $_SERVER, or getenv().
+     */
+    function env(?string $key = null, mixed $default = null): mixed
+    {
+        return arraykit_env($key, $default);
+    }
+}
+
+if (!function_exists('dotenv')) {
+    /**
+     * Access the ArrayKit .env file parser facade.
+     */
+    function dotenv(): ModuleProxy
+    {
+        return arraykit_dotenv();
     }
 }

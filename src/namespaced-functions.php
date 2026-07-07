@@ -7,6 +7,9 @@ namespace Infocyph\ArrayKit;
 use Infocyph\ArrayKit\Array\DotNotation;
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Collection\Pipeline;
+use Infocyph\ArrayKit\Config\EnvParser;
+use Infocyph\ArrayKit\Config\Support\Environment;
+use Infocyph\ArrayKit\Facade\ModuleProxy;
 
 if (!function_exists(__NAMESPACE__ . '\\compare')) {
     function compare(mixed $retrieved, mixed $value, ?string $operator = null): bool
@@ -57,5 +60,19 @@ if (!function_exists(__NAMESPACE__ . '\\chain')) {
     function chain(mixed $data): Pipeline
     {
         return Collection::make($data)->process();
+    }
+}
+
+if (!function_exists(__NAMESPACE__ . '\\env')) {
+    function env(?string $key = null, mixed $default = null): mixed
+    {
+        return Environment::get($key, $default);
+    }
+}
+
+if (!function_exists(__NAMESPACE__ . '\\dotenv')) {
+    function dotenv(): ModuleProxy
+    {
+        return new ModuleProxy(EnvParser::class);
     }
 }

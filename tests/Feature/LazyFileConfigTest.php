@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Infocyph\ArrayKit\Config\LazyFileConfig;
+use Infocyph\ArrayKit\Config\Support\Environment;
 
 function lazyConfigWriteArrayFile(string $directory, string $name, array $contents): void
 {
@@ -321,6 +322,30 @@ it('supports namespace cache warmup and fallback retrieval', function () {
     expect($fresh->get('db.host'))->toBe('localhost')
         ->and($fresh->get('db.port'))->toBe(3306)
         ->and($fresh->get('db.options'))->toBe(['timeout' => 5]);
+});
+
+it('materializes environment references and closures when warming namespace cache', function () {
+    $_ENV['ARRAYKIT_LAZY_CACHE_HOST'] = 'lazy-cache.internal';
+
+    $config = new LazyFileConfig($this->configPath, items: [
+        'db' => [
+            'host' => Environment::ref('ARRAYKIT_LAZY_CACHE_HOST', 'localhost'),
+            'port' => fn (): int => 3306,
+        ],
+    ], namespaceCacheDirectory: $this->cachePath);
+
+    try {
+        $config->warmNamespaceCache('db');
+
+        unset($_ENV['ARRAYKIT_LAZY_CACHE_HOST']);
+
+        $fresh = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+
+        expect($fresh->get('db.host'))->toBe('lazy-cache.internal')
+            ->and($fresh->get('db.port'))->toBe(3306);
+    } finally {
+        unset($_ENV['ARRAYKIT_LAZY_CACHE_HOST']);
+    }
 });
 
 it('writes a flat leaf index containing only final scalar values', function () {

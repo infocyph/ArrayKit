@@ -17,6 +17,8 @@ ArrayKit Facade Example
 
     $config = ArrayKit::config(['app' => ['env' => 'local']]);
     $env = $config->get('app.env');
+    $runtimeEnv = ArrayKit::env()->get('APP_ENV', 'local');
+    $dotenvValues = ArrayKit::dotenv()->parse("APP_ENV=local\n");
 
 ArraySingle Example
 -------------------
@@ -100,6 +102,42 @@ Config + Hooks Example
     $config->snapshot('before');
     $config->merge(['app' => ['env' => 'production']]);
     $config->restore('before');
+
+Config Env Cache Example
+------------------------
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Config\Config;
+    use Infocyph\ArrayKit\Config\Support\Environment;
+
+    $config = new Config();
+    $config->loadArray([
+        'db' => [
+            'host' => Environment::ref('DB_HOST', 'localhost'),
+            'port' => fn () => env('DB_PORT', 3306),
+        ],
+    ]);
+
+    // Writes concrete resolved values, not closures or EnvReference objects.
+    $config->exportCache(__DIR__.'/bootstrap/cache/config.php');
+
+Lazy File Config Example
+------------------------
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Config\LazyFileConfig;
+
+    $config = new LazyFileConfig(
+        __DIR__.'/config',
+        namespaceCacheDirectory: __DIR__.'/bootstrap/cache/config',
+    );
+
+    $config->warmNamespaceCache('db');
+    $host = $config->get('db.host');
 
 LazyCollection Example
 ----------------------

@@ -13,7 +13,9 @@ use Infocyph\ArrayKit\Collection\HookedCollection;
 use Infocyph\ArrayKit\Collection\LazyCollection;
 use Infocyph\ArrayKit\Collection\Pipeline;
 use Infocyph\ArrayKit\Config\Config;
+use Infocyph\ArrayKit\Config\EnvParser;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
+use Infocyph\ArrayKit\Config\Support\Environment;
 use Infocyph\ArrayKit\Facade\ModuleProxy;
 
 /**
@@ -55,6 +57,16 @@ final class ArrayKit
     public static function dot(): ModuleProxy
     {
         return self::proxy(DotNotation::class);
+    }
+
+    public static function dotenv(): ModuleProxy
+    {
+        return self::proxy(EnvParser::class);
+    }
+
+    public static function env(): ModuleProxy
+    {
+        return self::proxy(Environment::class);
     }
 
     public static function helper(): ModuleProxy
