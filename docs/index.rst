@@ -22,6 +22,7 @@ Contents
     dot-notation
     collection
     config
+    lazy-config
     traits-and-helpers
     migration
     rule-reference

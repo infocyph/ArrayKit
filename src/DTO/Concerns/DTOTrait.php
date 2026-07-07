@@ -2,26 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Infocyph\ArrayKit\traits;
+namespace Infocyph\ArrayKit\DTO\Concerns;
 
 use ReflectionNamedType;
 use ReflectionProperty;
 
 /**
- * Trait DTOTrait
- *
- * Provides a quick way to create an object from an associative array
- * and to convert an object's public properties to an array.
- *
- * Usage Example:
- *  class MyDTO {
- *      use DTOTrait;
- *
- *      public string $name;
- *      public int $age;
- *  }
- *
- *  $dto = MyDTO::create(['name' => 'Alice', 'age' => 30]);
+ * Provides DTO hydration and array export helpers.
  */
 trait DTOTrait
 {
@@ -102,7 +89,7 @@ trait DTOTrait
     }
 
     /**
-     * Convert the current object’s public properties into an array.
+     * Convert the current object's public properties into an array.
      *
      * @return array<array-key, mixed>
      */

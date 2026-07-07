@@ -82,7 +82,7 @@ trait LazyFileConfigCacheTrait
                 throw new UnexpectedValueException("Lazy namespace [{$namespace}] must resolve to an array to be cached.");
             }
 
-            $export = var_export($this->items[$namespace], true);
+            $export = var_export($this->materializeCacheValue($this->items[$namespace]), true);
             $path = $this->cachedNamespacePath($namespace);
 
             if ($path === null || file_put_contents($path, "<?php\n\nreturn {$export};\n") === false) {

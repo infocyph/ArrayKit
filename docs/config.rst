@@ -6,16 +6,17 @@ ArrayKit configuration objects provide dot-notation access to nested settings.
 Classes:
 
 - ``Infocyph\ArrayKit\Config\Config``
-- ``Infocyph\ArrayKit\Config\LazyFileConfig``
 
 ``Config`` supports optional hooks via explicit ``getWithHooks()``,
 ``setWithHooks()``, and ``fillWithHooks()`` methods.
-``LazyFileConfig`` loads namespace files only on first keyed access.
+
+For split per-namespace config files, see :doc:`lazy-config`.
 
 Loading Configuration
 ---------------------
 
-You can load config from an array or a PHP file that returns an array.
+You can load config from an array, a PHP file that returns an array, or a
+``.env`` file.
 
 .. code-block:: php
 
@@ -32,6 +33,9 @@ You can load config from an array or a PHP file that returns an array.
     // Or from file:
     // $ok = $config->loadFile(__DIR__.'/config.php');
 
+    // Or from a .env file:
+    // $ok = $config->loadEnvFile(__DIR__.'/.env');
+
 Important behavior:
 
 - ``loadArray()`` and ``loadFile()`` only load when config is currently empty.
@@ -40,7 +44,176 @@ Important behavior:
 - ``reload()`` replaces from array or readable file path.
 - ``exportCache()`` writes a compiled PHP cache file of current items.
 - ``loadCache()`` loads a compiled PHP cache file through the normal file loader.
+- ``loadEnvFile()`` loads parsed ``.env`` values only when config is empty.
+- ``mergeEnvFile()`` merges parsed ``.env`` values into existing config.
 - Facade-based config creation is documented in :doc:`facade`.
+
+Environment Values and .env Parsing
+-----------------------------------
+
+ArrayKit separates runtime environment reads from ``.env`` file parsing.
+
+Runtime environment reads use ``env()`` or ``ArrayKit::env()``. They check
+``$_ENV`` first, then non-HTTP ``$_SERVER`` values, then ``getenv()``.
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\ArrayKit;
+
+    $env = env('APP_ENV', 'local');
+    $debug = ArrayKit::env()->get('APP_DEBUG', false);
+    $hasSecret = ArrayKit::env()->has('APP_SECRET');
+
+``.env`` file parsing uses ``dotenv()``, ``ArrayKit::dotenv()``, or
+``EnvParser`` directly.
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\ArrayKit;
+    use Infocyph\ArrayKit\Config\EnvParser;
+
+    $values = EnvParser::parse("APP_ENV=local\nDB_PORT=3306\n");
+    $fileValues = ArrayKit::dotenv()->parseFile(__DIR__.'/.env');
+    $rawValues = dotenv()->parseRaw("URL=https://example.com/\${APP_ENV}\n");
+
+``env()`` is not the ``.env`` parser. It reads values already available in the
+runtime environment.
+
+Environment References in Config
+--------------------------------
+
+Config arrays can contain environment values in three different ways.
+
+Immediate resolution happens when the config PHP file is included:
+
+.. code-block:: php
+
+    <?php
+    return [
+        'db' => [
+            'port' => env('DB_PORT', 3306),
+        ],
+    ];
+
+Delayed environment resolution uses ``Environment::ref()``. This keeps an
+explicit env reference in config memory until a cache file is exported or a lazy
+namespace cache is warmed.
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Config\Support\Environment;
+
+    return [
+        'db' => [
+            'host' => Environment::ref('DB_HOST', 'localhost'),
+            'port' => Environment::ref('DB_PORT', 3306),
+        ],
+    ];
+
+Closures are also supported for custom delayed logic:
+
+.. code-block:: php
+
+    <?php
+    return [
+        'db' => [
+            'url' => fn () => sprintf(
+                'mysql://%s:%s@%s/%s',
+                env('DB_USER', 'root'),
+                env('DB_PASSWORD', ''),
+                env('DB_HOST', 'localhost'),
+                env('DB_NAME', 'app'),
+            ),
+        ],
+    ];
+
+Use ``Environment::ref()`` for simple environment lookups. Use closures only
+when you need custom computation.
+
+Full Process: .env to Config Cache
+----------------------------------
+
+This example shows a typical bootstrap flow:
+
+1. Parse ``.env`` values.
+2. Build runtime config using env values.
+3. Export a compiled config cache.
+4. Load config from cache on later requests.
+
+Example ``.env`` file:
+
+.. code-block:: dotenv
+
+    APP_NAME=ArrayKit Demo
+    APP_ENV=local
+    APP_DEBUG=true
+    DB_HOST=127.0.0.1
+    DB_PORT=3306
+    DB_DATABASE=arraykit
+
+Example bootstrap file:
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Config\Config;
+    use Infocyph\ArrayKit\Config\Support\Environment;
+
+    $basePath = dirname(__DIR__);
+    $cacheFile = $basePath.'/bootstrap/cache/config.php';
+
+    $config = new Config();
+
+    if (is_file($cacheFile)) {
+        // Fast path for normal runtime requests.
+        $config->loadCache($cacheFile);
+    } else {
+        // First boot, local development, or after cache clear.
+        $config->loadEnvFile($basePath.'/.env');
+
+        $config->merge([
+            'app' => [
+                'name' => env('APP_NAME', 'ArrayKit'),
+                'env' => env('APP_ENV', 'production'),
+                'debug' => filter_var(env('APP_DEBUG', false), FILTER_VALIDATE_BOOL),
+            ],
+            'db' => [
+                // Resolved only when exportCache() writes the cache file.
+                'host' => Environment::ref('DB_HOST', 'localhost'),
+                'port' => fn () => (int) env('DB_PORT', 3306),
+                'database' => Environment::ref('DB_DATABASE', 'app'),
+            ],
+        ]);
+
+        $config->exportCache($cacheFile);
+    }
+
+    $appName = $config->getString('app.name');
+    $dbHost = $config->getString('db.host');
+    $dbPort = $config->getInt('db.port');
+
+Important details:
+
+- ``loadEnvFile()`` stores parsed ``.env`` entries as config items.
+- ``env()`` reads the current runtime environment. It does not parse files.
+- ``Environment::ref()`` and closures are materialized by ``exportCache()``.
+- The generated cache file contains concrete resolved values only.
+- If an environment value changes after the cache file exists, rebuild the cache
+  before expecting config reads to change.
+- On cached boot, prefer ``loadCache()`` first. ``loadEnvFile()`` fills an empty
+  config object, so calling ``loadEnvFile()`` before ``loadCache()`` makes
+  ``loadCache()`` return ``false`` unless you are using a separate config object.
+
+If you want to parse ``.env`` without loading it into ``Config``:
+
+.. code-block:: php
+
+    <?php
+    $values = dotenv()->parseFile(__DIR__.'/.env');
+    $rawValues = dotenv()->parseFileRaw(__DIR__.'/.env');
 
 Reading Values
 --------------
@@ -227,14 +400,20 @@ Compiled Cache + Read Memoization
 
 - in-memory read memoization for repeated dot-path lookups
 - compiled cache export/load through PHP files
+- cache materialization of ``Environment::ref()`` values and closures
 
 .. code-block:: php
 
     <?php
+    use Infocyph\ArrayKit\Config\Support\Environment;
+
     $config = new Config();
     $config->loadArray([
         'app' => ['name' => 'ArrayKit'],
-        'db' => ['host' => 'localhost'],
+        'db' => [
+            'host' => Environment::ref('DB_HOST', 'localhost'),
+            'port' => fn () => env('DB_PORT', 3306),
+        ],
     ]);
 
     $config->readCache(); // enabled by default
@@ -242,59 +421,11 @@ Compiled Cache + Read Memoization
 
     $cached = new Config();
     $cached->loadCache(__DIR__.'/bootstrap/cache/config.php');
-    $name = $cached->get('app.name');
+    $host = $cached->get('db.host');
 
-LazyFileConfig
---------------
-
-Use ``LazyFileConfig`` when configuration is split into top-level namespace files
-like ``db.php``, ``cache.php``, ``queue.php``.
-
-Rules:
-
-- Key format is ``namespace.path.to.key``.
-- On first access, only ``{directory}/{namespace}.php`` is loaded.
-- Remaining key segments are resolved using dot notation.
-
-.. code-block:: php
-
-    <?php
-    use Infocyph\ArrayKit\Config\LazyFileConfig;
-
-    $config = new LazyFileConfig(__DIR__.'/config');
-
-    // Loads only config/db.php:
-    $host = $config->get('db.host', '127.0.0.1');
-
-    // Optional warm-up:
-    $config->preload(['db', 'cache']);
-
-    $loaded = $config->loadedNamespaces(); // ['db', 'cache']
-    $isLoaded = $config->loaded('db');     // alias of isLoaded()
-
-Important behavior:
-
-- ``get()`` requires at least one key.
-- ``all()`` is intentionally disabled and throws.
-- Namespace file must return an array.
-- Missing namespace file returns the provided default.
-- ``replace()`` and ``reload()`` reset resolved-namespace tracking.
-- read-only mode applies to ``set/fill/forget/replace/reload``-style mutators.
-- ``namespaceCache()`` configures an optional per-namespace cache directory.
-- ``warmNamespaceCache()`` writes cached namespace files and a shared ``__flat.php`` exact-leaf index.
-- Exact-key scalar reads check ``__flat.php`` first; structural, wildcard, and namespace reads fall back to namespace cache files.
-- Runtime writes only affect in-memory state until cache files are explicitly rebuilt.
-
-.. code-block:: php
-
-    <?php
-    $config = new LazyFileConfig(
-        __DIR__.'/config',
-        namespaceCacheDirectory: __DIR__.'/bootstrap/cache/config'
-    );
-
-    $config->warmNamespaceCache(['db', 'cache']);
-    $host = $config->get('db.host');
+When ``exportCache()`` writes the PHP cache file, ``Environment::ref()`` values
+and closures are recursively resolved first. The generated cache contains only
+the resolved values, not closures or reference objects.
 
 Method Summary
 --------------
@@ -308,25 +439,14 @@ Config methods:
 - ``prepend()``, ``append()``
 - ``replace()``, ``reload()``
 - ``exportCache()``, ``loadCache()``
+- ``loadEnvFile()``, ``mergeEnvFile()``
 - ``readCache()``, ``readCacheEnabled()``, ``flushReadCache()``
 - ``getString()/getInt()/getFloat()/getBool()/getArray()/getList()/getEnum()``
 - ``merge()``, ``overlay()``
 - ``snapshot()``, ``restore()``, ``changed()``
 - ``readonly()``, ``isReadonly()``
 
-LazyFileConfig methods:
-
-- ``get()`` (requires key)
-- ``has()``, ``hasAny()``
-- ``set()``, ``fill()``, ``forget()``
-- ``preload()``, ``isLoaded()``, ``loaded()``, ``loadedNamespaces()``
-- ``namespaceCache()``, ``namespaceCacheDirectory()``
-- ``warmNamespaceCache()``, ``flushNamespaceCache()``
-- ``replace()``, ``reload()``
-- ``exportCache()``, ``loadCache()``
-- ``all()`` (throws by design)
-
-Hook-aware methods (Config and LazyFileConfig):
+Hook-aware methods:
 
 - ``getWithHooks()``
 - ``setWithHooks()``

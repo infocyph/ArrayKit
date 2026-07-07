@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Infocyph\ArrayKit\Config;
+namespace Infocyph\ArrayKit\Config\Concerns;
 
 use Infocyph\ArrayKit\Array\DotNotation;
+use Infocyph\ArrayKit\Config\EnvParser;
+use Infocyph\ArrayKit\Config\Support\EnvReference;
 use InvalidArgumentException;
 use OutOfBoundsException;
 use RuntimeException;
 use UnexpectedValueException;
+use UnitEnum as TEnum;
 
 trait BaseConfigTrait
 {
@@ -81,7 +84,7 @@ trait BaseConfigTrait
             return false;
         }
 
-        $export = var_export($this->items, true);
+        $export = var_export($this->materializeCacheValue($this->items), true);
 
         return file_put_contents($path, "<?php\n\nreturn {$export};\n") !== false;
     }
@@ -184,8 +187,6 @@ trait BaseConfigTrait
      *
      * @param string|int|array<int, string|int>|null $key
      * @param class-string<TEnum> $enumClass
-     * @param TEnum|null $default
-     * @return TEnum|null
      */
     public function getEnum(string|int|array|null $key, string $enumClass, ?\UnitEnum $default = null): ?\UnitEnum
     {
@@ -341,6 +342,17 @@ trait BaseConfigTrait
         return $this->loadFile($path);
     }
 
+    public function loadEnvFile(string $path): bool
+    {
+        $this->assertWritable();
+
+        if (count($this->items) !== 0) {
+            return false;
+        }
+
+        return $this->loadArray(EnvParser::parseFile($path));
+    }
+
     /**
      * Load configuration from a specified file path (PHP returning array).
      *
@@ -378,6 +390,11 @@ trait BaseConfigTrait
         $this->items = array_replace_recursive($this->items, $items);
 
         return true;
+    }
+
+    public function mergeEnvFile(string $path): bool
+    {
+        return $this->merge(EnvParser::parseFile($path));
     }
 
     /**
@@ -541,6 +558,25 @@ trait BaseConfigTrait
     protected function hasResolvedValue(int|string $key): bool
     {
         return $this->resolveRawValue($key) !== $this->missingValueMarker();
+    }
+
+    protected function materializeCacheValue(mixed $value): mixed
+    {
+        if ($value instanceof EnvReference) {
+            return $this->materializeCacheValue($value->resolve());
+        }
+
+        if ($value instanceof \Closure) {
+            return $this->materializeCacheValue($value());
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $key => $entry) {
+                $value[$key] = $this->materializeCacheValue($entry);
+            }
+        }
+
+        return $value;
     }
 
     protected function missingValueMarker(): object

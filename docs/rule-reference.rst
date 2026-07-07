@@ -28,6 +28,9 @@ Object-style data pipeline and fluent transformations:
 Configuration storage with optional get/set hooks:
     :doc:`config`
 
+Lazy per-namespace configuration files:
+    :doc:`lazy-config`
+
 Single facade entrypoint for modules and factories:
     :doc:`facade`
 

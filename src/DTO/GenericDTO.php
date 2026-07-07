@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\DTO;
 
-use Infocyph\ArrayKit\traits\DTOTrait;
+use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
 
 final class GenericDTO
 {

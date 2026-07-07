@@ -6,6 +6,7 @@ namespace Infocyph\ArrayKit\Collection;
 
 use ArrayAccess;
 use Countable;
+use Infocyph\ArrayKit\Collection\Concerns\BaseCollectionTrait;
 use IteratorAggregate;
 use JsonSerializable;
 
