@@ -5,6 +5,8 @@ ArrayKit Manual
 =================
 
 For `ArrayKit <https://github.com/infocyph/ArrayKit>`_ |version|. Updated on |today|.
+ArrayKit provides data and configuration primitives: array helpers, dot paths,
+collections, dotenv support, hooks, and DTO hydration.
 
 Licensed under `MIT <https://github.com/infocyph/ArrayKit/blob/main/LICENSE>`_.
 

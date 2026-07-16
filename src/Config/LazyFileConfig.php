@@ -164,12 +164,7 @@ class LazyFileConfig extends Config
      */
     public function loadArray(array $resource): bool
     {
-        $loaded = parent::loadArray($resource);
-        if ($loaded) {
-            $this->syncLoadedNamespacesFromItems();
-        }
-
-        return $loaded;
+        return $this->syncLoadedNamespacesAfter(parent::loadArray($resource));
     }
 
     /**
@@ -191,12 +186,7 @@ class LazyFileConfig extends Config
     #[\Override]
     public function loadFile(string $path): bool
     {
-        $loaded = parent::loadFile($path);
-        if ($loaded) {
-            $this->syncLoadedNamespacesFromItems();
-        }
-
-        return $loaded;
+        return $this->syncLoadedNamespacesAfter(parent::loadFile($path));
     }
 
     #[\Override]
@@ -205,12 +195,7 @@ class LazyFileConfig extends Config
      */
     public function merge(array $items): bool
     {
-        $merged = parent::merge($items);
-        if ($merged) {
-            $this->syncLoadedNamespacesFromItems();
-        }
-
-        return $merged;
+        return $this->syncLoadedNamespacesAfter(parent::merge($items));
     }
 
     /**
@@ -234,12 +219,8 @@ class LazyFileConfig extends Config
     public function reload(array|string $source): bool
     {
         $this->assertWritable();
-        $reloaded = parent::reload($source);
-        if ($reloaded) {
-            $this->syncLoadedNamespacesFromItems();
-        }
 
-        return $reloaded;
+        return $this->syncLoadedNamespacesAfter(parent::reload($source));
     }
 
     #[\Override]
@@ -249,23 +230,14 @@ class LazyFileConfig extends Config
     public function replace(array $items): bool
     {
         $this->assertWritable();
-        $replaced = parent::replace($items);
-        if ($replaced) {
-            $this->syncLoadedNamespacesFromItems();
-        }
 
-        return $replaced;
+        return $this->syncLoadedNamespacesAfter(parent::replace($items));
     }
 
     #[\Override]
     public function restore(string $name = 'default'): bool
     {
-        $restored = parent::restore($name);
-        if ($restored) {
-            $this->syncLoadedNamespacesFromItems();
-        }
-
-        return $restored;
+        return $this->syncLoadedNamespacesAfter(parent::restore($name));
     }
 
     #[\Override]
@@ -539,5 +511,14 @@ class LazyFileConfig extends Config
 
             $this->loadedNamespaces[$namespace] = true;
         }
+    }
+
+    private function syncLoadedNamespacesAfter(bool $changed): bool
+    {
+        if ($changed) {
+            $this->syncLoadedNamespacesFromItems();
+        }
+
+        return $changed;
     }
 }

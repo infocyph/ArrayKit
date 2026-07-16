@@ -203,7 +203,6 @@ final class EnvValueResolver
 
     /**
      * @param array<array-key, mixed> $matches
-     * @param array-key $key
      */
     private static function stringMatch(array $matches, int|string $key): string
     {

@@ -1,7 +1,9 @@
 Quick Usage
 ===========
 
-This page shows copy-paste examples for common ArrayKit operations.
+This page shows copy-paste examples for common ArrayKit operations. The package
+keeps its data-focused features together: shape and access arrays, transform
+collections, hydrate configuration, and map values into DTOs.
 
 ArrayKit Facade Example
 ----------------------

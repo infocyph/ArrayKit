@@ -11,7 +11,7 @@ use IteratorAggregate;
 use JsonSerializable;
 
 /**
- * Class BucketCollection
+ * Class Collection
  *
  * A simple array-based collection that implements common
  * interfaces (ArrayAccess, IteratorAggregate, Countable, JsonSerializable).

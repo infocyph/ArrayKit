@@ -24,6 +24,7 @@ Recent Additions
 - ``Config`` adds typed getters (``getString/getInt/getFloat/getBool/getArray/getList/getEnum``), merge/state helpers (``merge/overlay/snapshot/restore/changed``), and ``readonly()`` mode.
 - ``Collection`` adds ``immutableProcess()`` / ``pipeImmutable()`` explicit immutable-style pipeline entry.
 - ``ArrayKit`` facade adds ``lazyCollection()`` and package now includes ``LazyCollection`` (generator-backed operations).
+- ``LazyCollection::from()`` now safely replays consumed values from one-shot iterables; use ``fromFactory()`` for a fresh source on every traversal.
 - New optional helper: ``ArrayShape`` validator.
 
 Compatibility Notes
