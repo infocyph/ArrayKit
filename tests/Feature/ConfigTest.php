@@ -4,12 +4,7 @@ declare(strict_types=1);
 
 use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\Support\Environment;
-
-enum ConfigMode: string
-{
-    case Local = 'local';
-    case Prod = 'prod';
-}
+use Infocyph\ArrayKit\Tests\Fixtures\ConfigMode;
 
 $config = new Config;
 
@@ -53,7 +48,7 @@ it('supports getOrFail for required keys', function () {
     $cfg->loadArray(['app' => ['name' => 'ArrayKit']]);
 
     expect($cfg->getOrFail('app.name'))->toBe('ArrayKit')
-        ->and(fn () => $cfg->getOrFail('app.missing'))->toThrow(OutOfBoundsException::class);
+        ->and(fn () => $cfg->getOrFail('app.missing'))->toThrow(\OutOfBoundsException::class);
 });
 
 it('supports typed getters with default fallbacks', function () {
@@ -92,7 +87,7 @@ it('supports merge/overlay/snapshot/restore/changed/readonly', function () {
 
     $cfg->readonly();
     expect($cfg->isReadonly())->toBeTrue()
-        ->and(fn () => $cfg->set('db.host', '127.0.0.1'))->toThrow(RuntimeException::class);
+        ->and(fn () => $cfg->set('db.host', '127.0.0.1'))->toThrow(\RuntimeException::class);
 });
 
 it('supports getEnum for backed enums', function () {
