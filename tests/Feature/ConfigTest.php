@@ -85,6 +85,9 @@ it('supports merge/overlay/snapshot/restore/changed/readonly', function () {
     expect($cfg->get('db.port'))->toBe(3306)
         ->and($cfg->changed('baseline'))->toBeFalse();
 
+    $cfg->set('db.port', '3306');
+    expect($cfg->changed('baseline'))->toBeTrue();
+
     $cfg->readonly();
     expect($cfg->isReadonly())->toBeTrue()
         ->and(fn () => $cfg->set('db.host', '127.0.0.1'))->toThrow(\RuntimeException::class);
