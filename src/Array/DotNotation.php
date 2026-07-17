@@ -73,6 +73,7 @@ class DotNotation
                 self::forgetBySegments($inner, $segments);
             }
         }
+        unset($inner);
     }
 
     /**
@@ -108,10 +109,12 @@ class DotNotation
             foreach ($target as &$inner) {
                 self::setValueBySegments($inner, $segments, $value, $overwrite);
             }
+            unset($inner);
         } elseif ($overwrite) {
             foreach ($target as &$inner) {
                 $inner = $value;
             }
+            unset($inner);
         }
     }
 

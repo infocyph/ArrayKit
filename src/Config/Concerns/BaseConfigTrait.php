@@ -74,19 +74,19 @@ trait BaseConfigTrait
             return true;
         }
 
-        return $this->snapshots[$snapshot] != $this->items;
+        return $this->snapshots[$snapshot] !== $this->items;
     }
 
     public function exportCache(string $path): bool
     {
         $directory = dirname($path);
-        if ($directory !== '' && $directory !== '.' && !is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+        if ($directory !== '' && $directory !== '.' && !is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
             return false;
         }
 
         $export = var_export($this->materializeCacheValue($this->items), true);
 
-        return file_put_contents($path, "<?php\n\nreturn {$export};\n") !== false;
+        return $this->writeCacheFile($path, "<?php\n\nreturn {$export};\n");
     }
 
     /**
@@ -612,5 +612,28 @@ trait BaseConfigTrait
     protected function valueCacheKey(int|string $key): string
     {
         return is_int($key) ? 'i:' . $key : 's:' . $key;
+    }
+
+    protected function writeCacheFile(string $path, string $contents): bool
+    {
+        $directory = dirname($path);
+        $temporaryPath = tempnam($directory, '.arraykit-');
+        if ($temporaryPath === false) {
+            return false;
+        }
+
+        if (file_put_contents($temporaryPath, $contents, LOCK_EX) === false) {
+            unlink($temporaryPath);
+
+            return false;
+        }
+
+        if (rename($temporaryPath, $path)) {
+            return true;
+        }
+
+        unlink($temporaryPath);
+
+        return false;
     }
 }

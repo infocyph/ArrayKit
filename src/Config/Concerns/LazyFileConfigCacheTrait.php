@@ -71,7 +71,7 @@ trait LazyFileConfigCacheTrait
             throw new RuntimeException('Namespace cache directory is not configured.');
         }
 
-        if (!is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+        if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
             throw new RuntimeException("Unable to create namespace cache directory [{$directory}].");
         }
 
@@ -85,7 +85,7 @@ trait LazyFileConfigCacheTrait
             $export = var_export($this->materializeCacheValue($this->items[$namespace]), true);
             $path = $this->cachedNamespacePath($namespace);
 
-            if ($path === null || file_put_contents($path, "<?php\n\nreturn {$export};\n") === false) {
+            if ($path === null || !$this->writeCacheFile($path, "<?php\n\nreturn {$export};\n")) {
                 throw new RuntimeException("Unable to write namespace cache for [{$namespace}].");
             }
         }
@@ -253,7 +253,7 @@ trait LazyFileConfigCacheTrait
         $index = $this->buildFlatLeafIndexFromDirectory($directory);
 
         ksort($index);
-        if (file_put_contents($indexPath, "<?php\n\nreturn " . var_export($index, true) . ";\n") === false) {
+        if (!$this->writeCacheFile($indexPath, "<?php\n\nreturn " . var_export($index, true) . ";\n")) {
             throw new RuntimeException('Unable to write flat lazy-config index cache.');
         }
 

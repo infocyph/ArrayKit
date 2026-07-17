@@ -242,7 +242,6 @@ class BaseArrayHelper
 
         $keys = (array) array_rand($array, $number);
 
-        // intersect is ~30 % faster than manual loop for large n
         $picked = array_intersect_key($array, array_flip($keys));
 
         return $preserveKeys ? $picked : array_values($picked);
@@ -262,7 +261,6 @@ class BaseArrayHelper
     public static function range(int $start, int $end, int $step = 1): array
     {
         if ($step === 0) {
-            // We could throw an exception, or return empty:
             return [];
         }
 

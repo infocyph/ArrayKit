@@ -429,6 +429,7 @@ trait ArrayMultiQuerySortTrait
                 $value = static::sortRecursive($value, $options, $descending);
             }
         }
+        unset($value);
 
         if (ArraySingle::isAssoc($array)) {
             $descending
