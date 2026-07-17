@@ -504,7 +504,7 @@ class LazyFileConfig extends Config
         parent::flushReadCache();
         $this->loadedNamespaces = [];
 
-        foreach (array_keys($this->items) as $namespace) {
+        foreach ($this->items as $namespace => $_) {
             if (!is_string($namespace) || !preg_match('/^[A-Za-z0-9_-]+$/', $namespace)) {
                 continue;
             }

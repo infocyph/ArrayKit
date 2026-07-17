@@ -134,7 +134,7 @@ trait LazyFileConfigCacheTrait
     {
         $namespaces = [];
 
-        foreach (array_keys($this->items) as $namespace) {
+        foreach ($this->items as $namespace => $_) {
             if (is_string($namespace) && preg_match('/^[A-Za-z0-9_-]+$/', $namespace)) {
                 $namespaces[$namespace] = true;
             }

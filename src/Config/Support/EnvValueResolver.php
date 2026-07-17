@@ -35,7 +35,7 @@ final class EnvValueResolver
     public static function resolve(array $items): array
     {
         $resolved = [];
-        foreach (array_keys($items) as $name) {
+        foreach ($items as $name => $_) {
             $resolved[$name] = self::resolveName($name, $items, $resolved, []);
         }
 
