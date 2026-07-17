@@ -1,12 +1,16 @@
 {
     "name": "infocyph/arraykit",
-    "description": "A Collection of useful PHP array functions.",
+    "description": "PHP data and configuration primitives: arrays, collections, dot paths, dotenv, hooks, and DTO hydration.",
     "license": "MIT",
     "type": "library",
     "keywords": [
-        "collection",
         "array",
-        "config"
+        "collection",
+        "config",
+        "dotenv",
+        "dot-notation",
+        "dto",
+        "pipeline"
     ],
     "authors": [
         {

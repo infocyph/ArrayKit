@@ -8,10 +8,10 @@
 ![GitHub Code Size](https://img.shields.io/github/languages/code-size/infocyph/ArrayKit)
 [![Documentation](https://img.shields.io/badge/Documentation-ArrayKit-blue?logo=readthedocs&logoColor=white)](https://docs.infocyph.com/projects/arraykit/)
 
-**ArrayKit** is a modern **PHP 8.4+** library for elegant, high-performance **array manipulation**, **dot notation
-utilities**, **dynamic configuration**, **hookable collections**, and more.
-From shallow single arrays to deeply nested data structures — **ArrayKit** provides a fluent, reliable toolkit for
-real-world PHP projects.
+**ArrayKit** is a modern **PHP 8.4+** data toolkit for **array manipulation**, **dot-path access**, **collections**,
+**configuration and dotenv parsing**, **hooks**, and **DTO hydration**. These capabilities work together around the
+same application-data boundary: shaping values, accessing nested structures, and carrying that data through runtime
+configuration or object models.
 
 ## Features at a Glance
 
@@ -26,6 +26,7 @@ real-world PHP projects.
 - **LazyCollection for Generator-Based Flows**
 - **ArrayShape Validation Helper**
 - **Compiled Config + Lazy Namespace Cache**
+- **Dotenv Parsing + Environment References**
 - **Namespaced Helpers + Optional Globals**
 
 ## Modules
@@ -47,6 +48,8 @@ real-world PHP projects.
 |---------------------|---------------------------------------------------------------------------------------------------------------------|
 | **Config**          | Dot-access configuration loader with explicit hook-aware variants (`getWithHooks`, `setWithHooks`, `fillWithHooks`) plus compiled cache export/load and read memoization. |
 | **LazyFileConfig**  | First-segment lazy loader (`db.host` loads `db.php` on demand) with namespace cache files for structural reads and a flat leaf-index cache for exact scalar lookups.      |
+| **EnvParser**       | Strict dotenv parser with variable expansion and circular-reference detection.                                     |
+| **Environment**     | Process-environment reader and `EnvReference` factory for deferred configuration values.                           |
 | **BaseConfigTrait** | Shared config logic.                                                                                                |
 
 
@@ -57,7 +60,7 @@ real-world PHP projects.
 | **Collection**          | OOP array wrapper implementing `ArrayAccess`, `IteratorAggregate`, `Countable`, `JsonSerializable`. |
 | **HookedCollection**    | Extends `Collection` with **on-get/on-set hooks** for real-time transformation of values.  |
 | **Pipeline**            | Functional-style pipeline for chaining operations on collections.                          |
-| **LazyCollection**      | Generator-backed lazy operations (`mapLazy`, `filterLazy`, `chunkLazy`, `take`, `takeUntil`). |
+| **LazyCollection**      | Repeatable lazy operations (`mapLazy`, `filterLazy`, `chunkLazy`, `take`, `takeUntil`), including one-shot generators and renewable factories. |
 | **BaseCollectionTrait** | Shared collection behavior.                                                                |
 
 
@@ -253,7 +256,7 @@ echo $collection['role']; // Role: admin
 ### 🔹 DTO Trait Example
 
 ```php
-use Infocyph\ArrayKit\traits\DTOTrait;
+use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
 
 class UserDTO {
     use DTOTrait;

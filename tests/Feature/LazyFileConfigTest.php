@@ -305,6 +305,22 @@ it('does not re-merge namespace files after replace merge or reload with in-memo
     expect($config->get('app'))->toBe(['name' => 'reloaded']);
 });
 
+it('keeps loaded namespaces synchronized after in-memory state changes', function () {
+    $config = new LazyFileConfig($this->configPath);
+
+    $config->loadArray(['app' => ['name' => 'ArrayKit']]);
+    expect($config->loaded('app'))->toBeTrue();
+
+    $config->snapshot('before-replace');
+    $config->replace(['cache' => ['driver' => 'file']]);
+    expect($config->loaded('app'))->toBeFalse()
+        ->and($config->loaded('cache'))->toBeTrue();
+
+    $config->restore('before-replace');
+    expect($config->loaded('app'))->toBeTrue()
+        ->and($config->loaded('cache'))->toBeFalse();
+});
+
 it('supports namespace cache warmup and fallback retrieval', function () {
     lazyConfigWriteArrayFile($this->configPath, 'db', [
         'host' => 'localhost',

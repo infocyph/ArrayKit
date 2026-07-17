@@ -591,6 +591,7 @@ LazyCollection
 .. code-block:: php
 
     public static function from(iterable $source): self
+    public static function fromFactory(\Closure $factory): self
     public static function make(mixed $data = []): self
     public function getIterator(): Traversable
     public function cursor(): Generator

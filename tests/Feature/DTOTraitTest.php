@@ -3,25 +3,7 @@
 declare(strict_types=1);
 
 use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
-
-final class DTOTraitAddress
-{
-    use DTOTrait;
-
-    public string $city = '';
-}
-
-final class DTOTraitUser
-{
-    use DTOTrait;
-
-    public DTOTraitAddress $address;
-
-    public function __construct()
-    {
-        $this->address = new DTOTraitAddress;
-    }
-}
+use Infocyph\ArrayKit\Tests\Fixtures\DTOTraitUser;
 
 it('can create a DTO from an array', function () {
     // Define a quick test class inline

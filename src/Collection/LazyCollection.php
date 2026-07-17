@@ -30,7 +30,22 @@ final readonly class LazyCollection implements IteratorAggregate
      */
     public static function from(iterable $source): self
     {
-        return new self(static fn(): iterable => $source);
+        return new self(self::replayableFactory($source));
+    }
+
+    /**
+     * Create a lazy collection from a factory that returns a fresh iterable for
+     * every traversal.
+     *
+     * @template TFactoryKey of array-key
+     * @template TFactoryValue
+     *
+     * @param \Closure(): iterable<TFactoryKey, TFactoryValue> $factory
+     * @return self<TFactoryKey, TFactoryValue>
+     */
+    public static function fromFactory(\Closure $factory): self
+    {
+        return new self($factory);
     }
 
     /**
@@ -43,7 +58,7 @@ final readonly class LazyCollection implements IteratorAggregate
         }
 
         if ($data instanceof Traversable) {
-            return self::from(self::iterableToArray($data));
+            return self::fromTraversable($data);
         }
 
         if ($data === null) {
@@ -156,12 +171,12 @@ final readonly class LazyCollection implements IteratorAggregate
         return new self(function () use ($limit): Generator {
             $count = 0;
             foreach ($this->cursor() as $key => $value) {
-                if ($count >= $limit) {
-                    break;
-                }
-
                 yield $key => $value;
                 $count++;
+
+                if ($count >= $limit) {
+                    return;
+                }
             }
         });
     }
@@ -184,24 +199,73 @@ final readonly class LazyCollection implements IteratorAggregate
     }
 
     /**
-     * Normalize traversable input to array-key arrays for generic safety.
+     * Normalize traversable input without forcing eager materialization.
      *
-     * @param Traversable<mixed, mixed> $source
-     * @return array<array-key, mixed>
+     * @param Traversable<array-key, mixed> $source
+     * @return self<array-key, mixed>
      */
-    private static function iterableToArray(Traversable $source): array
+    private static function fromTraversable(Traversable $source): self
     {
-        $results = [];
-        foreach ($source as $key => $value) {
-            if (is_int($key) || is_string($key)) {
-                $results[$key] = $value;
+        return new self(self::replayableFactory($source));
+    }
 
-                continue;
+    /**
+     * Adapt any iterable into a repeatable lazy source without eagerly
+     * materializing it. Values already consumed from a one-shot iterator are
+     * memoized, while later values are fetched only when a cursor needs them.
+     *
+     * @template TSourceKey of array-key
+     * @template TSourceValue
+     *
+     * @param iterable<TSourceKey, TSourceValue> $source
+     * @return \Closure(): iterable<TSourceKey, TSourceValue>
+     */
+    private static function replayableFactory(iterable $source): \Closure
+    {
+        /** @var list<array{0: TSourceKey, 1: TSourceValue}> $cache */
+        $cache = [];
+        $sourceCursor = null;
+        $sourceAdvancePending = false;
+        $exhausted = false;
+
+        return static function () use ($source, &$cache, &$sourceCursor, &$sourceAdvancePending, &$exhausted): Generator {
+            $position = 0;
+
+            while (true) {
+                if (array_key_exists($position, $cache)) {
+                    [$key, $value] = $cache[$position];
+                    yield $key => $value;
+                    $position++;
+
+                    continue;
+                }
+
+                if ($exhausted) {
+                    return;
+                }
+
+                $sourceCursor ??= (static function () use ($source): Generator {
+                    yield from $source;
+                })();
+
+                if ($sourceAdvancePending) {
+                    $sourceCursor->next();
+                    $sourceAdvancePending = false;
+                }
+
+                if (!$sourceCursor->valid()) {
+                    $exhausted = true;
+
+                    return;
+                }
+
+                $entry = [$sourceCursor->key(), $sourceCursor->current()];
+                $cache[] = $entry;
+                $sourceAdvancePending = true;
+
+                yield $entry[0] => $entry[1];
+                $position++;
             }
-
-            $results[] = $value;
-        }
-
-        return $results;
+        };
     }
 }

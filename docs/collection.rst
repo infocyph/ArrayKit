@@ -266,11 +266,16 @@ LazyCollection
 --------------
 
 Use ``LazyCollection`` for generator-backed transformations over large iterables.
+Collections built with ``from()`` replay values already read from a one-shot
+generator without eagerly materializing the source. That replay cache grows with
+the portion consumed, so use ``fromFactory()`` for long-lived or unbounded
+sources when each traversal can create a fresh iterable.
 
 .. code-block:: php
 
     <?php
     use Infocyph\ArrayKit\ArrayKit;
+    use Infocyph\ArrayKit\Collection\LazyCollection;
 
     $result = ArrayKit::lazyCollection(range(1, 1000))
         ->filterLazy(fn ($v) => $v % 2 === 0)
@@ -279,6 +284,18 @@ Use ``LazyCollection`` for generator-backed transformations over large iterables
         ->all();
 
     // [20, 40, 60, 80, 100]
+
+    $events = LazyCollection::from((function (): Generator {
+        yield 'created';
+        yield 'updated';
+    })());
+
+    $events->all(); // ['created', 'updated']
+    $events->all(); // ['created', 'updated']
+
+    $fresh = LazyCollection::fromFactory(function (): Generator {
+        yield from fetchEvents();
+    });
 
 Terminal calculations:
 

@@ -11,7 +11,7 @@ This page covers reusable building blocks outside the core helper classes:
 DTOTrait
 --------
 
-Namespace: ``Infocyph\ArrayKit\traits\DTOTrait``
+Namespace: ``Infocyph\ArrayKit\DTO\Concerns\DTOTrait``
 
 Main methods:
 
@@ -29,7 +29,7 @@ Basic DTO Flow
 .. code-block:: php
 
     <?php
-    use Infocyph\ArrayKit\traits\DTOTrait;
+    use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
 
     class UserDTO
     {
@@ -76,7 +76,7 @@ Unknown keys are ignored (no dynamic properties are created):
 HookTrait
 ---------
 
-Namespace: ``Infocyph\ArrayKit\traits\HookTrait``
+Namespace: ``Infocyph\ArrayKit\Concerns\HookTrait``
 
 Main methods:
 
