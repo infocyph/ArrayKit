@@ -439,18 +439,17 @@ class ArraySingle
      */
     public static function median(array $array): float|int
     {
-        $values = array_values(
-            array_filter(
-                $array,
-                static fn(mixed $value): bool => is_int($value) || is_float($value) || (is_string($value) && is_numeric($value)),
-            ),
-        );
+        $values = [];
+        foreach ($array as $value) {
+            if (is_int($value) || is_float($value) || (is_string($value) && is_numeric($value))) {
+                $values[] = (float) $value;
+            }
+        }
 
         if ($values === []) {
             return 0;
         }
 
-        $values = array_map(static fn(mixed $value): float => (float) $value, $values);
         sort($values, SORT_NUMERIC);
         $count = count($values);
         $mid = intdiv($count, 2);

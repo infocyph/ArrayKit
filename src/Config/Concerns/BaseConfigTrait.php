@@ -70,7 +70,7 @@ trait BaseConfigTrait
      */
     public function changed(string $snapshot = 'default'): bool
     {
-        if (!array_key_exists($snapshot, $this->snapshots)) {
+        if (!isset($this->snapshots[$snapshot])) {
             return true;
         }
 
@@ -501,7 +501,7 @@ trait BaseConfigTrait
     public function restore(string $name = 'default'): bool
     {
         $this->assertWritable();
-        if (!array_key_exists($name, $this->snapshots)) {
+        if (!isset($this->snapshots[$name])) {
             return false;
         }
 

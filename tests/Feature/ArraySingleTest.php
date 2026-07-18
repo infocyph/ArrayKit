@@ -44,6 +44,11 @@ it('ignores non-numeric values when calculating average', function () {
     expect(ArraySingle::avg($values))->toBe(4);
 });
 
+it('ignores non-numeric values when calculating median', function () {
+    expect(ArraySingle::median([1, '2', 7.5, 'ignore', null]))->toBe(2.0)
+        ->and(ArraySingle::median(['ignore', null]))->toBe(0);
+});
+
 it('searches an array for a callback condition', function () {
     $data = [1, 2, 3, 4];
     $key = ArraySingle::search($data, fn ($value) => $value === 3);
