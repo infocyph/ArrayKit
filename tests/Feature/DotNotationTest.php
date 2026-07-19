@@ -118,6 +118,11 @@ it('checks that hasAny() returns true if at least one key exists', function () {
     expect(DotNotation::hasAny($data, ['user.email', 'user.name']))->toBeTrue();
 });
 
+it('accepts a zero-like root key', function () {
+    expect(DotNotation::has(['0' => 'zero'], '0'))->toBeTrue()
+        ->and(DotNotation::hasAny(['0' => 'zero'], ['missing', '0']))->toBeTrue();
+});
+
 //
 // Test get()
 //
@@ -308,6 +313,14 @@ it('supports rename and move helpers', function () {
         ->and($data)->toBe(['user' => ['name' => 'Alice'], 'profile' => ['kind' => 'admin']]);
 });
 
+it('treats same-path rename and move operations as no-ops', function () {
+    $data = ['user' => ['role' => 'admin']];
+
+    expect(DotNotation::rename($data, 'user.role', 'user.role'))->toBeTrue()
+        ->and(DotNotation::move($data, 'user.role', 'user.role'))->toBeTrue()
+        ->and($data)->toBe(['user' => ['role' => 'admin']]);
+});
+
 //
 // Test type-specific retrieval: string, integer, float, boolean, arrayValue
 //
@@ -446,4 +459,18 @@ it('can throw on safe get traversal limit overflow', function () {
 
     expect(fn () => DotNotation::getSafe($data, 'users.*.name', 'missing', maxDepth: 1, throwOnTooDeep: true))
         ->toThrow(RuntimeException::class);
+});
+
+it('applies safe traversal limits to ordinary path segments and nodes', function () {
+    $data = ['one' => ['two' => ['three' => 'value']]];
+
+    expect(DotNotation::getSafe($data, 'one.two.three', 'missing', maxDepth: 2))->toBe('missing')
+        ->and(DotNotation::getSafe($data, 'one.two.three', 'missing', maxNodes: 2))->toBe('missing')
+        ->and(fn () => DotNotation::getSafe(
+            $data,
+            'one.two.three',
+            'missing',
+            maxDepth: 2,
+            throwOnTooDeep: true,
+        ))->toThrow(RuntimeException::class);
 });

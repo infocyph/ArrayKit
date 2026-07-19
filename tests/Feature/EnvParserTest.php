@@ -109,6 +109,13 @@ it('rejects malformed dotenv entries', function () {
         ->and(fn () => EnvParser::parse('BROKEN=${APP_NAME'))->toThrow(UnexpectedValueException::class);
 });
 
+it('rejects unsafe bytes from iterable dotenv input', function () {
+    expect(fn () => EnvParser::parseLines(["\xEF\xBB\xBFAPP_NAME=ArrayKit"]))
+        ->toThrow(UnexpectedValueException::class)
+        ->and(fn () => EnvParser::parseLines(["APP_NAME=Array\0Kit"]))
+        ->toThrow(UnexpectedValueException::class);
+});
+
 it('rejects circular dotenv variable references', function () {
     $_ENV['A'] = 'external';
 

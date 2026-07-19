@@ -104,3 +104,18 @@ it('supports sortByMany and row-query convenience helpers in pipelines', functio
             'role' => 'viewer',
         ]);
 });
+
+it('preserves explicit null row comparisons in pipelines', function () {
+    $rows = Collection::make([
+        ['id' => 1, 'role' => null],
+        ['id' => 2, 'role' => 'admin'],
+        ['id' => 3],
+    ]);
+
+    expect($rows->copy()->where('role', '=', null)->all())->toBe([
+        0 => ['id' => 1, 'role' => null],
+    ])->and($rows->process()->firstWhere('role', '=', null))->toBe([
+        'id' => 1,
+        'role' => null,
+    ]);
+});

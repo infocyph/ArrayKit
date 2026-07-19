@@ -12,16 +12,7 @@ final class ArraySingleOps
      */
     public static function containsAll(array $array, array $needles, bool $strict): bool
     {
-        if (!$strict) {
-            return self::containsAllLoose($array, $needles);
-        }
-
-        $lookup = self::buildStrictLookup($array);
-
-        return array_all(
-            $needles,
-            static fn(mixed $needle): bool => isset($lookup[self::fingerprintStrict($needle)]),
-        );
+        return ArrayValueSetOps::containsAll($array, $needles, $strict);
     }
 
     /**
@@ -30,16 +21,7 @@ final class ArraySingleOps
      */
     public static function containsAny(array $array, array $needles, bool $strict): bool
     {
-        if (!$strict) {
-            return self::containsAnyLoose($array, $needles);
-        }
-
-        $lookup = self::buildStrictLookup($array);
-
-        return array_any(
-            $needles,
-            static fn(mixed $needle): bool => isset($lookup[self::fingerprintStrict($needle)]),
-        );
+        return ArrayValueSetOps::containsAny($array, $needles, $strict);
     }
 
     /**
@@ -49,28 +31,7 @@ final class ArraySingleOps
      */
     public static function diff(array $array, array $values, bool $strict): array
     {
-        if (!$strict) {
-            $results = [];
-            foreach ($array as $key => $value) {
-                if (!in_array($value, $values, false)) {
-                    $results[$key] = $value;
-                }
-            }
-
-            return $results;
-        }
-
-        $lookup = self::buildStrictLookup($values);
-        $results = [];
-        foreach ($array as $key => $value) {
-            if (isset($lookup[self::fingerprintStrict($value)])) {
-                continue;
-            }
-
-            $results[$key] = $value;
-        }
-
-        return $results;
+        return ArrayValueSetOps::diff($array, $values, $strict);
     }
 
     /**
@@ -79,26 +40,7 @@ final class ArraySingleOps
      */
     public static function duplicates(array $array): array
     {
-        $strictLookup = [];
-        $strictCounts = [];
-        $duplicates = [];
-
-        foreach ($array as $value) {
-            $fingerprint = self::fingerprintStrict($value);
-            if (!isset($strictLookup[$fingerprint])) {
-                $strictLookup[$fingerprint] = $value;
-                $strictCounts[$fingerprint] = 1;
-
-                continue;
-            }
-
-            $strictCounts[$fingerprint]++;
-            if ($strictCounts[$fingerprint] === 2) {
-                $duplicates[] = $strictLookup[$fingerprint];
-            }
-        }
-
-        return $duplicates;
+        return ArrayValueSetOps::duplicates($array);
     }
 
     /**
@@ -106,9 +48,7 @@ final class ArraySingleOps
      */
     public static function fingerprint(mixed $value, bool $strict = true): string
     {
-        return $strict
-            ? self::fingerprintStrict($value)
-            : self::fingerprintLoose($value);
+        return ArrayValueSetOps::fingerprint($value, $strict);
     }
 
     /**
@@ -118,28 +58,7 @@ final class ArraySingleOps
      */
     public static function intersect(array $array, array $values, bool $strict): array
     {
-        if (!$strict) {
-            $results = [];
-            foreach ($array as $key => $value) {
-                if (in_array($value, $values, false)) {
-                    $results[$key] = $value;
-                }
-            }
-
-            return $results;
-        }
-
-        $lookup = self::buildStrictLookup($values);
-        $results = [];
-        foreach ($array as $key => $value) {
-            if (!isset($lookup[self::fingerprintStrict($value)])) {
-                continue;
-            }
-
-            $results[$key] = $value;
-        }
-
-        return $results;
+        return ArrayValueSetOps::intersect($array, $values, $strict);
     }
 
     /**
@@ -180,16 +99,7 @@ final class ArraySingleOps
      */
     public static function same(array $left, array $right, bool $strict): bool
     {
-        if (count($left) !== count($right)) {
-            return false;
-        }
-
-        $leftCounts = self::countsByFingerprint($left, $strict);
-        $rightCounts = self::countsByFingerprint($right, $strict);
-        ksort($leftCounts);
-        ksort($rightCounts);
-
-        return $leftCounts === $rightCounts;
+        return ArrayValueSetOps::same($left, $right, $strict);
     }
 
     /**
@@ -211,26 +121,7 @@ final class ArraySingleOps
      */
     public static function unique(array $array, bool $strict): array
     {
-        if (!$strict) {
-            /** @var array<array-key, mixed> $unique */
-            $unique = array_unique($array, \SORT_REGULAR);
-
-            return $unique;
-        }
-
-        $seen = [];
-        $result = [];
-        foreach ($array as $key => $item) {
-            $fingerprint = self::fingerprintStrict($item);
-            if (isset($seen[$fingerprint])) {
-                continue;
-            }
-
-            $seen[$fingerprint] = true;
-            $result[$key] = $item;
-        }
-
-        return $result;
+        return ArrayValueSetOps::unique($array, $strict);
     }
 
     /**
@@ -260,176 +151,9 @@ final class ArraySingleOps
         return $results;
     }
 
-    /**
-     * Build a loose scalar lookup table when all values are scalar/null.
-     *
-     * @param array<array-key, mixed> $array
-     * @return array<string, bool>|null
-     */
-    private static function buildLooseLookup(array $array): ?array
-    {
-        $lookup = [];
-        foreach ($array as $value) {
-            $fingerprint = self::fingerprintLooseScalar($value);
-            if ($fingerprint === null) {
-                return null;
-            }
-
-            $lookup[$fingerprint] = true;
-        }
-
-        return $lookup;
-    }
-
-    /**
-     * @param array<array-key, mixed> $array
-     * @return array<string, bool>
-     */
-    private static function buildStrictLookup(array $array): array
-    {
-        $lookup = [];
-        foreach ($array as $value) {
-            $lookup[self::fingerprintStrict($value)] = true;
-        }
-
-        return $lookup;
-    }
-
-    /**
-     * @param array<array-key, mixed> $array
-     * @param array<array-key, mixed> $needles
-     */
-    private static function containsAllLoose(array $array, array $needles): bool
-    {
-        $lookup = self::buildLooseLookup($array);
-        if ($lookup === null) {
-            return array_all($needles, fn($needle) => in_array($needle, $array, false));
-        }
-
-        foreach ($needles as $needle) {
-            $fingerprint = self::fingerprintLooseScalar($needle);
-            if ($fingerprint === null || !isset($lookup[$fingerprint])) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * @param array<array-key, mixed> $array
-     * @param array<array-key, mixed> $needles
-     */
-    private static function containsAnyLoose(array $array, array $needles): bool
-    {
-        $lookup = self::buildLooseLookup($array);
-        if ($lookup === null) {
-            return array_any($needles, fn($needle) => in_array($needle, $array, false));
-        }
-
-        foreach ($needles as $needle) {
-            $fingerprint = self::fingerprintLooseScalar($needle);
-            if ($fingerprint !== null && isset($lookup[$fingerprint])) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param array<array-key, mixed> $array
-     * @return array<string, int>
-     */
-    private static function countsByFingerprint(array $array, bool $strict): array
-    {
-        $counts = [];
-        foreach ($array as $value) {
-            $fingerprint = $strict ? self::fingerprintStrict($value) : self::fingerprintLoose($value);
-            $counts[$fingerprint] = ($counts[$fingerprint] ?? 0) + 1;
-        }
-
-        return $counts;
-    }
-
-    /**
-     * @param array<array-key, mixed> $value
-     */
-    private static function fingerprintArrayLoose(array $value): string
-    {
-        $parts = [];
-        foreach ($value as $key => $item) {
-            $parts[] = self::fingerprintLoose($key) . '=>' . self::fingerprintLoose($item);
-        }
-
-        return implode('|', $parts);
-    }
-
-    /**
-     * @param array<array-key, mixed> $value
-     */
-    private static function fingerprintArrayStrict(array $value): string
-    {
-        $parts = [];
-        foreach ($value as $key => $item) {
-            $parts[] = self::fingerprintStrict($key) . '=>' . self::fingerprintStrict($item);
-        }
-
-        return implode('|', $parts);
-    }
-
-    /**
-     * Build a loose-comparison-style fingerprint for set equality checks.
-     */
-    private static function fingerprintLoose(mixed $value): string
-    {
-        return match (true) {
-            is_int($value), is_float($value), is_bool($value), $value === null => 'numeric:' . (float) $value,
-            is_string($value) => is_numeric($value) ? 'numeric:' . (float) $value : 'string:' . $value,
-            is_array($value) => 'array:' . self::fingerprintArrayLoose($value),
-            is_object($value) => 'object-value:' . self::fingerprintArrayLoose(get_object_vars($value)),
-            is_resource($value) => 'resource:' . get_resource_type($value) . ':' . (int) $value,
-            default => 'unknown:' . get_debug_type($value),
-        };
-    }
-
-    /**
-     * Build a loose-comparison scalar fingerprint.
-     */
-    private static function fingerprintLooseScalar(mixed $value): ?string
-    {
-        return match (true) {
-            is_int($value), is_float($value), is_bool($value), $value === null => 'numeric:' . (float) $value,
-            is_string($value) => is_numeric($value) ? 'numeric:' . (float) $value : 'string:' . $value,
-            default => null,
-        };
-    }
-
-    /**
-     * Build a strict fingerprint that preserves type distinctions.
-     */
-    private static function fingerprintStrict(mixed $value): string
-    {
-        return match (true) {
-            $value === null => 'null:',
-            is_bool($value) => 'bool:' . ($value ? '1' : '0'),
-            is_int($value) => 'int:' . $value,
-            is_float($value) => 'float:' . json_encode($value, JSON_PRESERVE_ZERO_FRACTION),
-            is_string($value) => 'string:' . $value,
-            is_array($value) => 'array:' . self::fingerprintArrayStrict($value),
-            is_object($value) => 'object:' . $value::class . ':' . spl_object_id($value),
-            is_resource($value) => 'resource:' . get_resource_type($value) . ':' . (int) $value,
-            default => 'unknown:' . get_debug_type($value),
-        };
-    }
-
     private static function invokeValueCallback(callable $callback, mixed $value, int|string $key): mixed
     {
-        try {
-            return $callback($value, $key);
-        } catch (\ArgumentCountError) {
-            return $callback($value);
-        }
+        return $callback($value, $key);
     }
 
     /**

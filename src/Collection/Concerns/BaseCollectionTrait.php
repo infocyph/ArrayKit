@@ -260,12 +260,21 @@ trait BaseCollectionTrait
      */
     public function getArrayableItems(mixed $items): array
     {
-        return match (true) {
-            $items instanceof self => $items->items(),
-            $items instanceof JsonSerializable => is_array($items->jsonSerialize()) ? $items->jsonSerialize() : (array) $items->jsonSerialize(),
-            $items instanceof Traversable => iterator_to_array($items),
-            default => (array) $items,
-        };
+        if ($items instanceof self) {
+            return $items->items();
+        }
+
+        if ($items instanceof JsonSerializable) {
+            $serialized = $items->jsonSerialize();
+
+            return is_array($serialized) ? $serialized : (array) $serialized;
+        }
+
+        if ($items instanceof Traversable) {
+            return iterator_to_array($items);
+        }
+
+        return (array) $items;
     }
 
     /*

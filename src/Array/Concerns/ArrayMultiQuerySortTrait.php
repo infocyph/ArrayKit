@@ -80,7 +80,7 @@ trait ArrayMultiQuerySortTrait
         mixed $value = null,
         mixed $default = null,
     ): mixed {
-        if ($value === null && $operator !== null) {
+        if (func_num_args() === 3) {
             $value = $operator;
             $operator = null;
         }
@@ -134,7 +134,7 @@ trait ArrayMultiQuerySortTrait
             $gKey = null;
             if (is_callable($groupBy)) {
                 $gKey = $groupBy($row, $key);
-            } elseif (is_array($row) && isset($row[$groupBy])) {
+            } elseif (is_array($row) && array_key_exists($groupBy, $row)) {
                 $gKey = $row[$groupBy];
             } else {
                 $gKey = '_undefined';
@@ -410,8 +410,15 @@ trait ArrayMultiQuerySortTrait
             return $array;
         }
 
-        $normalized = self::normalizeSortByManyCriteria($criteria);
-        uasort($array, static fn(mixed $left, mixed $right): int => self::compareByManyCriteria($left, $right, $normalized));
+        $prepared = self::prepareSortByManyCriteria($array, $criteria);
+        uksort(
+            $array,
+            static fn(int|string $leftKey, int|string $rightKey): int => self::compareByManyCriteria(
+                $leftKey,
+                $rightKey,
+                $prepared,
+            ),
+        );
 
         return $array;
     }
@@ -511,7 +518,7 @@ trait ArrayMultiQuerySortTrait
      */
     public static function where(array $array, string $key, mixed $operator = null, mixed $value = null): array
     {
-        if ($value === null && $operator !== null) {
+        if (func_num_args() === 3) {
             $value = $operator;
             $operator = null;
         }
@@ -751,20 +758,23 @@ trait ArrayMultiQuerySortTrait
         if ($strict) {
             $lookup = [];
             foreach ($values as $value) {
+                if (self::containsNonReflexiveStrictValue($value)) {
+                    return null;
+                }
+
                 $lookup[ArraySingleOps::fingerprint($value, true)] = true;
             }
 
             return $lookup;
         }
 
-        $lookup = [];
+        $lookup = ['type:non-numeric-string' => true];
         foreach ($values as $value) {
-            $fingerprint = self::looseScalarFingerprint($value);
-            if ($fingerprint === null) {
+            if (!is_string($value) || is_numeric($value)) {
                 return null;
             }
 
-            $lookup[$fingerprint] = true;
+            $lookup['value:' . strlen($value) . ':' . $value] = true;
         }
 
         return $lookup;
@@ -812,14 +822,13 @@ trait ArrayMultiQuerySortTrait
 
         foreach ($array as $index => $row) {
             $derived = self::resolveDerivedValue($row, $keyOrCallback, $index);
-            $fingerprint = ArraySingleOps::fingerprint($derived, $strict);
-            $alreadySeen = isset($seen[$fingerprint]);
+            $alreadySeen = in_array($derived, $seen, $strict);
 
             if ($keepDuplicates) {
                 if ($alreadySeen) {
                     $results[$index] = $row;
                 } else {
-                    $seen[$fingerprint] = true;
+                    $seen[] = $derived;
                 }
 
                 continue;
@@ -829,7 +838,7 @@ trait ArrayMultiQuerySortTrait
                 continue;
             }
 
-            $seen[$fingerprint] = true;
+            $seen[] = $derived;
             $results[$index] = $row;
         }
 
@@ -837,13 +846,13 @@ trait ArrayMultiQuerySortTrait
     }
 
     /**
-     * @param array<int, array{by:string|callable, desc:bool, options:int}> $criteria
+     * @param array<int, array{values:array<array-key, mixed>, desc:bool, options:int}> $criteria
      */
-    private static function compareByManyCriteria(mixed $left, mixed $right, array $criteria): int
+    private static function compareByManyCriteria(int|string $leftKey, int|string $rightKey, array $criteria): int
     {
         foreach ($criteria as $criterion) {
-            $leftValue = self::resolveSortByManyValue($left, $criterion['by'], 0);
-            $rightValue = self::resolveSortByManyValue($right, $criterion['by'], 1);
+            $leftValue = $criterion['values'][$leftKey];
+            $rightValue = $criterion['values'][$rightKey];
             $comparison = self::compareSortValues($leftValue, $rightValue, $criterion['options']);
             if ($comparison !== 0) {
                 return self::applySortDirection($comparison, $criterion['desc']);
@@ -876,6 +885,19 @@ trait ArrayMultiQuerySortTrait
             \SORT_LOCALE_STRING => strcoll(self::asString($left), self::asString($right)),
             default => $left <=> $right,
         };
+    }
+
+    private static function containsNonReflexiveStrictValue(mixed $value): bool
+    {
+        if (is_float($value)) {
+            return is_nan($value);
+        }
+
+        if (!is_array($value)) {
+            return false;
+        }
+
+        return array_any($value, self::containsNonReflexiveStrictValue(...));
     }
 
     private static function extractComparableValue(mixed $row, string|callable $keyOrCallback, int|string $key): ?float
@@ -987,9 +1009,9 @@ trait ArrayMultiQuerySortTrait
                 return isset($lookup[ArraySingleOps::fingerprint($candidate, true)]);
             }
 
-            $fingerprint = self::looseScalarFingerprint($candidate);
-
-            return $fingerprint !== null && isset($lookup[$fingerprint]);
+            if (is_string($candidate) && !is_numeric($candidate)) {
+                return isset($lookup['value:' . strlen($candidate) . ':' . $candidate]);
+            }
         }
 
         return in_array($candidate, $values, $strict);
@@ -997,20 +1019,7 @@ trait ArrayMultiQuerySortTrait
 
     private static function invokeRowCallback(callable $callback, mixed $row, int|string $key): mixed
     {
-        try {
-            return $callback($row, $key);
-        } catch (\ArgumentCountError) {
-            return $callback($row);
-        }
-    }
-
-    private static function looseScalarFingerprint(mixed $value): ?string
-    {
-        return match (true) {
-            is_int($value), is_float($value), is_bool($value), $value === null => 'numeric:' . (float) $value,
-            is_string($value) => is_numeric($value) ? 'numeric:' . (float) $value : 'string:' . $value,
-            default => null,
-        };
+        return $callback($row, $key);
     }
 
     private static function normalizeArrayKey(mixed $value): int|string
@@ -1044,6 +1053,33 @@ trait ArrayMultiQuerySortTrait
         }
 
         return $normalized;
+    }
+
+    /**
+     * Resolve each criterion once per row before sorting.
+     *
+     * @param array<array-key, mixed> $array
+     * @param array<int, array<int, mixed>> $criteria
+     * @return array<int, array{values:array<array-key, mixed>, desc:bool, options:int}>
+     */
+    private static function prepareSortByManyCriteria(array $array, array $criteria): array
+    {
+        $prepared = [];
+
+        foreach (self::normalizeSortByManyCriteria($criteria) as $criterion) {
+            $values = [];
+            foreach ($array as $key => $row) {
+                $values[$key] = self::resolveSortByManyValue($row, $criterion['by'], $key);
+            }
+
+            $prepared[] = [
+                'values' => $values,
+                'desc' => $criterion['desc'],
+                'options' => $criterion['options'],
+            ];
+        }
+
+        return $prepared;
     }
 
     private static function resolveDerivedValue(mixed $row, string|callable $keyOrCallback, int|string $index): mixed

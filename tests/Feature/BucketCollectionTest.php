@@ -9,6 +9,22 @@ it('can be instantiated with array data', function () {
     expect($collection->items())->toBe(['a' => 1, 'b' => 2]);
 });
 
+it('serializes arrayable input only once', function () {
+    $source = new class implements JsonSerializable {
+        public int $calls = 0;
+
+        public function jsonSerialize(): mixed
+        {
+            $this->calls++;
+
+            return ['a' => 1];
+        }
+    };
+
+    expect(Collection::make($source)->all())->toBe(['a' => 1])
+        ->and($source->calls)->toBe(1);
+});
+
 it('supports array access', function () {
     $collection = new Collection;
     $collection['x'] = 42;

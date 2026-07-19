@@ -152,11 +152,11 @@ trait DTOTrait
             return $result;
         }
 
-        if (is_object($value) && method_exists($value, 'toArrayDeep')) {
+        if (is_object($value) && is_callable([$value, 'toArrayDeep'])) {
             return $value->toArrayDeep();
         }
 
-        if (is_object($value) && method_exists($value, 'toArray')) {
+        if (is_object($value) && is_callable([$value, 'toArray'])) {
             return $value->toArray();
         }
 
@@ -176,7 +176,7 @@ trait DTOTrait
         }
 
         $className = $type->getName();
-        if (method_exists($className, 'create')) {
+        if (is_callable([$className, 'create'])) {
             return $className::create($value);
         }
 
@@ -184,8 +184,13 @@ trait DTOTrait
             return $value;
         }
 
+        $reflection = new \ReflectionClass($className);
+        if (!$reflection->isInstantiable()) {
+            return $value;
+        }
+
         $instance = new $className();
-        if (method_exists($instance, 'fromArray')) {
+        if (is_callable([$instance, 'fromArray'])) {
             return $instance->fromArray($value);
         }
 

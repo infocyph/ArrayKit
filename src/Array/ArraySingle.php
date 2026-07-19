@@ -244,7 +244,7 @@ class ArraySingle
      */
     public static function exists(array $array, int|string $key): bool
     {
-        return isset($array[$key]) || array_key_exists($key, $array);
+        return array_key_exists($key, $array);
     }
 
     /**
@@ -1008,11 +1008,7 @@ class ArraySingle
 
     private static function invokeValueCallback(callable $callback, mixed $value, int|string $key): mixed
     {
-        try {
-            return $callback($value, $key);
-        } catch (\ArgumentCountError) {
-            return $callback($value);
-        }
+        return $callback($value, $key);
     }
 
     private static function normalizeArrayKey(mixed $value): int|string

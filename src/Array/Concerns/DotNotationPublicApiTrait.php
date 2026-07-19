@@ -185,7 +185,7 @@ trait DotNotationPublicApiTrait
      */
     public static function has(array $array, array|string $keys): bool
     {
-        if (empty($array) || empty($keys)) {
+        if ($array === [] || $keys === '' || $keys === []) {
             return false;
         }
 
@@ -214,7 +214,7 @@ trait DotNotationPublicApiTrait
      */
     public static function hasAny(array $array, array|string $keys): bool
     {
-        if (empty($array) || empty($keys)) {
+        if ($array === [] || $keys === '' || $keys === []) {
             return false;
         }
 
@@ -350,6 +350,10 @@ trait DotNotationPublicApiTrait
             return false;
         }
 
+        if ($from === $to) {
+            return true;
+        }
+
         if (!$overwrite && self::has($array, $to)) {
             return false;
         }
@@ -375,18 +379,10 @@ trait DotNotationPublicApiTrait
 
         if (is_array($keys)) {
             foreach ($keys as $k => $val) {
-                $working = $array;
-                self::setValue($working, (string) $k, $val, $overwrite);
-                if (is_array($working)) {
-                    $array = $working;
-                }
+                self::setValue($array, (string) $k, $val, $overwrite);
             }
         } else {
-            $working = $array;
-            self::setValue($working, $keys, $value, $overwrite);
-            if (is_array($working)) {
-                $array = $working;
-            }
+            self::setValue($array, $keys, $value, $overwrite);
         }
 
         return true;

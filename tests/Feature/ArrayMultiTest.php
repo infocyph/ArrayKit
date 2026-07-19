@@ -373,6 +373,42 @@ it('handles null values correctly in whereIn()', function () {
     ]);
 });
 
+it('preserves PHP loose comparison semantics in whereIn()', function () {
+    $rows = [
+        ['id' => 1, 'role' => true],
+        ['id' => 2, 'role' => 'admin'],
+    ];
+
+    expect(ArrayMulti::whereIn($rows, 'role', ['admin']))->toBe($rows);
+});
+
+it('distinguishes explicit null from shorthand row comparisons', function () {
+    $rows = [
+        ['id' => 1, 'role' => null],
+        ['id' => 2, 'role' => 'admin'],
+        ['id' => 3],
+    ];
+
+    expect(ArrayMulti::where($rows, 'role', '=', null))->toBe([
+        0 => ['id' => 1, 'role' => null],
+    ])->and(ArrayMulti::firstWhere($rows, 'role', '=', null))->toBe([
+        'id' => 1,
+        'role' => null,
+    ]);
+});
+
+it('keeps null and missing grouping keys separate', function () {
+    $rows = [
+        ['id' => 1, 'role' => null],
+        ['id' => 2],
+    ];
+
+    expect(ArrayMulti::groupBy($rows, 'role'))->toBe([
+        '' => [['id' => 1, 'role' => null]],
+        '_undefined' => [['id' => 2]],
+    ]);
+});
+
 it('handles null values and missing keys correctly in whereNotIn()', function () {
     $rows = [
         ['id' => 1, 'role' => null],
@@ -524,6 +560,26 @@ it('supports sortByMany with mixed sort directions', function () {
         ['team' => 'B', 'score' => 15, 'id' => 3],
         ['team' => 'B', 'score' => 15, 'id' => 4],
     ]);
+});
+
+it('evaluates sortByMany criteria once per row with original keys', function () {
+    $rows = [
+        'high' => ['score' => 20],
+        'low' => ['score' => 10],
+    ];
+    $calls = [];
+
+    $sorted = ArrayMulti::sortByMany($rows, [[
+        function (array $row, string $key) use (&$calls): int {
+            $calls[] = $key;
+
+            return $row['score'];
+        },
+        'asc',
+    ]]);
+
+    expect(array_keys($sorted))->toBe(['low', 'high'])
+        ->and($calls)->toBe(['high', 'low']);
 });
 
 it('supports whereBetween/whereLike/whereStartsWith/whereEndsWith/whereContains/firstWhereIn', function () {

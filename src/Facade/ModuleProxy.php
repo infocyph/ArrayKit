@@ -20,7 +20,7 @@ final readonly class ModuleProxy
      */
     public function __call(string $method, array $arguments): mixed
     {
-        if (!method_exists($this->targetClass, $method)) {
+        if (!is_callable([$this->targetClass, $method])) {
             throw new BadMethodCallException("Method {$this->targetClass}::{$method} does not exist.");
         }
 

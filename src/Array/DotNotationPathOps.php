@@ -144,17 +144,13 @@ final class DotNotationPathOps
         int $currentDepth = 1,
         int &$visitedNodes = 0,
     ): mixed {
-        if ($maxDepth > 0 && $currentDepth > $maxDepth) {
-            return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max depth.');
-        }
-
-        $visitedNodes++;
-        if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
-            return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max node count.');
-        }
-
         foreach ($segments as $index => $segment) {
             unset($segments[$index]);
+
+            $visitedNodes++;
+            if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
+                return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max node count.');
+            }
 
             if ($segment === '*') {
                 return self::traverseWildcard(
@@ -171,11 +167,17 @@ final class DotNotationPathOps
                 );
             }
 
+            if ($maxDepth > 0 && $currentDepth > $maxDepth) {
+                return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max depth.');
+            }
+
             $normalized = self::normalizeSegment($segment, $target);
             $target = self::accessSegment($target, $normalized, $missing);
             if ($target === $missing) {
                 return $missing;
             }
+
+            $currentDepth++;
         }
 
         return $target;
@@ -285,7 +287,7 @@ final class DotNotationPathOps
                 $maxDepth,
                 $maxNodes,
                 $throwOnTooDeep,
-                $currentDepth + 1,
+                $currentDepth,
                 $visitedNodes,
             );
             $result[] = $resolved === $missing ? $defaultResolver($default) : $resolved;

@@ -19,7 +19,8 @@
         }
     ],
     "require": {
-        "php": ">=8.4"
+        "php": ">=8.4",
+        "ext-hash": "*"
     },
     "require-dev": {
         "infocyph/phpforge": "dev-main"

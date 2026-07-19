@@ -326,6 +326,8 @@ Behavior Notes
 - ``ArraySingle::avg()``, ``sum()``, ``isPositive()``, and ``isNegative()`` ignore non-numeric values.
 - ``ArraySingle::paginate()`` requires ``$page >= 1`` and ``$perPage >= 1``.
 - ``ArrayMulti::whereIn()`` / ``whereNotIn()`` treat ``null`` as a real value when the key exists.
+- ``ArrayMulti::where()`` / ``firstWhere()`` distinguish explicit ``null`` from
+  the two-argument shorthand form.
 - ``ArrayMulti::flatten($array, 0)`` returns unchanged top-level values.
 - Use ``depthGuarded()``, ``flattenGuarded()``, and ``sortRecursiveGuarded()`` when processing untrusted/deep inputs.
 - ``ArrayMulti`` callback helpers such as ``sortBy()``, ``sum()``, ``maxBy()``, ``minBy()`` support ``($row, $key)``.

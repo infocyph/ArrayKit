@@ -28,7 +28,7 @@ final class EnvParser
      */
     public static function parseFile(string $path): array
     {
-        return self::parse(self::readFile($path));
+        return EnvValueResolver::resolve(EnvLineParser::parseContents(self::readFile($path)));
     }
 
     /**
@@ -36,7 +36,7 @@ final class EnvParser
      */
     public static function parseFileRaw(string $path): array
     {
-        return self::parseRaw(self::readFile($path));
+        return EnvValueResolver::restoreLiteralDollars(EnvLineParser::parseContents(self::readFile($path)));
     }
 
     /**
@@ -45,7 +45,7 @@ final class EnvParser
      */
     public static function parseLines(iterable $lines): array
     {
-        return EnvValueResolver::resolve(EnvLineParser::parseLines($lines));
+        return EnvValueResolver::resolve(EnvLineParser::parseLines(self::safeLines($lines)));
     }
 
     /**
@@ -54,7 +54,7 @@ final class EnvParser
      */
     public static function parseLinesRaw(iterable $lines): array
     {
-        return EnvValueResolver::restoreLiteralDollars(EnvLineParser::parseLines($lines));
+        return EnvValueResolver::restoreLiteralDollars(EnvLineParser::parseLines(self::safeLines($lines)));
     }
 
     /**
@@ -94,5 +94,28 @@ final class EnvParser
         self::assertSafeContents($contents, $path);
 
         return $contents;
+    }
+
+    /**
+     * @param iterable<int, string> $lines
+     * @return \Generator<int, string>
+     */
+    private static function safeLines(iterable $lines): \Generator
+    {
+        $first = true;
+
+        foreach ($lines as $number => $line) {
+            if ($first && str_starts_with($line, "\xEF\xBB\xBF")) {
+                throw new UnexpectedValueException('Environment lines must not start with a byte-order mark.');
+            }
+
+            if (str_contains($line, "\0")) {
+                throw new UnexpectedValueException('Environment lines must not contain NUL bytes.');
+            }
+
+            $first = false;
+
+            yield $number => $line;
+        }
     }
 }

@@ -66,9 +66,7 @@ class Pipeline
      */
     public function combine(array $values): Collection
     {
-        $combined = ArraySingle::combine($this->working, $values);
-        // Replacing the entire array with the combined result
-        $this->working = $combined;
+        $this->working = ArraySingle::combine($this->working, $values);
 
         return $this->collection;
     }
@@ -109,11 +107,7 @@ class Pipeline
      */
     public function duplicates(): Collection
     {
-        // If you want to *replace* the original array with only duplicates:
-        $dupes = ArraySingle::duplicates($this->working);
-        // This means our collection now becomes an array of those duplicated values.
-        // Possibly you might want to keep them in a "counts" structure, but let's do direct.
-        $this->working = $dupes;
+        $this->working = ArraySingle::duplicates($this->working);
 
         return $this->collection;
     }
@@ -164,6 +158,14 @@ class Pipeline
      */
     public function firstWhere(string $key, mixed $operator = null, mixed $value = null, mixed $default = null): mixed
     {
+        if (func_num_args() === 2) {
+            return ArrayMulti::firstWhere($this->working, $key, $operator);
+        }
+
+        if (func_num_args() === 3) {
+            return ArrayMulti::firstWhere($this->working, $key, $operator, $value);
+        }
+
         return ArrayMulti::firstWhere($this->working, $key, $operator, $value, $default);
     }
 
@@ -680,7 +682,9 @@ class Pipeline
      */
     public function where(string $key, mixed $operator = null, mixed $value = null): Collection
     {
-        $this->working = ArrayMulti::where($this->working, $key, $operator, $value);
+        $this->working = func_num_args() === 2
+            ? ArrayMulti::where($this->working, $key, $operator)
+            : ArrayMulti::where($this->working, $key, $operator, $value);
 
         return $this->collection;
     }
@@ -818,18 +822,9 @@ class Pipeline
             return $pickMax ? ArraySingle::max($this->working) : ArraySingle::min($this->working);
         }
 
-        if (is_string($keyOrCallback)) {
-            return $pickMax
-                ? ArrayMulti::max($this->working, $keyOrCallback)
-                : ArrayMulti::min($this->working, $keyOrCallback);
-        }
-
-        $mapped = ArraySingle::map(
-            $this->working,
-            static fn(mixed $value, int|string $key): mixed => $keyOrCallback($value, $key),
-        );
-
-        return $pickMax ? ArraySingle::max($mapped) : ArraySingle::min($mapped);
+        return $pickMax
+            ? ArrayMulti::max($this->working, $keyOrCallback)
+            : ArrayMulti::min($this->working, $keyOrCallback);
     }
 
     private function selectExtremeBy(string|callable $keyOrCallback, bool $pickMax): mixed
