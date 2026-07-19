@@ -41,12 +41,13 @@ configuration or object models.
 | **ArrayShape**      | Lightweight array-shape assertions for row validation (`require`).                                     |
 | **BaseArrayHelper** | Internal shared base for consistent API across helpers.                                            |
 | **ArraySharedOps**  | Internal shared operations used by `ArraySingle` and `ArrayMulti` (`each/every/partition/skip*`). |
+| **ArrayValueSetOps** | Internal equality/set engine with exact PHP comparison semantics and collision-verified strict fingerprints. |
 
 ### Config System
 
 | Class               | Description                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------|
-| **Config**          | Dot-access configuration loader with explicit hook-aware variants (`getWithHooks`, `setWithHooks`, `fillWithHooks`) plus compiled cache export/load and read memoization. |
+| **Config**          | Dot-access configuration loader with explicit hook-aware variants (`getWithHooks`, `setWithHooks`, `fillWithHooks`) plus compiled cache export/load and bounded read memoization. |
 | **LazyFileConfig**  | First-segment lazy loader (`db.host` loads `db.php` on demand) with namespace cache files for structural reads and a flat leaf-index cache for exact scalar lookups.      |
 | **EnvParser**       | Strict dotenv parser with variable expansion and circular-reference detection.                                     |
 | **Environment**     | Process-environment reader and `EnvReference` factory for deferred configuration values.                           |

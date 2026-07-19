@@ -336,10 +336,10 @@ class LazyFileConfig extends Config
             return;
         }
 
-        $this->loadedNamespaces[$namespace] = true;
-
         $file = $this->resolveCachedNamespaceFile($namespace) ?? $this->resolveNamespaceFile($namespace);
         if ($file === null) {
+            $this->loadedNamespaces[$namespace] = true;
+
             return;
         }
 
@@ -347,6 +347,8 @@ class LazyFileConfig extends Config
         if (!is_array($loaded)) {
             throw new UnexpectedValueException("Config file [{$file}] must return an array.");
         }
+
+        $this->loadedNamespaces[$namespace] = true;
 
         if (!array_key_exists($namespace, $this->items)) {
             $this->items[$namespace] = $loaded;
@@ -451,7 +453,7 @@ class LazyFileConfig extends Config
             return $this->resolvedValueCache[$cacheKey];
         }
 
-        return $this->resolvedValueCache[$cacheKey] = $this->resolveLazyRawValue($key);
+        return $this->cacheResolvedValue($cacheKey, $this->resolveLazyRawValue($key));
     }
 
     protected function setPath(string $path, mixed $value, bool $overwrite): void

@@ -185,6 +185,10 @@ Important lazy-cache details:
   exist or are not readable.
 - If env values change, rerun ``warmNamespaceCache()`` or flush and rebuild the
   namespace cache.
+- A namespace is marked loaded only after its source returns a valid array, so
+  a corrected file can be retried after a failed read.
+- A full cache flush removes only ``__flat.php`` and valid namespace cache
+  files; unrelated files in the configured directory are preserved.
 
 Method Summary
 --------------

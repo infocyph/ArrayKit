@@ -446,6 +446,9 @@ Config methods:
 - ``snapshot()``, ``restore()``, ``changed()``
 - ``readonly()``, ``isReadonly()``
 
+Read memoization is bounded to 1,024 resolved paths for predictable memory use
+in persistent workers. Mutations and reloads invalidate the memoized values.
+
 Hook-aware methods:
 
 - ``getWithHooks()``

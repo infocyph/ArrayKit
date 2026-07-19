@@ -361,19 +361,7 @@ class ArrayMulti
      */
     public static function unique(array $array, bool $strict = false): array
     {
-        $seenFingerprints = [];
-        $results = [];
-        foreach ($array as $key => $row) {
-            $fingerprint = ArraySingleOps::fingerprint($row, $strict);
-            if (isset($seenFingerprints[$fingerprint])) {
-                continue;
-            }
-
-            $seenFingerprints[$fingerprint] = true;
-            $results[$key] = $row;
-        }
-
-        return $results;
+        return ArraySingleOps::unique($array, $strict);
     }
 
     /**

@@ -17,7 +17,7 @@ class DotNotation
     private static function flattenInto(array $array, string $prepend, array &$result): void
     {
         foreach ($array as $key => $value) {
-            if (is_array($value) && !empty($value)) {
+            if (is_array($value) && $value !== []) {
                 self::flattenInto($value, $prepend . $key . '.', $result);
 
                 continue;
@@ -172,10 +172,32 @@ class DotNotation
 
     /**
      * Sets a value in the target array/object using dot notation.
+     *
+     * @param array<array-key, mixed> $target
      */
-    private static function setValue(mixed &$target, string $key, mixed $value, bool $overwrite): void
+    private static function setValue(array &$target, string $key, mixed $value, bool $overwrite): void
     {
-        self::setValueBySegments($target, self::splitPath($key), $value, $overwrite);
+        $segments = self::splitPath($key);
+        $first = self::shiftSegment($segments);
+        if ($first === null) {
+            return;
+        }
+
+        if ($first === '*') {
+            if ($segments !== []) {
+                foreach ($target as &$inner) {
+                    self::setValueBySegments($inner, $segments, $value, $overwrite);
+                }
+            } elseif ($overwrite) {
+                foreach ($target as &$inner) {
+                    $inner = $value;
+                }
+            }
+
+            return;
+        }
+
+        self::setValueArray($target, $first, $segments, $value, $overwrite);
     }
 
     /**

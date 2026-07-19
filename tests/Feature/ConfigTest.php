@@ -172,3 +172,15 @@ it('memoizes reads without returning stale values after mutation', function () {
         ->and($cfg->readCache(false)->readCacheEnabled())->toBeFalse()
         ->and($cfg->get('app.name'))->toBe('ArrayKitX');
 });
+
+it('bounds the in-memory read cache for long-running processes', function () {
+    $cfg = new Config;
+
+    for ($index = 0; $index < 2048; $index++) {
+        $cfg->get('missing.'.$index);
+    }
+
+    $cacheSize = (fn (): int => count($this->resolvedValueCache))->call($cfg);
+
+    expect($cacheSize)->toBeLessThanOrEqual(1024);
+});

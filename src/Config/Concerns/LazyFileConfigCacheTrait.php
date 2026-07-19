@@ -156,11 +156,11 @@ trait LazyFileConfigCacheTrait
             }
 
             $namespace = substr($entry, 0, -strlen($suffix));
-            if ($namespace === '') {
+            if ($namespace === '' || !preg_match('/^[A-Za-z0-9_-]+$/', $namespace)) {
                 continue;
             }
 
-            $namespaces[$this->normalizeNamespace($namespace)] = true;
+            $namespaces[$namespace] = true;
         }
 
         return array_keys($namespaces);
@@ -207,11 +207,12 @@ trait LazyFileConfigCacheTrait
             return;
         }
 
-        $this->flatLeafIndexLoaded = true;
         $this->flatLeafIndex = [];
 
         $path = $this->flatLeafIndexPath();
         if ($path === null || !is_file($path) || !is_readable($path)) {
+            $this->flatLeafIndexLoaded = true;
+
             return;
         }
 
@@ -221,6 +222,7 @@ trait LazyFileConfigCacheTrait
         }
 
         $this->flatLeafIndex = $this->filterFlatLeafIndex($loaded);
+        $this->flatLeafIndexLoaded = true;
     }
 
     /**
@@ -337,7 +339,10 @@ trait LazyFileConfigCacheTrait
     private function flushAllNamespaceCacheFiles(): void
     {
         $directory = $this->namespaceCacheDirectory;
-        if ($directory === null) {
+        if ($directory === null || !is_dir($directory)) {
+            $this->flatLeafIndex = [];
+            $this->flatLeafIndexLoaded = false;
+
             return;
         }
 
@@ -345,6 +350,10 @@ trait LazyFileConfigCacheTrait
         if ($entries !== false) {
             foreach ($entries as $entry) {
                 if ($entry === '.' || $entry === '..') {
+                    continue;
+                }
+
+                if (!$this->isOwnedNamespaceCacheEntry($entry)) {
                     continue;
                 }
 
@@ -357,5 +366,21 @@ trait LazyFileConfigCacheTrait
 
         $this->flatLeafIndex = [];
         $this->flatLeafIndexLoaded = false;
+    }
+
+    private function isOwnedNamespaceCacheEntry(string $entry): bool
+    {
+        if ($entry === self::FLAT_INDEX_FILE) {
+            return true;
+        }
+
+        $suffix = '.' . $this->extension;
+        if (!str_ends_with($entry, $suffix)) {
+            return false;
+        }
+
+        $namespace = substr($entry, 0, -strlen($suffix));
+
+        return $namespace !== '' && preg_match('/^[A-Za-z0-9_-]+$/', $namespace) === 1;
     }
 }

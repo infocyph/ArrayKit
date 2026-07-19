@@ -65,6 +65,40 @@ it('checks containsAll and containsAny with strict and loose modes', function ()
         ->and(ArraySingle::containsAny($data, ['x', '2'], true))->toBeFalse();
 });
 
+it('preserves PHP loose comparison semantics for mixed scalar membership', function () {
+    expect(ArraySingle::containsAny(['enabled'], [true]))->toBeTrue()
+        ->and(ArraySingle::containsAny([null], ['0']))->toBeFalse()
+        ->and(ArraySingle::containsAll([''], [null]))->toBeTrue();
+});
+
+it('keeps non-finite floats distinct in strict set operations', function () {
+    $longValue = ['payload' => str_repeat('x', 128)];
+    $values = [INF, -INF, NAN, NAN, $longValue, $longValue];
+
+    expect(ArraySingle::unique($values, true))->toHaveCount(5)
+        ->and(ArraySingle::duplicates([INF, -INF, NAN, NAN]))->toBe([])
+        ->and(ArraySingle::containsAny([INF], [-INF], true))->toBeFalse();
+});
+
+it('does not retry callbacks that throw argument count errors internally', function () {
+    $calls = 0;
+    $exception = null;
+
+    try {
+        ArraySingle::sum([1], function (int $value, int $key) use (&$calls): never {
+            expect([$value, $key])->toBe([1, 0]);
+            $calls++;
+
+            throw new ArgumentCountError('callback failure');
+        });
+    } catch (ArgumentCountError $caught) {
+        $exception = $caught;
+    }
+
+    expect($exception)->toBeInstanceOf(ArgumentCountError::class)
+        ->and($calls)->toBe(1);
+});
+
 it('sums the array using sum()', function () {
     $arr = [1, 2, 3];
     expect(ArraySingle::sum($arr))

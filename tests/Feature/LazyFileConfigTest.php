@@ -218,6 +218,21 @@ it('throws when a namespace file does not return an array', function () {
     expect(fn () => $config->get('db.host'))->toThrow(UnexpectedValueException::class);
 });
 
+it('can retry a namespace after its invalid file is corrected', function () {
+    file_put_contents(
+        $this->configPath.DIRECTORY_SEPARATOR.'db.php',
+        "<?php\n\nreturn 'invalid';\n",
+    );
+
+    $config = new LazyFileConfig($this->configPath);
+
+    expect(fn () => $config->get('db.host'))->toThrow(UnexpectedValueException::class);
+
+    lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost']);
+
+    expect($config->get('db.host'))->toBe('localhost');
+});
+
 it('throws for invalid preload namespaces', function () {
     $config = new LazyFileConfig($this->configPath);
 
@@ -338,6 +353,18 @@ it('supports namespace cache warmup and fallback retrieval', function () {
     expect($fresh->get('db.host'))->toBe('localhost')
         ->and($fresh->get('db.port'))->toBe(3306)
         ->and($fresh->get('db.options'))->toBe(['timeout' => 5]);
+});
+
+it('flushes only files owned by the namespace cache', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost']);
+    file_put_contents($this->cachePath.DIRECTORY_SEPARATOR.'keep.txt', 'unrelated');
+
+    $config = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+    $config->warmNamespaceCache('db')->flushNamespaceCache();
+
+    expect(is_file($this->cachePath.DIRECTORY_SEPARATOR.'keep.txt'))->toBeTrue()
+        ->and(is_file($this->cachePath.DIRECTORY_SEPARATOR.'db.php'))->toBeFalse()
+        ->and(is_file($this->cachePath.DIRECTORY_SEPARATOR.'__flat.php'))->toBeFalse();
 });
 
 it('materializes environment references and closures when warming namespace cache', function () {

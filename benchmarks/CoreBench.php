@@ -32,6 +32,8 @@ final class CoreBench
 
     private array $singleAssoc = [];
 
+    private array $uniqueNestedLarge = [];
+
     public function setUp(): void
     {
         $this->single = [
@@ -78,6 +80,14 @@ final class CoreBench
                     2 => 'viewer',
                     default => null,
                 },
+            ];
+        }
+
+        $this->uniqueNestedLarge = [];
+        for ($i = 0; $i < 1000; $i++) {
+            $this->uniqueNestedLarge[] = [
+                'id' => $i % 500,
+                'payload' => str_repeat(chr(65 + ($i % 26)), 128),
             ];
         }
 
@@ -182,6 +192,12 @@ final class CoreBench
     public function benchArraySingleUnique(): void
     {
         ArraySingle::unique($this->single);
+    }
+
+    #[Subject]
+    public function benchArraySingleUniqueNestedLong(): void
+    {
+        ArraySingle::unique($this->uniqueNestedLarge, true);
     }
 
     #[Subject]

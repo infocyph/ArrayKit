@@ -73,6 +73,11 @@ it('exposes array modules through one facade', function () {
         ->and(ArrayKit::dot()->get(['a' => ['b' => 1]], 'a.b'))->toBe(1);
 });
 
+it('does not expose private module methods through the facade', function () {
+    expect(fn () => ArrayKit::single()->toNumericOrNull(1))
+        ->toThrow(BadMethodCallException::class);
+});
+
 it('creates config instances from the facade', function () {
     $config = ArrayKit::config(['app' => ['name' => 'ArrayKit']]);
 

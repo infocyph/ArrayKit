@@ -232,7 +232,7 @@ final readonly class LazyCollection implements IteratorAggregate
             $position = 0;
 
             while (true) {
-                if (array_key_exists($position, $cache)) {
+                if (isset($cache[$position])) {
                     [$key, $value] = $cache[$position];
                     yield $key => $value;
                     $position++;

@@ -71,13 +71,7 @@ class BaseArrayHelper
 
         if (is_callable($callback)) {
             foreach ($array as $key => $value) {
-                try {
-                    $passes = (bool) $callback($value, $key);
-                } catch (\ArgumentCountError) {
-                    $passes = (bool) $callback($value);
-                }
-
-                if (!$passes) {
+                if (!(bool) $callback($value, $key)) {
                     $results[$key] = $value;
                 }
             }

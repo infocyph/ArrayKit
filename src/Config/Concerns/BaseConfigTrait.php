@@ -15,6 +15,8 @@ use UnitEnum as TEnum;
 
 trait BaseConfigTrait
 {
+    private const int MAX_READ_CACHE_ENTRIES = 1024;
+
     /**
      * @var array<array-key, mixed> Internal storage for config items
      */
@@ -548,6 +550,15 @@ trait BaseConfigTrait
         }
     }
 
+    protected function cacheResolvedValue(string $cacheKey, mixed $value): mixed
+    {
+        if (count($this->resolvedValueCache) >= self::MAX_READ_CACHE_ENTRIES) {
+            $this->resolvedValueCache = [];
+        }
+
+        return $this->resolvedValueCache[$cacheKey] = $value;
+    }
+
     protected function getResolvedValue(int|string $key, mixed $default = null): mixed
     {
         $resolved = $this->resolveRawValue($key);
@@ -606,7 +617,10 @@ trait BaseConfigTrait
             return $this->resolvedValueCache[$cacheKey];
         }
 
-        return $this->resolvedValueCache[$cacheKey] = DotNotation::get($this->items, $key, $this->missingValueMarker());
+        return $this->cacheResolvedValue(
+            $cacheKey,
+            DotNotation::get($this->items, $key, $this->missingValueMarker()),
+        );
     }
 
     protected function valueCacheKey(int|string $key): string
