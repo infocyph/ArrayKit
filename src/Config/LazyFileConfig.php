@@ -19,7 +19,7 @@ class LazyFileConfig extends Config
     /**
      * @var array<string, bool>
      */
-    protected array $loadedNamespaces = [];
+    protected array $loadedNamespaces;
 
     /**
      * @param array<array-key, mixed> $items
