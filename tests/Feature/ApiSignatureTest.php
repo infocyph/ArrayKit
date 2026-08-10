@@ -40,7 +40,7 @@ it('keeps documented public signatures aligned with reflection', function () {
         'LazyCollection' => LazyCollection::class,
     ];
 
-    $normalizeType = static function (?string $type): array {
+    $normalizeType = static function (?string $type, ?string $selfType = null): array {
         if ($type === null || $type === '') {
             return [];
         }
@@ -49,8 +49,12 @@ it('keeps documented public signatures aligned with reflection', function () {
             ? [substr($type, 1), 'null']
             : explode('|', $type);
 
-        $normalized = array_map(static function (string $part): string {
+        $normalized = array_map(static function (string $part) use ($selfType): string {
             $part = ltrim(trim($part), '\\');
+
+            if ($part === 'self' && $selfType !== null) {
+                return $selfType;
+            }
 
             return str_contains($part, '\\') ? basename(str_replace('\\', '/', $part)) : $part;
         }, $types);
@@ -59,7 +63,7 @@ it('keeps documented public signatures aligned with reflection', function () {
         return $normalized;
     };
 
-    $reflectionType = static function (?ReflectionType $type) use ($normalizeType): array {
+    $reflectionType = static function (?ReflectionType $type, ?string $selfType = null) use ($normalizeType): array {
         if ($type === null) {
             return [];
         }
@@ -67,7 +71,7 @@ it('keeps documented public signatures aligned with reflection', function () {
         if ($type instanceof ReflectionUnionType) {
             $parts = array_map(static fn(ReflectionNamedType $part): string => $part->getName(), $type->getTypes());
 
-            return $normalizeType(implode('|', $parts));
+            return $normalizeType(implode('|', $parts), $selfType);
         }
 
         if ($type instanceof ReflectionIntersectionType) {
@@ -82,7 +86,7 @@ it('keeps documented public signatures aligned with reflection', function () {
             $name .= '|null';
         }
 
-        return $normalizeType($name);
+        return $normalizeType($name, $selfType);
     };
 
     $parseParameter = static function (string $parameter) use ($normalizeType): array {
@@ -122,6 +126,7 @@ it('keeps documented public signatures aligned with reflection', function () {
         }
 
         $method = new ReflectionMethod($activeClass, $matches['name']);
+        $declaringType = $method->getDeclaringClass()->getShortName();
         $documentedParameters = trim($matches['parameters']) === ''
             ? []
             : array_map($parseParameter, preg_split('/,\s*/', $matches['parameters']));
@@ -130,8 +135,8 @@ it('keeps documented public signatures aligned with reflection', function () {
         expect($method->isPublic())->toBeTrue($activeClass . '::' . $method->getName())
             ->and($method->isStatic())->toBe(($matches['static'] ?? '') !== '', $activeClass . '::' . $method->getName())
             ->and($documentedParameters)->toHaveCount(count($actualParameters), $activeClass . '::' . $method->getName())
-            ->and($reflectionType($method->getReturnType()))->toBe(
-                $normalizeType(isset($matches['return']) ? trim($matches['return']) : null),
+            ->and($reflectionType($method->getReturnType(), $declaringType))->toBe(
+                $normalizeType(isset($matches['return']) ? trim($matches['return']) : null, $declaringType),
                 $activeClass . '::' . $method->getName() . ' return type',
             );
 
@@ -152,7 +157,7 @@ it('keeps documented public signatures aligned with reflection', function () {
             }
 
             expect($documented['name'])->toBe($actual->getName(), $activeClass . '::' . $method->getName())
-                ->and($documented['type'])->toBe($reflectionType($actual->getType()), $activeClass . '::' . $method->getName() . ' $' . $actual->getName())
+                ->and($documented['type'])->toBe($reflectionType($actual->getType(), $declaringType), $activeClass . '::' . $method->getName() . ' $' . $actual->getName())
                 ->and($documented['reference'])->toBe($actual->isPassedByReference(), $activeClass . '::' . $method->getName() . ' $' . $actual->getName())
                 ->and($documented['variadic'])->toBe($actual->isVariadic(), $activeClass . '::' . $method->getName() . ' $' . $actual->getName())
                 ->and($documented['hasDefault'])->toBe($actual->isDefaultValueAvailable(), $activeClass . '::' . $method->getName() . ' $' . $actual->getName())
