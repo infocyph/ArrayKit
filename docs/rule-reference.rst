@@ -114,6 +114,8 @@ Helper Functions
     function Infocyph\ArrayKit\array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
     function Infocyph\ArrayKit\collect(mixed $data = []): Collection
     function Infocyph\ArrayKit\chain(mixed $data): Pipeline
+    function Infocyph\ArrayKit\env(?string $key = null, mixed $default = null): mixed
+    function Infocyph\ArrayKit\dotenv(): ModuleProxy
 
     // Optional globals (manual include of src/functions.php)
     function compare(mixed $retrieved, mixed $value, ?string $operator = null): bool
@@ -131,6 +133,8 @@ ArrayKit Facade
     public static function multi(): ModuleProxy
     public static function helper(): ModuleProxy
     public static function dot(): ModuleProxy
+    public static function env(): ModuleProxy
+    public static function dotenv(): ModuleProxy
     public static function config(array $items = []): Config
     public static function lazyConfig(string $directory, string $extension = 'php', array $items = [], ?string $namespaceCacheDirectory = null): LazyFileConfig
     public static function collection(mixed $data = []): Collection
@@ -143,6 +147,7 @@ Facade ModuleProxy
 
 .. code-block:: php
 
+    public function __construct(private string $targetClass)
     public function __call(string $method, array $arguments): mixed
 
 BaseArrayHelper
@@ -203,7 +208,7 @@ ArraySingle
     public static function positive(array $array): array
     public static function negative(array $array): array
     public static function nth(array $array, int $step, int $offset = 0): array
-    public static function duplicates(array $array): array
+    public static function duplicates(array $array, bool $strict = false): array
     public static function paginate(array $array, int $page, int $perPage): array
     public static function combine(array $keys, array $values): array
     public static function where(array $array, ?callable $callback = null): array
@@ -397,6 +402,7 @@ HookedCollection extends ``Collection`` and adds hook behavior (from ``HookTrait
 
 .. code-block:: php
 
+    public function copy(): static
     public function offsetGet(mixed $offset): mixed
     public function offsetSet(mixed $offset, mixed $value): void
     public function onGet(string $offset, callable $callback): static
@@ -412,7 +418,7 @@ Pipeline
     public function values(): Collection
     public function rekey(array|callable $mapper): Collection
     public function nth(int $step, int $offset = 0): Collection
-    public function duplicates(): Collection
+    public function duplicates(bool $strict = false): Collection
     public function slice(int $offset, ?int $length = null): Collection
     public function paginate(int $page, int $perPage): Collection
     public function combine(array $values): Collection
@@ -454,8 +460,6 @@ Pipeline
     public function sortBy(string|callable $by, bool $desc = false, int $options = SORT_REGULAR): Collection
     public function sortByMany(array $criteria): Collection
     public function isMultiDimensional(): bool
-    public function wrap(): Collection
-    public function unWrap(): Collection
     public function shuffle(?int $seed = null): Collection
     public function sum(?callable $callback = null): float|int
     public function min(string|callable|null $keyOrCallback = null): float|int|null
@@ -490,19 +494,20 @@ Config uses ``BaseConfigTrait``. Public API:
 .. code-block:: php
 
     public function loadFile(string $path): bool
+    public function loadEnvFile(string $path): bool
     public function loadArray(array $resource): bool
     public function all(): array
     public function has(string|array $keys): bool
     public function hasAny(string|array $keys): bool
     public function get(string|int|array|null $key = null, mixed $default = null): mixed
-    public function getOrFail(string|int|array|null $key): mixed
-    public function getString(string|int|array|null $key, ?string $default = null): ?string
-    public function getInt(string|int|array|null $key, ?int $default = null): ?int
-    public function getFloat(string|int|array|null $key, ?float $default = null): ?float
-    public function getBool(string|int|array|null $key, ?bool $default = null): ?bool
-    public function getArray(string|int|array|null $key, ?array $default = null): ?array
-    public function getList(string|int|array|null $key, ?array $default = null): ?array
-    public function getEnum(string|int|array|null $key, string $enumClass, ?\UnitEnum $default = null): ?\UnitEnum
+    public function getOrFail(string|int|array $key): mixed
+    public function getString(string|int $key, ?string $default = null): ?string
+    public function getInt(string|int $key, ?int $default = null): ?int
+    public function getFloat(string|int $key, ?float $default = null): ?float
+    public function getBool(string|int $key, ?bool $default = null): ?bool
+    public function getArray(string|int $key, ?array $default = null): ?array
+    public function getList(string|int $key, ?array $default = null): ?array
+    public function getEnum(string|int $key, string $enumClass, ?\UnitEnum $default = null): ?\UnitEnum
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     public function fill(string|array $key, mixed $value = null): bool
     public function forget(string|int|array $key): bool
@@ -511,6 +516,7 @@ Config uses ``BaseConfigTrait``. Public API:
     public function replace(array $items): bool
     public function reload(array|string $source): bool
     public function merge(array $items): bool
+    public function mergeEnvFile(string $path): bool
     public function overlay(array $overlay): bool
     public function exportCache(string $path): bool
     public function loadCache(string $path): bool
@@ -531,12 +537,19 @@ Calling ``all()`` throws by design because lazy configuration requires a key.
 
 .. code-block:: php
 
+    public function __construct(protected string $directory, protected string $extension = 'php', array $items = [], ?string $namespaceCacheDirectory = null)
     public function get(string|int|array|null $key = null, mixed $default = null): mixed
     public function has(string|array $keys): bool
     public function hasAny(string|array $keys): bool
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     public function fill(string|array $key, mixed $value = null): bool
     public function forget(string|int|array $key): bool
+    public function loadArray(array $resource): bool
+    public function loadFile(string $path): bool
+    public function merge(array $items): bool
+    public function reload(array|string $source): bool
+    public function replace(array $items): bool
+    public function restore(string $name = 'default'): bool
     public function preload(string|array $namespaces): static
     public function isLoaded(string $namespace): bool
     public function loaded(string $namespace): bool
@@ -580,6 +593,44 @@ HookTrait
 
     public function onGet(string $offset, callable $callback): static
     public function onSet(string $offset, callable $callback): static
+
+EnvParser
+----------------------------------
+
+.. code-block:: php
+
+    public static function parse(string $contents): array
+    public static function parseFile(string $path): array
+    public static function parseFileRaw(string $path): array
+    public static function parseLines(iterable $lines): array
+    public static function parseLinesRaw(iterable $lines): array
+    public static function parseRaw(string $contents): array
+
+Environment
+----------------------------------
+
+.. code-block:: php
+
+    public static function all(bool $includeHttpServerValues = false): array
+    public static function get(?string $key = null, mixed $default = null): mixed
+    public static function has(string $key): bool
+    public static function ref(string $key, mixed $default = null): EnvReference
+
+DTO
+----------------------------------
+
+``DTO`` is an optional abstract base using ``DTOTrait``. It exposes the same
+methods listed in the ``DTOTrait`` section.
+
+.. code-block:: php
+
+    public static function create(array $values): static
+    public function fromArray(array $values): static
+    public function hydrate(array $values, array $mapping = [], bool $coerce = false): static
+    public function hydrateNested(array $values, array $mapping = [], bool $coerce = false): static
+    public function toArray(): array
+    public function toArrayDeep(): array
+    public function replaceFromArray(array $values, array $mapping = [], bool $coerce = false): static
 
 LazyCollection
 ----------------------------------

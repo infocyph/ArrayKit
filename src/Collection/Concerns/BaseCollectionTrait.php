@@ -11,6 +11,7 @@ use Infocyph\ArrayKit\Collection\Pipeline;
 use JsonSerializable;
 use Traversable;
 
+/** @internal */
 trait BaseCollectionTrait
 {
     /**

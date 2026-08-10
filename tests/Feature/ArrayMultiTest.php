@@ -373,6 +373,16 @@ it('handles null values correctly in whereIn()', function () {
     ]);
 });
 
+it('keeps whereIn results stable around its adaptive lookup boundary', function () {
+    $rows = array_map(
+        static fn(int $id): array => ['id' => $id],
+        range(0, 999),
+    );
+
+    expect(ArrayMulti::whereIn($rows, 'id', range(0, 254), true))->toHaveCount(255)
+        ->and(ArrayMulti::whereIn($rows, 'id', range(0, 255), true))->toHaveCount(256);
+});
+
 it('preserves PHP loose comparison semantics in whereIn()', function () {
     $rows = [
         ['id' => 1, 'role' => true],
@@ -380,6 +390,17 @@ it('preserves PHP loose comparison semantics in whereIn()', function () {
     ];
 
     expect(ArrayMulti::whereIn($rows, 'role', ['admin']))->toBe($rows);
+});
+
+it('preserves loose boolean and string comparisons in optimized row membership', function () {
+    $values = array_map(static fn(int $index): string => 'role-'.$index, range(1, 256));
+    $rows = [['role' => true], ['role' => false]];
+
+    expect(ArrayMulti::whereIn($rows, 'role', $values))->toBe([
+        0 => ['role' => true],
+    ])->and(ArrayMulti::whereNotIn($rows, 'role', $values))->toBe([
+        1 => ['role' => false],
+    ])->and(ArrayMulti::firstWhereIn($rows, 'role', $values))->toBe(['role' => true]);
 });
 
 it('distinguishes explicit null from shorthand row comparisons', function () {
@@ -416,7 +437,67 @@ it('skips missing derived fields without colliding with literal user values', fu
     ])->and(ArrayMulti::countBy($rows, 'role'))->toBe([
         '_undefined' => 1,
         '' => 1,
+    ])->and(ArrayMulti::uniqueBy($rows, 'role'))->toBe([
+        0 => ['id' => 1, 'role' => '_undefined'],
+        1 => ['id' => 2, 'role' => ''],
+    ])->and(ArrayMulti::duplicatesBy($rows, 'role'))->toBe([])
+        ->and(ArrayMulti::pluck($rows, 'id', 'role'))->toBe([
+            '_undefined' => 1,
+            '' => 2,
+        ]);
+});
+
+it('treats explicit null as a derived value while skipping missing fields', function () {
+    $rows = [
+        ['id' => 1, 'role' => null],
+        ['id' => 2],
+        ['id' => 3, 'role' => null],
+    ];
+
+    expect(ArrayMulti::uniqueBy($rows, 'role', true))->toBe([
+        0 => ['id' => 1, 'role' => null],
+    ])->and(ArrayMulti::duplicatesBy($rows, 'role', true))->toBe([
+        2 => ['id' => 3, 'role' => null],
     ]);
+});
+
+it('always treats strings as field names in field-or-callback APIs', function () {
+    $rows = [
+        10 => ['trim' => 'b', 'amount' => 2],
+        20 => ['trim' => 'a', 'amount' => 3],
+        30 => ['trim' => 'b', 'amount' => 4],
+    ];
+
+    expect(ArrayMulti::groupBy($rows, 'trim'))->toHaveKeys(['a', 'b'])
+        ->and(ArrayMulti::keyBy($rows, 'trim')['a'])->toBe($rows[20])
+        ->and(ArrayMulti::countBy($rows, 'trim'))->toBe(['b' => 2, 'a' => 1])
+        ->and(ArrayMulti::uniqueBy($rows, 'trim'))->toBe([
+            10 => $rows[10],
+            20 => $rows[20],
+        ])->and(ArrayMulti::duplicatesBy($rows, 'trim'))->toBe([
+            30 => $rows[30],
+        ])->and(array_keys(ArrayMulti::sortBy($rows, 'trim')))->toBe([20, 10, 30])
+        ->and(ArrayMulti::sum($rows, 'amount'))->toBe(9);
+});
+
+it('preserves large integer precision in row numeric operations', function () {
+    $low = 9007199254740992;
+    $high = 9007199254740993;
+    $rows = [
+        'low' => ['score' => $low],
+        'high' => ['score' => $high],
+    ];
+
+    expect(ArrayMulti::min($rows, 'score'))->toBe($low)
+        ->and(ArrayMulti::max($rows, 'score'))->toBe($high)
+        ->and(ArrayMulti::maxBy($rows, 'score'))->toBe($rows['high'])
+        ->and(ArrayMulti::sum([['score' => $high], ['score' => -$low]], 'score'))->toBe(1)
+        ->and(array_keys(ArrayMulti::sortBy($rows, 'score', options: SORT_NUMERIC)))->toBe(['low', 'high']);
+});
+
+it('treats callable strings as values in ambiguous row APIs', function () {
+    expect(ArrayMulti::contains(['trim', 'other'], 'trim'))->toBeTrue()
+        ->and(ArrayMulti::reject(['trim', 'other'], 'trim'))->toBe([1 => 'other']);
 });
 
 it('rejects null and other invalid derived array keys', function (mixed $invalid) {
@@ -695,4 +776,20 @@ it('can throw when guarded recursion limits are exceeded', function () {
         ->toThrow(RuntimeException::class)
         ->and(fn () => ArrayMulti::sortRecursiveGuarded($deep, maxDepth: 2, throwOnTooDeep: true))
         ->toThrow(RuntimeException::class);
+});
+
+it('rejects invalid chunks and ragged transpose matrices', function () {
+    expect(fn () => ArrayMulti::chunk([[1]], 0))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => ArrayMulti::transpose([[1, 2], [3]]))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => ArrayMulti::transpose([1, 2]))->toThrow(InvalidArgumentException::class);
+});
+
+it('handles closed resources through strict scan fallback', function () {
+    $resource = fopen('php://memory', 'rb');
+    fclose($resource);
+
+    expect(ArrayMulti::uniqueBy([
+        ['value' => $resource],
+        ['value' => $resource],
+    ], 'value', true))->toHaveCount(1);
 });

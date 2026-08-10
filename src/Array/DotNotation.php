@@ -10,6 +10,11 @@ class DotNotation
 {
     use DotNotationPublicApiTrait;
 
+    private static function escapePathSegment(string $segment): string
+    {
+        return DotNotationPathOps::escapePathSegment($segment);
+    }
+
     /**
      * @param array<array-key, mixed> $array
      * @param array<array-key, mixed> $result
@@ -17,13 +22,14 @@ class DotNotation
     private static function flattenInto(array $array, string $prepend, array &$result): void
     {
         foreach ($array as $key => $value) {
+            $path = $prepend . self::escapePathSegment((string) $key);
             if (is_array($value) && $value !== []) {
-                self::flattenInto($value, $prepend . $key . '.', $result);
+                self::flattenInto($value, $path . '.', $result);
 
                 continue;
             }
 
-            $result[$prepend . $key] = $value;
+            $result[$path] = $value;
         }
     }
 
@@ -42,16 +48,22 @@ class DotNotation
         $next = $position + 1;
 
         if ($segment === '*') {
-            if ($next < $segmentCount) {
-                self::forgetEach($array, $segments, $next);
+            if ($next >= $segmentCount) {
+                $array = [];
+
+                return;
             }
+
+            self::forgetEach($array, $segments, $next);
 
             return;
         }
 
         $normalized = self::unescapeSegment($segment);
-        if ($next < $segmentCount && ArraySingle::exists($array, $normalized) && is_array($array[$normalized])) {
-            self::forgetBySegments($array[$normalized], $segments, $next);
+        if ($next < $segmentCount) {
+            if (ArraySingle::exists($array, $normalized) && is_array($array[$normalized])) {
+                self::forgetBySegments($array[$normalized], $segments, $next);
+            }
 
             return;
         }
@@ -117,6 +129,49 @@ class DotNotation
         }
     }
 
+    private static function hasWritableObjectProperty(object $target, string $propertyName): bool
+    {
+        $propertyExists = property_exists($target, $propertyName);
+        if ($target instanceof \stdClass) {
+            return $propertyExists;
+        }
+
+        if (!$propertyExists) {
+            if (method_exists($target, '__set')) {
+                return false;
+            }
+
+            throw new \InvalidArgumentException(
+                'Object property [' . $target::class . '::$' . $propertyName
+                . '] does not exist and no magic setter is available.',
+            );
+        }
+
+        $property = new \ReflectionProperty($target, $propertyName);
+        if ($property->isReadOnly()) {
+            throw new \InvalidArgumentException(
+                'Object property [' . $target::class . '::$' . $propertyName . '] is readonly.',
+            );
+        }
+
+        if ($property->isPublic()) {
+            return true;
+        }
+
+        if (method_exists($target, '__set')) {
+            return false;
+        }
+
+        throw new \InvalidArgumentException(
+            'Object property [' . $target::class . '::$' . $propertyName . '] is not publicly writable.',
+        );
+    }
+
+    private static function isDirectKey(int|string $key): bool
+    {
+        return is_int($key) || (!str_contains($key, '.') && !str_contains($key, '\\'));
+    }
+
     /**
      * Get a stable sentinel that represents a missing key path.
      */
@@ -139,7 +194,7 @@ class DotNotation
         ?int $maxNodes = null,
         bool $throwOnTooDeep = false,
     ): mixed {
-        if (is_array($target) && ArraySingle::exists($target, $key)) {
+        if (self::isDirectKey($key) && is_array($target) && ArraySingle::exists($target, $key)) {
             return $target[$key];
         }
 
@@ -239,6 +294,10 @@ class DotNotation
 
         if ($segment === '*') {
             if (!is_array($target)) {
+                if (!$overwrite) {
+                    return;
+                }
+
                 $target = [];
             }
 
@@ -269,6 +328,10 @@ class DotNotation
         mixed $value,
         bool $overwrite,
     ): void {
+        if (!$overwrite) {
+            return;
+        }
+
         $segment = self::unescapeSegment($segment);
         $target = [];
         if ($position < count($segments)) {
@@ -292,11 +355,15 @@ class DotNotation
         bool $overwrite,
     ): void {
         $segment = self::unescapeSegment($segment);
-        $propertyExists = property_exists($target, $segment);
+        $propertyExists = self::hasWritableObjectProperty($target, $segment);
 
         if ($position < count($segments)) {
             if (!$propertyExists) {
-                $target->{$segment} = [];
+                $nested = [];
+                self::setValueBySegments($nested, $segments, $position, $value, $overwrite);
+                $target->{$segment} = $nested;
+
+                return;
             }
 
             self::setValueBySegments($target->{$segment}, $segments, $position, $value, $overwrite);

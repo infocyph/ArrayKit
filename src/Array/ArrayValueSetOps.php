@@ -9,7 +9,13 @@ namespace Infocyph\ArrayKit\Array;
  */
 final class ArrayValueSetOps
 {
-    private const int XXH128_MIN_FINGERPRINT_BYTES = 64;
+    private const int CONTAINS_ALL_LOOKUP_MIN_NEEDLES = 512;
+
+    private const int CONTAINS_ANY_LOOKUP_MIN_NEEDLES = 192;
+
+    private const int FILTER_LOOKUP_MIN_VALUES = 192;
+
+    private const int XXH128_MIN_FINGERPRINT_BYTES = 1024;
 
     /**
      * @param array<array-key, mixed> $array
@@ -19,6 +25,15 @@ final class ArrayValueSetOps
     {
         if (!$strict) {
             return array_all($needles, static fn(mixed $needle): bool => in_array($needle, $array, false));
+        }
+
+        if (count($needles) < self::CONTAINS_ALL_LOOKUP_MIN_NEEDLES) {
+            return array_all($needles, static fn(mixed $needle): bool => in_array($needle, $array, true));
+        }
+
+        $firstKey = array_key_first($needles);
+        if (!in_array($needles[$firstKey], $array, true)) {
+            return false;
         }
 
         $lookup = self::buildStrictLookup($array);
@@ -40,6 +55,15 @@ final class ArrayValueSetOps
     {
         if (!$strict) {
             return array_any($needles, static fn(mixed $needle): bool => in_array($needle, $array, false));
+        }
+
+        if (count($needles) < self::CONTAINS_ANY_LOOKUP_MIN_NEEDLES) {
+            return array_any($needles, static fn(mixed $needle): bool => in_array($needle, $array, true));
+        }
+
+        $firstKey = array_key_first($needles);
+        if (in_array($needles[$firstKey], $array, true)) {
+            return true;
         }
 
         $lookup = self::buildStrictLookup($array);
@@ -67,10 +91,10 @@ final class ArrayValueSetOps
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
      */
-    public static function duplicates(array $array): array
+    public static function duplicates(array $array, bool $strict): array
     {
-        if (!self::allStrictHashable($array)) {
-            return self::duplicatesByScan($array);
+        if (!$strict || !self::allStrictHashable($array)) {
+            return self::duplicatesByScan($array, $strict);
         }
 
         $strictLookup = [];
@@ -241,20 +265,25 @@ final class ArrayValueSetOps
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
      */
-    private static function duplicatesByScan(array $array): array
+    private static function duplicatesByScan(array $array, bool $strict): array
     {
         $seen = [];
         $duplicates = [];
 
         foreach ($array as $value) {
-            if (!in_array($value, $seen, true)) {
+            $seenKey = array_find_key(
+                $seen,
+                static fn(mixed $seenValue): bool => $strict ? $value === $seenValue : $value == $seenValue,
+            );
+            if ($seenKey === null) {
                 $seen[] = $value;
 
                 continue;
             }
 
-            if (!in_array($value, $duplicates, true)) {
-                $duplicates[] = $value;
+            $representative = $seen[$seenKey];
+            if (!in_array($representative, $duplicates, $strict)) {
+                $duplicates[] = $representative;
             }
         }
 
@@ -268,7 +297,9 @@ final class ArrayValueSetOps
      */
     private static function filterByMembership(array $array, array $values, bool $strict, bool $keepMatches): array
     {
-        $lookup = $strict ? self::buildStrictLookup($values) : null;
+        $lookup = $strict && count($values) >= self::FILTER_LOOKUP_MIN_VALUES
+            ? self::buildStrictLookup($values)
+            : null;
         $results = [];
 
         foreach ($array as $key => $value) {
@@ -286,10 +317,9 @@ final class ArrayValueSetOps
 
     /**
      * Use XXH128 only for long canonical keys, retaining canonical values in
-     * each digest bucket so a hash collision can never change equality. A PHP
-     * 8.4 CLI microbenchmark (100 runs of 1,000 nested 128-byte values) measured
-     * 110.8 ms with verified digest buckets versus 138.6 ms with canonical keys.
-     * The threshold avoids the measured hashing regression for short scalars.
+     * each digest bucket so a hash collision can never change equality. The
+     * current PHP 8.4 payload matrix did not show a stable digest advantage up
+     * through 512-byte payloads, so hashing is reserved for much longer keys.
      *
      * @param array<string, true> $seen
      * @param array<string, string|list<string>> $digestBuckets
@@ -411,6 +441,10 @@ final class ArrayValueSetOps
 
     private static function isStrictHashable(mixed $value): bool
     {
+        if (gettype($value) === 'resource (closed)') {
+            return false;
+        }
+
         if (is_float($value)) {
             return !is_nan($value);
         }

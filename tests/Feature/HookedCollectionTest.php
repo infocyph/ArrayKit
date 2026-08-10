@@ -50,3 +50,16 @@ it('can run pipeline operations without type errors', function () {
         ->toBeInstanceOf(HookedCollection::class)
         ->and($filtered->all())->toBe([1 => 2, 3 => 4]);
 });
+
+it('preserves hooks when copied while keeping pipeline state independent', function () {
+    $collection = new HookedCollection(['name' => 'alice']);
+    $collection->onGet('name', static fn(string $value): string => strtoupper($value));
+    $collection->process();
+
+    $copy = $collection->copy();
+    $copy->set('name', 'bob');
+
+    expect($copy['name'])->toBe('BOB')
+        ->and($collection['name'])->toBe('ALICE')
+        ->and($copy->process())->not->toBe($collection->process());
+});

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\Array;
 
+/** @internal */
 final class ArraySingleOps
 {
     /**
@@ -38,9 +39,9 @@ final class ArraySingleOps
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
      */
-    public static function duplicates(array $array): array
+    public static function duplicates(array $array, bool $strict): array
     {
-        return ArrayValueSetOps::duplicates($array);
+        return ArrayValueSetOps::duplicates($array, $strict);
     }
 
     /**
@@ -91,6 +92,22 @@ final class ArraySingleOps
     public static function minBy(array $array, callable $callback): mixed
     {
         return self::pickBy($array, $callback, pickMax: false);
+    }
+
+    /**
+     * Convert numeric input without discarding integer precision.
+     */
+    public static function numericValue(mixed $value): float|int|null
+    {
+        if (is_int($value) || is_float($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            return $value + 0;
+        }
+
+        return null;
     }
 
     /**
@@ -171,7 +188,10 @@ final class ArraySingleOps
                 continue;
             }
 
-            $numeric = (float) $score;
+            $numeric = self::numericValue($score);
+            if ($numeric === null) {
+                continue;
+            }
             if (!$found || ($pickMax ? ($numeric > $bestScore) : ($numeric < $bestScore))) {
                 $best = $value;
                 $bestScore = $numeric;
@@ -190,20 +210,16 @@ final class ArraySingleOps
         $selected = null;
 
         foreach ($array as $value) {
-            if (!is_numeric($value)) {
+            $numeric = self::numericValue($value);
+            if ($numeric === null) {
                 continue;
             }
 
-            $numeric = (float) $value;
             if ($selected === null || ($pickMax ? ($numeric > $selected) : ($numeric < $selected))) {
                 $selected = $numeric;
             }
         }
 
-        if ($selected === null) {
-            return null;
-        }
-
-        return fmod($selected, 1.0) === 0.0 ? (int) $selected : $selected;
+        return $selected;
     }
 }

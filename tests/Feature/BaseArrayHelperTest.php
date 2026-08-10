@@ -40,8 +40,20 @@ it('checks if all items meet a condition', function () {
     expect($res)->toBeTrue();
 });
 
+it('uses normal truthy callback semantics for any and all checks', function () {
+    expect(BaseArrayHelper::haveAny([0, 2], static fn(int $value): int => $value))
+        ->toBeTrue()
+        ->and(BaseArrayHelper::isAll([1, 2], static fn(int $value): int => $value))->toBeTrue()
+        ->and(BaseArrayHelper::isAll([1, 0], static fn(int $value): int => $value))->toBeFalse();
+});
+
 it('finds the first key matching a callback', function () {
     $data = ['a' => 10, 'b' => 15, 'c' => 20];
     $key = BaseArrayHelper::findKey($data, fn ($val) => $val > 10);
-    expect($key)->toBe('b');
+    expect($key)->toBe('b')
+        ->and(BaseArrayHelper::findKey([0, 2], fn (int $value): int => $value))->toBe(1);
+});
+
+it('rejects a zero range step', function () {
+    expect(fn () => BaseArrayHelper::range(1, 5, 0))->toThrow(InvalidArgumentException::class);
 });

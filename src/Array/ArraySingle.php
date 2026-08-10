@@ -20,7 +20,7 @@ class ArraySingle
      */
     public static function avg(array $array): float|int
     {
-        $total = 0.0;
+        $total = 0;
         $count = 0;
 
         foreach ($array as $value) {
@@ -46,8 +46,7 @@ class ArraySingle
      * Break an array into smaller chunks of a specified size.
      *
      * This function splits the input array into multiple smaller arrays, each
-     * containing up to the specified number of elements. If the specified size
-     * is less than or equal to zero, the entire array is returned as a single chunk.
+     * containing up to the specified number of elements.
      *
      * @param array<array-key, mixed> $array The array to be chunked.
      * @param int $size The size of each chunk.
@@ -57,7 +56,7 @@ class ArraySingle
     public static function chunk(array $array, int $size, bool $preserveKeys = false): array
     {
         if ($size <= 0) {
-            return [$array];
+            throw new InvalidArgumentException('Chunk size must be greater than 0.');
         }
 
         return array_chunk($array, $size, $preserveKeys);
@@ -67,8 +66,7 @@ class ArraySingle
      * Combine two arrays into one array with corresponding key-value pairs.
      *
      * The function takes two arrays, one of keys and one of values, and combines them
-     * into a single array. If the two arrays are not of equal length, the function
-     * will truncate the longer array to match the length of the shorter array.
+     * into a single array. Both arrays must contain the same number of items.
      *
      * @param array<array-key, mixed> $keys The array of keys.
      * @param array<array-key, mixed> $values The array of values.
@@ -80,13 +78,11 @@ class ArraySingle
         $valueCount = count($values);
 
         if ($keyCount !== $valueCount) {
-            $size = ($keyCount > $valueCount) ? $valueCount : $keyCount;
-            $keys = array_slice($keys, 0, $size);
-            $values = array_slice($values, 0, $size);
+            throw new InvalidArgumentException('Keys and values must contain the same number of items.');
         }
 
         $normalizedKeys = array_map(
-            self::normalizeArrayKey(...),
+            static fn(mixed $key): int|string => self::requireArrayKey($key, 'combine'),
             array_values($keys),
         );
 
@@ -112,7 +108,7 @@ class ArraySingle
      */
     public static function contains(array $array, mixed $valueOrCallback, bool $strict = false): bool
     {
-        if (is_callable($valueOrCallback)) {
+        if (!is_string($valueOrCallback) && is_callable($valueOrCallback)) {
             return static::some($array, $valueOrCallback);
         }
 
@@ -157,7 +153,7 @@ class ArraySingle
 
         foreach ($array as $key => $value) {
             $bucket = $by ? $by($value, $key) : $value;
-            $normalized = self::normalizeArrayKey($bucket);
+            $normalized = self::requireArrayKey($bucket, 'countBy');
             $counts[$normalized] = ($counts[$normalized] ?? 0) + 1;
         }
 
@@ -184,9 +180,9 @@ class ArraySingle
      * @param array<array-key, mixed> $array The array to search for duplicates.
      * @return array<array-key, mixed> An array of duplicate values.
      */
-    public static function duplicates(array $array): array
+    public static function duplicates(array $array, bool $strict = false): array
     {
-        return ArraySingleOps::duplicates($array);
+        return ArraySingleOps::duplicates($array, $strict);
     }
 
     /**
@@ -400,7 +396,7 @@ class ArraySingle
             }
 
             foreach ($mapped as $mappedKey => $mappedValue) {
-                $results[self::normalizeArrayKey($mappedKey)] = $mappedValue;
+                $results[$mappedKey] = $mappedValue;
             }
         }
 
@@ -443,8 +439,9 @@ class ArraySingle
     {
         $values = [];
         foreach ($array as $value) {
-            if (is_int($value) || is_float($value) || (is_string($value) && is_numeric($value))) {
-                $values[] = (float) $value;
+            $numeric = ArraySingleOps::numericValue($value);
+            if ($numeric !== null) {
+                $values[] = $numeric;
             }
         }
 
@@ -733,7 +730,7 @@ class ArraySingle
                 ? $mapper($key, $value)
                 : ($mapper[$key] ?? $key);
 
-            $results[self::normalizeArrayKey($nextKey)] = $value;
+            $results[self::requireArrayKey($nextKey, 'rekey')] = $value;
         }
 
         return $results;
@@ -766,9 +763,9 @@ class ArraySingle
      */
     public static function search(array $array, mixed $needle): int|string|null
     {
-        if (is_callable($needle)) {
+        if (!is_string($needle) && is_callable($needle)) {
             foreach ($array as $key => $value) {
-                if ($needle($value, $key) === true) {
+                if ($needle($value, $key)) {
                     return $key;
                 }
             }
@@ -899,7 +896,7 @@ class ArraySingle
      */
     public static function some(array $array, callable $callback): bool
     {
-        return array_any($array, static fn(mixed $value, int|string $key): bool => (bool) $callback($value, $key));
+        return array_any($array, $callback);
     }
 
     /**
@@ -914,7 +911,7 @@ class ArraySingle
      */
     public static function sum(array $array, ?callable $callback = null): float|int
     {
-        $total = 0.0;
+        $total = 0;
 
         if ($callback === null) {
             foreach ($array as $value) {
@@ -926,7 +923,7 @@ class ArraySingle
                 $total += $numeric;
             }
 
-            return fmod($total, 1.0) === 0.0 ? (int) $total : $total;
+            return $total;
         }
 
         foreach ($array as $key => $value) {
@@ -939,7 +936,7 @@ class ArraySingle
             $total += $numeric;
         }
 
-        return fmod($total, 1.0) === 0.0 ? (int) $total : $total;
+        return $total;
     }
 
     /**
@@ -1010,16 +1007,19 @@ class ArraySingle
         return ArraySharedOps::normalizeArrayKey($value);
     }
 
-    private static function toNumericOrNull(mixed $value): ?float
+    private static function requireArrayKey(mixed $value, string $operation): int|string
     {
-        if (is_int($value) || is_float($value)) {
-            return (float) $value;
+        if (is_int($value) || is_string($value)) {
+            return $value;
         }
 
-        if (is_string($value) && is_numeric($value)) {
-            return (float) $value;
-        }
+        throw new InvalidArgumentException(
+            $operation . ' derived key must be an integer or string; ' . get_debug_type($value) . ' given.',
+        );
+    }
 
-        return null;
+    private static function toNumericOrNull(mixed $value): float|int|null
+    {
+        return ArraySingleOps::numericValue($value);
     }
 }

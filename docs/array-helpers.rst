@@ -109,8 +109,9 @@ ArraySingle: Search, Partition, Aggregation
     $hasAll = ArraySingle::containsAll($arr, [1, 2, 3]);    // true
     $hasAny = ArraySingle::containsAny($arr, [99, 3]);      // true
     [$even, $odd] = ArraySingle::partition($arr, fn ($v) => $v % 2 === 0);
-    $dupes = ArraySingle::duplicates($arr);              // [2]
-    $unique = ArraySingle::unique($arr);                 // [1,2,3,4,5]
+    $dupes = ArraySingle::duplicates($arr);              // [2] (loose by default)
+    $strictDupes = ArraySingle::duplicates($arr, true);  // strict comparison
+    $unique = ArraySingle::unique($arr);                 // [0=>1,1=>2,3=>3,4=>4,5=>5,6=>'x']
     $sum = ArraySingle::sum($arr);                       // 17 (non-numeric ignored)
     $avg = ArraySingle::avg($arr);                       // 17/6 (non-numeric ignored)
     $median = ArraySingle::median($arr);                 // 2.5
@@ -126,8 +127,8 @@ ArraySingle: Numeric and Value Helpers
 
     $values = [-2, -1, 0, 1, 2, 3, 'x'];
 
-    $positive = ArraySingle::positive($values);  // [1,2,3]
-    $negative = ArraySingle::negative($values);  // [-2,-1]
+    $positive = ArraySingle::positive($values);  // [3=>1,4=>2,5=>3]
+    $negative = ArraySingle::negative($values);  // [0=>-2,1=>-1]
     $isInt = ArraySingle::isInt([1, 2, 3]);      // true
     $isPositive = ArraySingle::isPositive([1, 2, 'x']); // true
     $isNegative = ArraySingle::isNegative([-1, -2, 'x']); // true
@@ -308,7 +309,7 @@ Behavior Matrix
       - Dot-path support
       - Wildcard support
     * - ``ArraySingle``
-      - yes (except ``values()``, ``unique()``, positional list helpers)
+      - yes (except ``values()`` and positional list helpers)
       - no
       - no
       - no
@@ -337,14 +338,30 @@ Behavior Notes
 - Many methods preserve original keys (especially ``slice``, ``where``, ``skip`` variants).
 - ``ArraySingle::isAssoc([])`` is ``false``; empty arrays are treated as non-associative.
 - ``ArraySingle::nth($array, $step, $offset)`` starts at ``$offset`` then takes every ``$step`` item.
-- ``ArraySingle::unique()`` has loose mode (default) and strict mode.
+- ``ArraySingle::unique()`` preserves original keys. Both ``unique()`` and
+  ``duplicates()`` have loose mode (default) plus explicit strict mode.
 - ``ArraySingle::avg()``, ``sum()``, ``isPositive()``, and ``isNegative()`` ignore non-numeric values.
+- Numeric min/max/sum paths retain integer values and precision unless PHP naturally
+  promotes an arithmetic result to ``float``.
 - ``ArraySingle::paginate()`` requires ``$page >= 1`` and ``$perPage >= 1``.
+- ``chunk()`` rejects non-positive sizes, ``BaseArrayHelper::range()`` rejects a
+  zero step, ``ArraySingle::combine()`` requires equal counts, and
+  ``ArrayMulti::transpose()`` requires rows with identical keys.
+- ``ArraySingle::mode()`` counts only integer and string values; other value
+  types are ignored.
+- Key-producing callbacks must return an actual integer or string. Missing
+  string fields are skipped by ``uniqueBy()``, ``duplicatesBy()``, ``keyBy()``,
+  ``indexBy()``, ``countBy()``, and indexed ``pluck()``; an explicit ``null``
+  field remains a present value and throws where an array key is required.
 - ``ArrayMulti::whereIn()`` / ``whereNotIn()`` treat ``null`` as a real value when the key exists.
 - ``ArrayMulti::where()`` / ``firstWhere()`` distinguish explicit ``null`` from
   the two-argument shorthand form.
 - ``ArrayMulti::flatten($array, 0)`` returns unchanged top-level values.
 - Use ``depthGuarded()``, ``flattenGuarded()``, and ``sortRecursiveGuarded()`` when processing untrusted/deep inputs.
 - ``ArrayMulti`` callback helpers such as ``sortBy()``, ``sum()``, ``maxBy()``, ``minBy()`` support ``($row, $key)``.
+- In ``string|callable`` row APIs, strings always identify fields; use a closure or
+  another non-string callable for callback behavior.
 - ``ArrayMulti::where()`` uses ``Infocyph\ArrayKit\compare()`` semantics for operators.
 - ``BaseArrayHelper::random()`` throws ``InvalidArgumentException`` when requested count exceeds array size.
+- Recursive/reference-containing arrays are outside the supported input contract
+  for unguarded equality, fingerprint, flatten, and recursive-sort helpers.

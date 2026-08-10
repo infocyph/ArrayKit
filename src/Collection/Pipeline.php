@@ -105,9 +105,9 @@ class Pipeline
      * Keep only duplicate values, using ArraySingle::duplicates.
      * (Typically this means setting $this->working to the *list of duplicates*.)
      */
-    public function duplicates(): Collection
+    public function duplicates(bool $strict = false): Collection
     {
-        $this->working = ArraySingle::duplicates($this->working);
+        $this->working = ArraySingle::duplicates($this->working, $strict);
 
         return $this->collection;
     }
@@ -640,17 +640,6 @@ class Pipeline
     }
 
     /**
-     * Example: Unwrap an array if it has exactly one element, from BaseArrayHelper::unWrap.
-     */
-    public function unWrap(): Collection
-    {
-        $unwrapped = BaseArrayHelper::unWrap($this->working);
-        $this->working = is_array($unwrapped) ? $unwrapped : [$unwrapped];
-
-        return $this->collection;
-    }
-
-    /**
      * Reindex the working set numerically.
      */
     public function values(): Collection
@@ -792,16 +781,6 @@ class Pipeline
         $this->working = ArrayMulti::whereStartsWith($this->working, $key, $prefix, $caseSensitive);
 
         return $this->collection;
-    }
-
-    /**
-     * Wrap the entire array if it's not already an array, from BaseArrayHelper::wrap
-     */
-    public function wrap(): Collection
-    {
-        return $this->mutateWorking(
-            fn(array $working): array => BaseArrayHelper::wrap($working),
-        );
     }
 
     /**

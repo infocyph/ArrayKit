@@ -45,7 +45,7 @@ it('ignores non-numeric values when calculating average', function () {
 });
 
 it('ignores non-numeric values when calculating median', function () {
-    expect(ArraySingle::median([1, '2', 7.5, 'ignore', null]))->toBe(2.0)
+    expect(ArraySingle::median([1, '2', 7.5, 'ignore', null]))->toBe(2)
         ->and(ArraySingle::median(['ignore', null]))->toBe(0);
 });
 
@@ -63,6 +63,19 @@ it('checks containsAll and containsAny with strict and loose modes', function ()
         ->and(ArraySingle::containsAll($data, [1, '2'], true))->toBeFalse()
         ->and(ArraySingle::containsAny($data, ['x', 2]))->toBeTrue()
         ->and(ArraySingle::containsAny($data, ['x', '2'], true))->toBeFalse();
+});
+
+it('keeps strict membership results stable across adaptive strategy boundaries', function () {
+    $haystack = range(0, 999);
+    $small = range(10, 24);
+    $large = range(10, 521);
+
+    expect(ArraySingle::containsAll($haystack, $small, true))->toBeTrue()
+        ->and(ArraySingle::containsAll($haystack, $large, true))->toBeTrue()
+        ->and(ArraySingle::containsAny($haystack, [...range(1000, 1190), 500], true))->toBeTrue()
+        ->and(ArraySingle::containsAny($haystack, range(1000, 1191), true))->toBeFalse()
+        ->and(ArraySingle::intersect($haystack, $large, true))->toBe(array_combine($large, $large))
+        ->and(ArraySingle::diff($haystack, $large, true))->toHaveCount(488);
 });
 
 it('preserves PHP loose comparison semantics for mixed scalar membership', function () {
@@ -129,7 +142,7 @@ it('ignores non-numeric values in sum() and supports callback keys', function ()
 
     expect(ArraySingle::sum($arr))->toBe(3)
         ->and(ArraySingle::sum($arr, fn ($value, $key) => is_numeric($value) ? ((float) $value + $key) : null))
-        ->toBe(9);
+        ->toBe(9.0);
 });
 
 it('filters non-empty values without crashing on mixed data', function () {
@@ -151,6 +164,33 @@ it('removes duplicates from the array using unique()', function () {
         ->toBe([0 => 1, 1 => 2, 3 => 3, 5 => 4])
         ->and(ArraySingle::unique([1, '1', 2, 3], true))
         ->toBe([1, '1', 2, 3]); // Strict comparison
+});
+
+it('supports loose and strict duplicate detection explicitly', function () {
+    $values = [1, '1'];
+
+    expect(ArraySingle::duplicates($values))->toBe([1])
+        ->and(ArraySingle::duplicates($values, true))->toBe([]);
+});
+
+it('preserves large integer precision in numeric selection and accumulation', function () {
+    $low = 9007199254740992;
+    $high = 9007199254740993;
+
+    expect(ArraySingle::min([$high, $low]))->toBe($low)
+        ->and(ArraySingle::max([$low, $high]))->toBe($high)
+        ->and(ArraySingle::median([$high]))->toBe($high)
+        ->and(ArraySingle::sum([$high, -$low]))->toBe(1)
+        ->and(ArraySingle::maxBy(
+            [['score' => $low], ['score' => $high]],
+            static fn(array $row): int => $row['score'],
+        ))->toBe(['score' => $high]);
+});
+
+it('treats callable strings as values in ambiguous value-or-callback APIs', function () {
+    expect(ArraySingle::contains(['trim', 'other'], 'trim'))->toBeTrue()
+        ->and(ArraySingle::search(['trim', 'other'], 'trim'))->toBe(0)
+        ->and(ArraySingle::reject(['trim', 'other'], 'trim'))->toBe([1 => 'other']);
 });
 
 it('handles unique() with mixed values in loose and strict modes', function () {
@@ -252,6 +292,21 @@ it('evaluates positivity and negativity using numeric values only', function () 
 it('validates paginate() arguments', function () {
     expect(fn () => ArraySingle::paginate([1, 2, 3], 0, 2))->toThrow(InvalidArgumentException::class)
         ->and(fn () => ArraySingle::paginate([1, 2, 3], 1, 0))->toThrow(InvalidArgumentException::class);
+});
+
+it('throws for invalid structural arguments and derived keys', function () {
+    expect(fn () => ArraySingle::chunk([1, 2], 0))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => ArraySingle::combine(['a'], [1, 2]))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => ArraySingle::countBy([1], fn () => null))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => ArraySingle::rekey(['a' => 1], fn () => false))->toThrow(InvalidArgumentException::class);
+});
+
+it('uses ordinary callback truthiness for search', function () {
+    expect(ArraySingle::search([0, 2], fn (int $value): int => $value))->toBe(1);
+});
+
+it('calculates mode from integer and string values only', function () {
+    expect(ArraySingle::mode([1, 1, true, true, null, 1.0, ['value']]))->toBe([1]);
 });
 
 it('paginates arrays for valid page and per-page values', function () {

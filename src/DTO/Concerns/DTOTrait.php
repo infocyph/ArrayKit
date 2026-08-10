@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\DTO\Concerns;
 
 use ReflectionNamedType;
+use ReflectionObject;
 use ReflectionProperty;
 
 /**
@@ -47,7 +48,7 @@ trait DTOTrait
     {
         foreach ($values as $key => $value) {
             $property = is_string($key) && isset($mapping[$key]) ? $mapping[$key] : $key;
-            if (!is_string($property) || !property_exists($this, $property)) {
+            if (!is_string($property) || !$this->isHydratableProperty($property)) {
                 continue;
             }
 
@@ -67,7 +68,7 @@ trait DTOTrait
     {
         foreach ($values as $key => $value) {
             $property = is_string($key) && isset($mapping[$key]) ? $mapping[$key] : $key;
-            if (!is_string($property) || !property_exists($this, $property)) {
+            if (!is_string($property) || !$this->isHydratableProperty($property)) {
                 continue;
             }
 
@@ -94,7 +95,14 @@ trait DTOTrait
      */
     public function toArray(): array
     {
-        return get_object_vars($this);
+        $result = [];
+        foreach (new ReflectionObject($this)->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            if (!$property->isStatic() && $property->isInitialized($this)) {
+                $result[$property->getName()] = $property->getValue($this);
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -105,7 +113,7 @@ trait DTOTrait
     public function toArrayDeep(): array
     {
         $result = [];
-        foreach (get_object_vars($this) as $key => $value) {
+        foreach ($this->toArray() as $key => $value) {
             $result[$key] = $this->exportValue($value);
         }
 
@@ -122,6 +130,12 @@ trait DTOTrait
 
         $reflection = new ReflectionProperty($this, $property);
         $type = $reflection->getType();
+        if ($value === null && $type?->allowsNull()) {
+            $this->{$property} = null;
+
+            return;
+        }
+
         if (!$type instanceof ReflectionNamedType || $type->isBuiltin() === false) {
             $this->{$property} = $value;
 
@@ -160,6 +174,17 @@ trait DTOTrait
         }
 
         return $value;
+    }
+
+    private function isHydratableProperty(string $property): bool
+    {
+        if (!property_exists($this, $property)) {
+            return false;
+        }
+
+        $reflection = new ReflectionProperty($this, $property);
+
+        return $reflection->isPublic() && !$reflection->isStatic();
     }
 
     private function resolveNestedValue(string $property, mixed $value): mixed

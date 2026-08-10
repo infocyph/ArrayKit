@@ -140,6 +140,9 @@ HookedCollection
     // Dot-notation hooks are supported
     $c->onGet('user.city', fn ($v) => ucfirst((string) $v));
 
+    // Copies keep registered hooks but have isolated data and pipeline state
+    $copy = $c->copy();
+
     echo $c['name'];      // ALICE
     $c['role'] = 'admin';
     echo $c['role'];      // Role: admin
@@ -193,7 +196,6 @@ Structure and reshape:
 - ``flatten()``, ``flattenByKey()``, ``collapse()``
 - ``groupBy()``, ``keyBy()``, ``indexBy()``, ``pluck()``, ``transpose()``
 - ``mapWithKeys()``, ``values()``, ``rekey()``
-- ``wrap()``, ``unWrap()``
 
 Ordering and uniqueness:
 
@@ -328,3 +330,6 @@ Behavior Notes
 - ``paginate()`` throws ``InvalidArgumentException`` when ``page < 1`` or ``perPage < 1``.
 - ``flatten(0)`` keeps top-level values unchanged; ``flatten(1)`` flattens one level.
 - ``sum()`` and numeric min/max flows ignore non-numeric values.
+- ``HookedCollection::copy()`` preserves hooks while isolating collection data
+  and cached pipeline state.
+- ``duplicates()`` is loose by default and accepts ``true`` for strict comparison.

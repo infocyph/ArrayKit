@@ -13,6 +13,7 @@ use RuntimeException;
 use UnexpectedValueException;
 use UnitEnum as TEnum;
 
+/** @internal */
 trait BaseConfigTrait
 {
     private const int MAX_READ_CACHE_ENTRIES = 1024;
@@ -57,9 +58,12 @@ trait BaseConfigTrait
     {
         $this->assertWritable();
 
-        $array = $this->get($key, []);
-        if (!is_array($array)) {
+        $missing = $this->missingValueMarker();
+        $array = $this->get($key, $missing);
+        if ($array === $missing) {
             $array = [];
+        } elseif (!is_array($array)) {
+            throw new InvalidArgumentException("Config value [{$key}] must be an array.");
         }
 
         $array[] = $value;
@@ -159,11 +163,10 @@ trait BaseConfigTrait
     /**
      * Get an array value or fallback default when type does not match.
      *
-     * @param string|int|array<int, string|int>|null $key
      * @param array<array-key, mixed>|null $default
      * @return array<array-key, mixed>|null
      */
-    public function getArray(string|int|array|null $key, ?array $default = null): ?array
+    public function getArray(string|int $key, ?array $default = null): ?array
     {
         $value = $this->get($key, $default);
 
@@ -172,10 +175,8 @@ trait BaseConfigTrait
 
     /**
      * Get a bool value or fallback default when type does not match.
-     *
-     * @param string|int|array<int, string|int>|null $key
      */
-    public function getBool(string|int|array|null $key, ?bool $default = null): ?bool
+    public function getBool(string|int $key, ?bool $default = null): ?bool
     {
         $value = $this->get($key, $default);
 
@@ -187,10 +188,9 @@ trait BaseConfigTrait
      *
      * @template TEnum of \UnitEnum
      *
-     * @param string|int|array<int, string|int>|null $key
      * @param class-string<TEnum> $enumClass
      */
-    public function getEnum(string|int|array|null $key, string $enumClass, ?\UnitEnum $default = null): ?\UnitEnum
+    public function getEnum(string|int $key, string $enumClass, ?\UnitEnum $default = null): ?\UnitEnum
     {
         if (!enum_exists($enumClass)) {
             throw new InvalidArgumentException("Enum class [{$enumClass}] does not exist.");
@@ -224,10 +224,8 @@ trait BaseConfigTrait
 
     /**
      * Get a float value or fallback default when type does not match.
-     *
-     * @param string|int|array<int, string|int>|null $key
      */
-    public function getFloat(string|int|array|null $key, ?float $default = null): ?float
+    public function getFloat(string|int $key, ?float $default = null): ?float
     {
         $value = $this->get($key, $default);
 
@@ -236,10 +234,8 @@ trait BaseConfigTrait
 
     /**
      * Get an int value or fallback default when type does not match.
-     *
-     * @param string|int|array<int, string|int>|null $key
      */
-    public function getInt(string|int|array|null $key, ?int $default = null): ?int
+    public function getInt(string|int $key, ?int $default = null): ?int
     {
         $value = $this->get($key, $default);
 
@@ -249,11 +245,10 @@ trait BaseConfigTrait
     /**
      * Get a list array value or fallback default when type does not match.
      *
-     * @param string|int|array<int, string|int>|null $key
      * @param array<int, mixed>|null $default
      * @return array<int, mixed>|null
      */
-    public function getList(string|int|array|null $key, ?array $default = null): ?array
+    public function getList(string|int $key, ?array $default = null): ?array
     {
         $value = $this->get($key, $default);
         if (!is_array($value) || !array_is_list($value)) {
@@ -266,15 +261,28 @@ trait BaseConfigTrait
     /**
      * Get a required configuration value or throw when missing.
      *
-     * @param string|int|array<int, int|string>|null $key
+     * @param string|int|array<int, int|string> $key
      */
-    public function getOrFail(string|int|array|null $key): mixed
+    public function getOrFail(string|int|array $key): mixed
     {
         $missing = new \stdClass();
-        $value = $this->get($key, $missing);
+        if (is_array($key)) {
+            $values = [];
+            foreach ($key as $path) {
+                $value = $this->get($path, $missing);
+                if ($value === $missing) {
+                    throw new OutOfBoundsException("Required config key [{$path}] is missing.");
+                }
 
+                $values[(string) $path] = $value;
+            }
+
+            return $values;
+        }
+
+        $value = $this->get($key, $missing);
         if ($value === $missing) {
-            throw new OutOfBoundsException('Required config key is missing.');
+            throw new OutOfBoundsException("Required config key [{$key}] is missing.");
         }
 
         return $value;
@@ -282,10 +290,8 @@ trait BaseConfigTrait
 
     /**
      * Get a string value or fallback default when type does not match.
-     *
-     * @param string|int|array<int, string|int>|null $key
      */
-    public function getString(string|int|array|null $key, ?string $default = null): ?string
+    public function getString(string|int $key, ?string $default = null): ?string
     {
         $value = $this->get($key, $default);
 
@@ -421,9 +427,12 @@ trait BaseConfigTrait
     {
         $this->assertWritable();
 
-        $array = $this->get($key, []);
-        if (!is_array($array)) {
+        $missing = $this->missingValueMarker();
+        $array = $this->get($key, $missing);
+        if ($array === $missing) {
             $array = [];
+        } elseif (!is_array($array)) {
+            throw new InvalidArgumentException("Config value [{$key}] must be an array.");
         }
 
         array_unshift($array, $value);

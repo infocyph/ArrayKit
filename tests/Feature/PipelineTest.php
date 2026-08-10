@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Infocyph\ArrayKit\Collection\Collection;
+use Infocyph\ArrayKit\Collection\Pipeline;
 
 it('supports keyBy/indexBy/mapWithKeys/countBy in pipelines', function () {
     $rows = Collection::make([
@@ -48,7 +49,7 @@ it('supports min/max/minBy/maxBy and set helpers in pipelines', function () {
         ->and($rows->process()->firstWhere('score', '>=', 20))->toBe(['id' => 2, 'score' => 40]);
 });
 
-it('supports values, rekey, deep merge helpers, and unwrap alias', function () {
+it('supports values, rekey, and deep merge helpers', function () {
     $collection = Collection::make(['first_name' => 'Ada', 'last_name' => 'Lovelace']);
     $renamed = $collection->copy()->rekey(['first_name' => 'firstName'])->all();
 
@@ -64,9 +65,9 @@ it('supports values, rekey, deep merge helpers, and unwrap alias', function () {
     ]);
 
     $single = Collection::make(['only']);
-    expect($single->copy()->unwrap()->all())->toBe(['only'])
-        ->and($single->copy()->unWrap()->all())->toBe(['only'])
-        ->and($single->copy()->values()->all())->toBe(['only']);
+    expect($single->copy()->values()->all())->toBe(['only'])
+        ->and(method_exists(Pipeline::class, 'wrap'))->toBeFalse()
+        ->and(method_exists(Pipeline::class, 'unWrap'))->toBeFalse();
 });
 
 it('supports sortByMany and row-query convenience helpers in pipelines', function () {

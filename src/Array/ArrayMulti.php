@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Array;
 
 use Infocyph\ArrayKit\Array\Concerns\ArrayMultiQuerySortTrait;
+use InvalidArgumentException;
 
 class ArrayMulti
 {
@@ -17,7 +18,7 @@ class ArrayMulti
     public static function chunk(array $array, int $size, bool $preserveKeys = false): array
     {
         if ($size <= 0) {
-            return [$array];
+            throw new InvalidArgumentException('Chunk size must be greater than 0.');
         }
 
         return array_chunk($array, $size, $preserveKeys);
@@ -44,7 +45,7 @@ class ArrayMulti
      */
     public static function contains(array $array, mixed $valueOrCallback, bool $strict = false): bool
     {
-        if (is_callable($valueOrCallback)) {
+        if (!is_string($valueOrCallback) && is_callable($valueOrCallback)) {
             return static::some($array, $valueOrCallback);
         }
 
@@ -336,15 +337,15 @@ class ArrayMulti
         }
         $firstRow = current($matrix);
         if (!is_array($firstRow)) {
-            return [];
+            throw new InvalidArgumentException('Matrix rows must be arrays for transpose.');
         }
 
         $keys = array_keys($firstRow);
         $results = array_fill_keys($keys, []);
 
         foreach ($matrix as $row) {
-            if (!is_array($row)) {
-                continue;
+            if (!is_array($row) || array_keys($row) !== $keys) {
+                throw new InvalidArgumentException('Matrix rows must have identical keys for transpose.');
             }
 
             foreach ($row as $col => $value) {

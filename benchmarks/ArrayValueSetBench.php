@@ -104,7 +104,7 @@ final class ArrayValueSetBench
     public function provideValueSets(): array
     {
         $workloads = [];
-        foreach ([16, 32, 48, 64, 96, 128, 256, 512] as $bytes) {
+        foreach ([16, 32, 48, 64, 96, 128, 256, 512, 768, 1024, 1536, 2048, 4096, 8192] as $bytes) {
             $workloads[$bytes . 'b-duplicates'] = [
                 'bytes' => $bytes,
                 'distribution' => 'duplicate-heavy',
