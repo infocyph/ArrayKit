@@ -15,6 +15,11 @@ Available classes:
 - ``Infocyph\ArrayKit\Collection\Pipeline``
 - ``Infocyph\ArrayKit\Collection\LazyCollection``
 
+Choose the lowest-cost surface that fits the job: direct ``ArraySingle`` /
+``ArrayMulti`` static calls for hot loops, ``Collection`` or ``Pipeline`` for a
+convenient mutable chain, and ``LazyCollection`` for streaming or very large
+iterables where intermediate materialization should be avoided.
+
 Creating Collections
 --------------------
 
@@ -315,6 +320,8 @@ Behavior Notes
 --------------
 
 - Most pipeline methods return the underlying ``Collection`` for chaining.
+- Collection iteration is provided by ``IteratorAggregate``; manual internal
+  pointer methods are intentionally not part of the API.
 - Terminal methods return scalar/array/bool and stop the chain.
 - Dot-notation works in collection accessors and in ``HookedCollection`` get/set overrides.
 - ``merge()`` follows PHP ``array_merge`` semantics (string-key overwrite, numeric append/reindex).

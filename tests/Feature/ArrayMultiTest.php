@@ -397,17 +397,41 @@ it('distinguishes explicit null from shorthand row comparisons', function () {
     ]);
 });
 
-it('keeps null and missing grouping keys separate', function () {
+it('skips missing derived fields without colliding with literal user values', function () {
     $rows = [
-        ['id' => 1, 'role' => null],
-        ['id' => 2],
+        ['id' => 1, 'role' => '_undefined'],
+        ['id' => 2, 'role' => ''],
+        ['id' => 3],
     ];
 
     expect(ArrayMulti::groupBy($rows, 'role'))->toBe([
-        '' => [['id' => 1, 'role' => null]],
-        '_undefined' => [['id' => 2]],
+        '_undefined' => [['id' => 1, 'role' => '_undefined']],
+        '' => [['id' => 2, 'role' => '']],
+    ])->and(ArrayMulti::keyBy($rows, 'role'))->toBe([
+        '_undefined' => ['id' => 1, 'role' => '_undefined'],
+        '' => ['id' => 2, 'role' => ''],
+    ])->and(ArrayMulti::indexBy($rows, 'role'))->toBe([
+        '_undefined' => ['id' => 1, 'role' => '_undefined'],
+        '' => ['id' => 2, 'role' => ''],
+    ])->and(ArrayMulti::countBy($rows, 'role'))->toBe([
+        '_undefined' => 1,
+        '' => 1,
     ]);
 });
+
+it('rejects null and other invalid derived array keys', function (mixed $invalid) {
+    $rows = [['id' => 1, 'group' => $invalid]];
+
+    expect(fn () => ArrayMulti::groupBy($rows, 'group'))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => ArrayMulti::keyBy($rows, 'group'))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => ArrayMulti::countBy($rows, 'group'))->toThrow(InvalidArgumentException::class);
+})->with([
+    'null' => [null],
+    'boolean' => [false],
+    'float' => [1.5],
+    'array' => [[]],
+    'object' => [new stdClass()],
+]);
 
 it('handles null values and missing keys correctly in whereNotIn()', function () {
     $rows = [
@@ -538,6 +562,47 @@ it('supports uniqueBy and duplicatesBy helpers', function () {
     ])->and(ArrayMulti::duplicatesBy($rows, fn (array $row) => strtolower($row['email'])))->toBe([
         1 => ['id' => 2, 'email' => 'a@example.com'],
     ]);
+});
+
+it('preserves strict derived equality for adversarial values', function () {
+    $firstObject = new stdClass();
+    $secondObject = new stdClass();
+    $resource = fopen('php://memory', 'rb');
+
+    $rows = [
+        ['value' => 0],
+        ['value' => '0'],
+        ['value' => false],
+        ['value' => 0.0],
+        ['value' => ['nested' => [1, '1']]],
+        ['value' => ['nested' => [1, '1']]],
+        ['value' => $firstObject],
+        ['value' => $firstObject],
+        ['value' => $secondObject],
+        ['value' => $resource],
+        ['value' => $resource],
+        ['value' => NAN],
+        ['value' => NAN],
+    ];
+
+    expect(array_keys(ArrayMulti::uniqueBy($rows, 'value', true)))
+        ->toBe([0, 1, 2, 3, 4, 6, 8, 9, 11, 12])
+        ->and(array_keys(ArrayMulti::duplicatesBy($rows, 'value', true)))
+        ->toBe([5, 7, 10]);
+
+    fclose($resource);
+});
+
+it('handles large strict derived sets without changing key order', function () {
+    $rows = [];
+    for ($index = 0; $index < 10000; $index++) {
+        $rows['row-' . $index] = [
+            'derived' => ['id' => $index % 5000, 'payload' => str_repeat('x', 96)],
+        ];
+    }
+
+    expect(ArrayMulti::uniqueBy($rows, 'derived', true))->toHaveCount(5000)
+        ->and(array_key_first(ArrayMulti::duplicatesBy($rows, 'derived', true)))->toBe('row-5000');
 });
 
 it('supports sortByMany with mixed sort directions', function () {

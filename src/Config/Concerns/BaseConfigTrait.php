@@ -608,6 +608,15 @@ trait BaseConfigTrait
 
     protected function resolveRawValue(int|string $key): mixed
     {
+        if (
+            is_int($key)
+            || (!str_contains($key, '.') && !str_contains($key, '\\'))
+        ) {
+            return array_key_exists($key, $this->items)
+                ? $this->items[$key]
+                : $this->missingValueMarker();
+        }
+
         if (!$this->readCacheEnabled) {
             return DotNotation::get($this->items, $key, $this->missingValueMarker());
         }

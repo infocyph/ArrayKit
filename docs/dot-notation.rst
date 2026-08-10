@@ -260,5 +260,7 @@ Behavior Notes
 - Missing integer keys return the provided default.
 - Defaults may be plain values or callables, and callables are only evaluated when path resolution fails.
 - Wildcard traversal in ``get`` returns arrays of matched results.
-- ``set`` supports wildcard paths when wildcard is the first segment.
+- ``set`` supports wildcards at any path depth, including multiple wildcards.
 - ``forget`` supports wildcard and nested removal across arrays.
+- Compiled paths are kept in a bounded cache, and traversal advances a segment
+  cursor without copying the remaining path on each step.

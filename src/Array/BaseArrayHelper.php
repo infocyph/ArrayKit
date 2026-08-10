@@ -331,16 +331,13 @@ class BaseArrayHelper
     }
 
     /**
-     * Wrap a value in an array if it's not already an array; otherwise return the array as is.
+     * Wrap a non-null value without discarding valid falsey data.
      *
-     * If the value is empty, an empty array is returned.
-     *
-     * @param mixed $value The value to wrap.
-     * @return array<array-key, mixed> The wrapped value.
+     * @return array<array-key, mixed>
      */
     public static function wrap(mixed $value): array
     {
-        if (empty($value)) {
+        if ($value === null) {
             return [];
         }
 

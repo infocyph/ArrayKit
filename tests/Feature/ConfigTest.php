@@ -173,6 +173,62 @@ it('memoizes reads without returning stale values after mutation', function () {
         ->and($cfg->get('app.name'))->toBe('ArrayKitX');
 });
 
+it('bypasses memoization for direct top-level reads', function () {
+    $cfg = new Config;
+    $cfg->loadArray([
+        'debug' => false,
+        'zero' => 0,
+        'nullable' => null,
+    ]);
+
+    for ($index = 0; $index < 100; $index++) {
+        expect($cfg->get('debug'))->toBeFalse()
+            ->and($cfg->get('zero'))->toBe(0)
+            ->and($cfg->get('nullable', 'fallback'))->toBeNull()
+            ->and($cfg->get('missing', 'fallback'))->toBe('fallback');
+    }
+
+    $cacheSize = (fn (): int => count($this->resolvedValueCache))->call($cfg);
+    expect($cacheSize)->toBe(0);
+});
+
+it('invalidates memoized nested reads after every mutation family', function () {
+    $cfg = new Config;
+    $cfg->loadArray(['app' => ['value' => 1]]);
+
+    expect($cfg->get('app.value'))->toBe(1);
+
+    $cfg->set('app.value', 2);
+    expect($cfg->get('app.value'))->toBe(2);
+
+    $cfg->set(['app.value' => 3, 'app.extra' => 'set']);
+    expect($cfg->get('app.value'))->toBe(3);
+
+    $cfg->fill('app.filled', 4);
+    expect($cfg->get('app.filled'))->toBe(4);
+
+    $cfg->forget('app.filled');
+    expect($cfg->get('app.filled', 'missing'))->toBe('missing');
+
+    $cfg->replace(['app' => ['value' => 5]]);
+    expect($cfg->get('app.value'))->toBe(5);
+
+    $cfg->merge(['app' => ['value' => 6]]);
+    expect($cfg->get('app.value'))->toBe(6);
+
+    $cfg->overlay(['app' => ['value' => 7]]);
+    expect($cfg->get('app.value'))->toBe(7);
+
+    $cfg->snapshot();
+    $cfg->set('app.value', 8);
+    expect($cfg->get('app.value'))->toBe(8)
+        ->and($cfg->restore())->toBeTrue()
+        ->and($cfg->get('app.value'))->toBe(7);
+
+    $cfg->reload(['app' => ['value' => 9]]);
+    expect($cfg->get('app.value'))->toBe(9);
+});
+
 it('bounds the in-memory read cache for long-running processes', function () {
     $cfg = new Config;
 

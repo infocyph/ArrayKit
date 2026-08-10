@@ -34,6 +34,20 @@ Compatibility Notes
 - Pipeline methods are mutable by design: most transformation methods update the same collection instance and return it.
 - Use ``copy()`` or ``immutable()`` before pipeline operations when functional immutability is preferred.
 
+Behavior Changes
+----------------
+
+- ``wrap()`` now treats only ``null`` as absence. Falsey non-null scalars are
+  wrapped instead of being discarded.
+- Seeded ``ArraySingle::shuffle()`` uses an isolated randomizer and no longer
+  reseeds or advances PHP's global Mersenne Twister state.
+- ``groupBy()``, ``keyBy()`` / ``indexBy()``, and ``countBy()`` skip rows whose
+  derived field is missing. Present values must produce integer or string keys;
+  ``null`` and other invalid key types now throw ``InvalidArgumentException``.
+- ``Collection`` relies on ``IteratorAggregate``. Calls to the former manual
+  pointer surface (``current()``, ``key()``, ``next()``, ``rewind()``, and
+  ``valid()``) should be replaced with ``foreach`` or ``getIterator()``.
+
 Recommended Upgrade Checklist
 -----------------------------
 

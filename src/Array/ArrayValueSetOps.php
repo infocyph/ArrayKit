@@ -135,6 +135,40 @@ final class ArrayValueSetOps
     }
 
     /**
+     * Track strict membership with canonical fingerprints and a safe scan fallback.
+     *
+     * Long fingerprints use verified digest buckets, so a digest collision cannot
+     * change equality. Values such as NaN that are not reflexive use PHP's strict
+     * comparison semantics in the fallback bucket.
+     *
+     * @param array<string, true> $seen
+     * @param array<string, string|list<string>> $digestBuckets
+     * @param array<int, mixed> $fallback
+     */
+    public static function strictValueAlreadySeen(
+        mixed $value,
+        array &$seen,
+        array &$digestBuckets,
+        array &$fallback,
+    ): bool {
+        if (!self::isStrictHashable($value)) {
+            if (in_array($value, $fallback, true)) {
+                return true;
+            }
+
+            $fallback[] = $value;
+
+            return false;
+        }
+
+        return self::fingerprintAlreadySeen(
+            $seen,
+            $digestBuckets,
+            self::fingerprintStrict($value),
+        );
+    }
+
+    /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
      */
@@ -147,16 +181,12 @@ final class ArrayValueSetOps
             return $unique;
         }
 
-        if (!self::allStrictHashable($array)) {
-            return self::uniqueByScan($array);
-        }
-
         $seen = [];
         $digestBuckets = [];
+        $fallback = [];
         $result = [];
         foreach ($array as $key => $item) {
-            $fingerprint = self::fingerprintStrict($item);
-            if (self::fingerprintAlreadySeen($seen, $digestBuckets, $fingerprint)) {
+            if (self::strictValueAlreadySeen($item, $seen, $digestBuckets, $fallback)) {
                 continue;
             }
 
@@ -410,26 +440,5 @@ final class ArrayValueSetOps
         }
 
         return true;
-    }
-
-    /**
-     * @param array<array-key, mixed> $array
-     * @return array<array-key, mixed>
-     */
-    private static function uniqueByScan(array $array): array
-    {
-        $seen = [];
-        $result = [];
-
-        foreach ($array as $key => $item) {
-            if (in_array($item, $seen, true)) {
-                continue;
-            }
-
-            $seen[] = $item;
-            $result[$key] = $item;
-        }
-
-        return $result;
     }
 }

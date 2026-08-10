@@ -220,18 +220,6 @@ trait BaseCollectionTrait
     }
 
     /**
-     * Returns the current element in the collection.
-     *
-     * This is part of the Iterator interface.
-     *
-     * @return mixed The current element in the collection.
-     */
-    public function current(): mixed
-    {
-        return current($this->data);
-    }
-
-    /**
      * Retrieve an item from the collection by key or keys.
      *
      * The following cases are handled:
@@ -381,19 +369,6 @@ trait BaseCollectionTrait
     }
 
     /**
-     * Return the key of the current element.
-     *
-     * This is part of the Iterator interface.
-     *
-     * @return string|int|null The key of the current element, or null if the
-     *                         internal pointer is not valid.
-     */
-    public function key(): string|int|null
-    {
-        return key($this->data);
-    }
-
-    /**
      * Return an array of all the keys in the collection.
      *
      * @return array<int, int|string>
@@ -413,16 +388,6 @@ trait BaseCollectionTrait
         $this->data = array_merge($this->data, $this->getArrayableItems($items));
 
         return $this;
-    }
-
-    /**
-     * Advances the internal pointer to the next element.
-     *
-     * This is part of the Iterator interface.
-     */
-    public function next(): void
-    {
-        next($this->data);
     }
 
     /*
@@ -550,16 +515,6 @@ trait BaseCollectionTrait
     }
 
     /**
-     * Rewinds the internal pointer of the collection to the first element.
-     *
-     * This is part of the Iterator interface.
-     */
-    public function rewind(): void
-    {
-        reset($this->data);
-    }
-
-    /**
      * Set one or multiple items in the collection using dot notation.
      *
      * If no key is provided, the entire collection is replaced with $value.
@@ -595,17 +550,5 @@ trait BaseCollectionTrait
         $json = json_encode($this->data, $options);
 
         return $json === false ? 'null' : $json;
-    }
-
-    /**
-     * Checks if the current element is valid.
-     *
-     * This is part of the Iterator interface.
-     *
-     * @return bool True if the current element is valid, false otherwise.
-     */
-    public function valid(): bool
-    {
-        return key($this->data) !== null;
     }
 }

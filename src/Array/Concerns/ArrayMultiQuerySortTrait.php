@@ -7,6 +7,8 @@ namespace Infocyph\ArrayKit\Array\Concerns;
 use Infocyph\ArrayKit\Array\ArraySharedOps;
 use Infocyph\ArrayKit\Array\ArraySingle;
 use Infocyph\ArrayKit\Array\ArraySingleOps;
+use Infocyph\ArrayKit\Array\ArrayValueSetOps;
+use InvalidArgumentException;
 
 use function Infocyph\ArrayKit\compare;
 
@@ -44,14 +46,16 @@ trait ArrayMultiQuerySortTrait
     public static function countBy(array $array, string|callable $groupBy): array
     {
         $counts = [];
+        $useCallback = is_callable($groupBy);
 
         foreach ($array as $key => $row) {
-            $bucket = is_callable($groupBy)
-                ? $groupBy($row, $key)
-                : ((is_array($row) && array_key_exists($groupBy, $row)) ? $row[$groupBy] : '_undefined');
+            if (!$useCallback && (!is_array($row) || !array_key_exists($groupBy, $row))) {
+                continue;
+            }
 
-            $normalized = self::normalizeArrayKey($bucket);
-            $counts[$normalized] = ($counts[$normalized] ?? 0) + 1;
+            $bucket = $useCallback ? $groupBy($row, $key) : $row[$groupBy];
+            $arrayKey = self::requireArrayKey($bucket, 'countBy');
+            $counts[$arrayKey] = ($counts[$arrayKey] ?? 0) + 1;
         }
 
         return $counts;
@@ -130,16 +134,15 @@ trait ArrayMultiQuerySortTrait
     public static function groupBy(array $array, string|callable $groupBy, bool $preserveKeys = false): array
     {
         $results = [];
+        $useCallback = is_callable($groupBy);
+
         foreach ($array as $key => $row) {
-            $gKey = null;
-            if (is_callable($groupBy)) {
-                $gKey = $groupBy($row, $key);
-            } elseif (is_array($row) && array_key_exists($groupBy, $row)) {
-                $gKey = $row[$groupBy];
-            } else {
-                $gKey = '_undefined';
+            if (!$useCallback && (!is_array($row) || !array_key_exists($groupBy, $row))) {
+                continue;
             }
-            $groupKey = self::normalizeArrayKey($gKey);
+
+            $resolved = $useCallback ? $groupBy($row, $key) : $row[$groupBy];
+            $groupKey = self::requireArrayKey($resolved, 'groupBy');
 
             if ($preserveKeys) {
                 $results[$groupKey][$key] = $row;
@@ -171,13 +174,15 @@ trait ArrayMultiQuerySortTrait
     public static function keyBy(array $array, string|callable $keyBy): array
     {
         $results = [];
+        $useCallback = is_callable($keyBy);
 
         foreach ($array as $index => $row) {
-            $resolved = is_callable($keyBy)
-                ? $keyBy($row, $index)
-                : ((is_array($row) && array_key_exists($keyBy, $row)) ? $row[$keyBy] : '_undefined');
+            if (!$useCallback && (!is_array($row) || !array_key_exists($keyBy, $row))) {
+                continue;
+            }
 
-            $results[self::normalizeArrayKey($resolved)] = $row;
+            $resolved = $useCallback ? $keyBy($row, $index) : $row[$keyBy];
+            $results[self::requireArrayKey($resolved, 'keyBy')] = $row;
         }
 
         return $results;
@@ -288,7 +293,7 @@ trait ArrayMultiQuerySortTrait
 
             $value = $row[$column];
             if ($indexBy !== null && array_key_exists($indexBy, $row)) {
-                $results[self::normalizeArrayKey($row[$indexBy])] = $value;
+                $results[self::requireArrayKey($row[$indexBy], 'pluck')] = $value;
             } else {
                 $results[] = $value;
             }
@@ -817,29 +822,46 @@ trait ArrayMultiQuerySortTrait
         bool $strict,
         bool $keepDuplicates,
     ): array {
-        $seen = [];
         $results = [];
+        $useCallback = is_callable($keyOrCallback);
 
-        foreach ($array as $index => $row) {
-            $derived = self::resolveDerivedValue($row, $keyOrCallback, $index);
-            $alreadySeen = in_array($derived, $seen, $strict);
+        if (!$strict) {
+            $seen = [];
+            foreach ($array as $index => $row) {
+                $derived = $useCallback
+                    ? self::invokeRowCallback($keyOrCallback, $row, $index)
+                    : self::resolveDerivedValue($row, $keyOrCallback, $index);
+                $alreadySeen = in_array($derived, $seen, false);
 
-            if ($keepDuplicates) {
-                if ($alreadySeen) {
+                if ($alreadySeen === $keepDuplicates) {
                     $results[$index] = $row;
-                } else {
+                }
+                if (!$alreadySeen) {
                     $seen[] = $derived;
                 }
-
-                continue;
             }
 
-            if ($alreadySeen) {
-                continue;
-            }
+            return $results;
+        }
 
-            $seen[] = $derived;
-            $results[$index] = $row;
+        $seen = [];
+        $digestBuckets = [];
+        $fallback = [];
+
+        foreach ($array as $index => $row) {
+            $derived = $useCallback
+                ? self::invokeRowCallback($keyOrCallback, $row, $index)
+                : self::resolveDerivedValue($row, $keyOrCallback, $index);
+            $alreadySeen = ArrayValueSetOps::strictValueAlreadySeen(
+                $derived,
+                $seen,
+                $digestBuckets,
+                $fallback,
+            );
+
+            if ($alreadySeen === $keepDuplicates) {
+                $results[$index] = $row;
+            }
         }
 
         return $results;
@@ -1080,6 +1102,17 @@ trait ArrayMultiQuerySortTrait
         }
 
         return $prepared;
+    }
+
+    private static function requireArrayKey(mixed $value, string $operation): int|string
+    {
+        if (is_int($value) || is_string($value)) {
+            return $value;
+        }
+
+        throw new InvalidArgumentException(
+            $operation . ' derived key must be an integer or string; ' . get_debug_type($value) . ' given.',
+        );
     }
 
     private static function resolveDerivedValue(mixed $row, string|callable $keyOrCallback, int|string $index): mixed
