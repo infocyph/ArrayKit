@@ -66,11 +66,6 @@ final class ArraySingleBench
         ArraySingle::diff($this->data, $this->needles, true);
     }
 
-    public function benchDuplicates(): void
-    {
-        ArraySingle::duplicates($this->data);
-    }
-
     public function benchIntersect(): void
     {
         ArraySingle::intersect($this->data, $this->needles, true);
@@ -122,6 +117,11 @@ final class ArraySingleBench
     public function benchSeededShuffle(): void
     {
         ArraySingle::shuffle($this->data, 12345);
+    }
+
+    public function benchStrictDuplicates(): void
+    {
+        ArraySingle::duplicates($this->data, true);
     }
 
     public function benchSum(): void

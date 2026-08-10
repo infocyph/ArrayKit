@@ -9,10 +9,12 @@ use Infocyph\ArrayKit\Array\ArraySingle;
 use PhpBench\Attributes\BeforeMethods;
 use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\ParamProviders;
+use PhpBench\Attributes\RetryThreshold;
 use PhpBench\Attributes\Revs;
 
 #[Revs(3)]
 #[Iterations(5)]
+#[RetryThreshold(100)]
 #[BeforeMethods('setUp')]
 #[ParamProviders('provideMembershipWorkloads')]
 final class MembershipCrossoverBench
@@ -125,7 +127,7 @@ final class MembershipCrossoverBench
     {
         $workloads = [];
 
-        foreach ([1, 2, 8, 16, 32, 64, 128, 192, 256, 512] as $size) {
+        foreach ([128, 192, 256, 512] as $size) {
             foreach (['hit-first', 'hit-last', 'miss'] as $distribution) {
                 $workloads[$size . '-' . $distribution] = [
                     'size' => $size,
