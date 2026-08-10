@@ -80,6 +80,23 @@ it('keeps non-finite floats distinct in strict set operations', function () {
         ->and(ArraySingle::containsAny([INF], [-INF], true))->toBeFalse();
 });
 
+it('isolates deterministic shuffle state from the global Mersenne Twister', function () {
+    $values = range(1, 20);
+
+    expect(ArraySingle::shuffle($values, 12345))
+        ->toBe(ArraySingle::shuffle($values, 12345))
+        ->not->toBe(ArraySingle::shuffle($values, 54321));
+
+    mt_srand(9876);
+    $first = mt_rand();
+    $second = mt_rand();
+
+    mt_srand(9876);
+    expect(mt_rand())->toBe($first);
+    ArraySingle::shuffle($values, 12345);
+    expect(mt_rand())->toBe($second);
+});
+
 it('does not retry callbacks that throw argument count errors internally', function () {
     $calls = 0;
     $exception = null;

@@ -196,6 +196,15 @@ it('supports escaped dot paths for literal dot keys', function () {
         ->and(DotNotation::has($data, 'service\\.name'))->toBeTrue();
 });
 
+it('supports escaped backslashes without corrupting compiled paths', function () {
+    $data = [
+        'root\\name' => ['value' => 'found'],
+    ];
+
+    expect(DotNotation::get($data, 'root\\\\name.value'))->toBe('found')
+        ->and(DotNotation::get($data, 'root\\\\name.value'))->toBe('found');
+});
+
 it('retrieves multiple keys when passed an array', function () {
     $data = [
         'user' => ['name' => 'Carol', 'email' => 'carol@example.com'],
@@ -286,6 +295,24 @@ it('supports wildcard set and wildcard forget', function () {
             ['name' => 'Bob', 'active' => true],
         ],
     ]);
+});
+
+it('supports multiple wildcards and missing wildcard branches', function () {
+    $data = [
+        'companies' => [
+            ['teams' => [['name' => 'A'], ['name' => 'B']]],
+            ['teams' => [['name' => 'C'], []]],
+        ],
+    ];
+
+    expect(DotNotation::get($data, 'companies.*.teams.*.name', 'missing'))
+        ->toBe(['A', 'B', 'C', 'missing']);
+
+    DotNotation::set($data, 'companies.*.teams.*.active', true);
+    DotNotation::forget($data, 'companies.*.teams.*.active');
+
+    expect(DotNotation::get($data, 'companies.*.teams.*.active', 'missing'))
+        ->toBe(['missing', 'missing', 'missing', 'missing']);
 });
 
 it('supports hasWildcard, paths and matches helpers', function () {

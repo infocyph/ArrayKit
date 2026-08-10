@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Array;
 
 use InvalidArgumentException;
+use Random\Engine\Mt19937;
+use Random\Randomizer;
 
 class ArraySingle
 {
@@ -800,28 +802,20 @@ class ArraySingle
     }
 
     /**
-     * Randomly shuffles the elements in the given array.
+     * Shuffle values, using isolated deterministic state when a seed is given.
      *
-     * If no seed is given, the internal PHP random number generator is used.
-     * If a seed is given, the Mersenne Twister random number generator is
-     * seeded with the given value, used to shuffle the array, and then reset
-     * to the current internal PHP random number generator seed.
-     *
-     * @param array<array-key, mixed> $array The array to shuffle.
-     * @param int|null $seed Optional seed for the Mersenne Twister.
-     * @return array<array-key, mixed> The shuffled array.
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
      */
     public static function shuffle(array $array, ?int $seed = null): array
     {
         if ($seed === null) {
-            \shuffle($array);
-        } else {
-            \mt_srand($seed);
-            \shuffle($array);
-            \mt_srand();
+            shuffle($array);
+
+            return $array;
         }
 
-        return $array;
+        return new Randomizer(new Mt19937($seed))->shuffleArray($array);
     }
 
     /**

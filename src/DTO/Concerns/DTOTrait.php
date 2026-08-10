@@ -16,8 +16,7 @@ trait DTOTrait
      * Create a new instance of the using class and populate
      * its public properties from the given array.
      *
-     * Unknown keys are ignored. Only properties matching
-     * class property names will be set.
+     * Unknown keys are ignored. Matching public properties are assigned.
      *
      * @param array<array-key, mixed> $values Key-value pairs matching property names
      */

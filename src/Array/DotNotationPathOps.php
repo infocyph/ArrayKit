@@ -143,9 +143,11 @@ final class DotNotationPathOps
         bool $throwOnTooDeep = false,
         int $currentDepth = 1,
         int &$visitedNodes = 0,
+        int $position = 0,
     ): mixed {
-        foreach ($segments as $index => $segment) {
-            unset($segments[$index]);
+        $segmentCount = count($segments);
+        for ($index = $position; $index < $segmentCount; $index++) {
+            $segment = $segments[$index];
 
             $visitedNodes++;
             if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
@@ -164,6 +166,7 @@ final class DotNotationPathOps
                     $throwOnTooDeep,
                     $currentDepth,
                     $visitedNodes,
+                    $index + 1,
                 );
             }
 
@@ -208,6 +211,21 @@ final class DotNotationPathOps
         }
 
         return $missing;
+    }
+
+    /**
+     * @param array<int, string> $segments
+     */
+    private static function hasWildcardFrom(array $segments, int $position): bool
+    {
+        $segmentCount = count($segments);
+        for ($index = $position; $index < $segmentCount; $index++) {
+            if ($segments[$index] === '*') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -269,6 +287,7 @@ final class DotNotationPathOps
         bool $throwOnTooDeep,
         int $currentDepth,
         int &$visitedNodes,
+        int $position,
     ): mixed {
         $target = is_object($target) && method_exists($target, 'all') ? $target->all() : $target;
 
@@ -289,10 +308,12 @@ final class DotNotationPathOps
                 $throwOnTooDeep,
                 $currentDepth,
                 $visitedNodes,
+                $position,
             );
             $result[] = $resolved === $missing ? $defaultResolver($default) : $resolved;
         }
-        if (in_array('*', $segments, true)) {
+
+        if (self::hasWildcardFrom($segments, $position)) {
             $result = ArrayMulti::collapse($result);
         }
 

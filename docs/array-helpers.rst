@@ -19,6 +19,10 @@ If you prefer one entry point, use ``Infocyph\ArrayKit\ArrayKit``:
     $flat = ArrayKit::multi()->flatten([[1], [2, [3]]]);
     $wrapped = ArrayKit::helper()->wrap('x');
 
+``wrap()`` returns ``[]`` only for ``null``, leaves arrays unchanged, and wraps
+every other value. Falsey values such as ``false``, ``0``, ``0.0``, ``'0'``,
+and ``''`` therefore remain data and become one-element arrays.
+
 Choosing the Right Helper
 -------------------------
 
@@ -200,6 +204,12 @@ ArrayMulti: Grouping, Ordering, and Projection
     $scores = ArrayMulti::pluck($rows, 'score');             // [10,30,20]
     $transposed = ArrayMulti::transpose($rows);
 
+For ``groupBy()``, ``keyBy()`` / ``indexBy()``, and ``countBy()``, rows missing
+the requested field are skipped. Derived keys must be strings or integers;
+``null``, booleans, floats, arrays, and objects raise
+``InvalidArgumentException``. Literal strings such as ``'_undefined'`` and
+``''`` are valid keys and are never used as missing-value sentinels.
+
 ArrayMulti: Row Set Operations
 ------------------------------
 
@@ -226,6 +236,11 @@ ArrayMulti: Row Set Operations
     $reduced = ArrayMulti::reduce($rows, fn ($carry, $row) => $carry + $row['id'], 0);
     $sumById = ArrayMulti::sum($rows, 'id');
     $sumByCallback = ArrayMulti::sum($rows, fn ($row, $key) => $row['id'] + $key);
+
+Strict ``uniqueBy()`` and ``duplicatesBy()`` preserve PHP strict equality,
+original row order, and original keys. Their verified fingerprint buckets avoid
+quadratic scans for ordinary values while retaining collision checks and a safe
+fallback for values that cannot be fingerprinted, including ``NAN``.
 
 ArrayShape Validation
 ---------------------

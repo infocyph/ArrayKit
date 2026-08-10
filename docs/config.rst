@@ -447,7 +447,10 @@ Config methods:
 - ``readonly()``, ``isReadonly()``
 
 Read memoization is bounded to 1,024 resolved paths for predictable memory use
-in persistent workers. Mutations and reloads invalidate the memoized values.
+in persistent workers. Plain top-level string and integer keys use direct array
+lookup instead of entering the path cache; nested, escaped, and wildcard paths
+remain memoized. Every mutation family, restore, and reload invalidates the
+memoized values.
 
 Hook-aware methods:
 

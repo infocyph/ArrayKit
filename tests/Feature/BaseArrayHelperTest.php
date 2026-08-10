@@ -15,6 +15,19 @@ it('wraps a non-array value', function () {
     expect($wrapped)->toBe(['hello']);
 });
 
+it('preserves every falsey value except null when wrapping', function (mixed $value, array $expected) {
+    expect(BaseArrayHelper::wrap($value))->toBe($expected);
+})->with([
+    'null' => [null, []],
+    'empty array' => [[], []],
+    'false' => [false, [false]],
+    'integer zero' => [0, [0]],
+    'float zero' => [0.0, [0.0]],
+    'negative float zero' => [-0.0, [-0.0]],
+    'numeric zero string' => ['0', ['0']],
+    'empty string' => ['', ['']],
+]);
+
 it('checks if at least one item meets a condition', function () {
     $data = [1, 2, 3];
     $res = BaseArrayHelper::haveAny($data, fn ($val) => $val > 2);

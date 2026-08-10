@@ -23,7 +23,7 @@
         "ext-hash": "*"
     },
     "require-dev": {
-        "infocyph/phpforge": "dev-main"
+        "infocyph/phpforge": "dev-main@dev"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,

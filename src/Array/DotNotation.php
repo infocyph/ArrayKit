@@ -31,28 +31,27 @@ class DotNotation
      * @param array<array-key, mixed> $array
      * @param array<int, string> $segments
      */
-    private static function forgetBySegments(array &$array, array $segments): void
+    private static function forgetBySegments(array &$array, array $segments, int $position = 0): void
     {
-        if ($segments === []) {
+        $segmentCount = count($segments);
+        if ($position >= $segmentCount) {
             return;
         }
 
-        $segment = self::shiftSegment($segments);
-        if ($segment === null) {
-            return;
-        }
+        $segment = $segments[$position];
+        $next = $position + 1;
 
         if ($segment === '*') {
-            if ($segments !== []) {
-                self::forgetEach($array, $segments);
+            if ($next < $segmentCount) {
+                self::forgetEach($array, $segments, $next);
             }
 
             return;
         }
 
         $normalized = self::unescapeSegment($segment);
-        if ($segments !== [] && ArraySingle::exists($array, $normalized) && is_array($array[$normalized])) {
-            self::forgetBySegments($array[$normalized], $segments);
+        if ($next < $segmentCount && ArraySingle::exists($array, $normalized) && is_array($array[$normalized])) {
+            self::forgetBySegments($array[$normalized], $segments, $next);
 
             return;
         }
@@ -66,11 +65,11 @@ class DotNotation
      * @param array<array-key, mixed> $array
      * @param array<int, string> $segments
      */
-    private static function forgetEach(array &$array, array $segments): void
+    private static function forgetEach(array &$array, array $segments, int $position): void
     {
         foreach ($array as &$inner) {
             if (is_array($inner)) {
-                self::forgetBySegments($inner, $segments);
+                self::forgetBySegments($inner, $segments, $position);
             }
         }
     }
@@ -97,16 +96,19 @@ class DotNotation
     /**
      * Sets values in the target using dot-notation with wildcard support.
      *
+     * @param array<array-key, mixed> $target
      * @param array<int, string> $segments
      */
-    private static function handleWildcardSet(mixed &$target, array $segments, mixed $value, bool $overwrite): void
-    {
-        if (!is_array($target)) {
-            $target = [];
-        }
-        if (!empty($segments)) {
+    private static function handleWildcardSet(
+        array &$target,
+        array $segments,
+        int $position,
+        mixed $value,
+        bool $overwrite,
+    ): void {
+        if ($position < count($segments)) {
             foreach ($target as &$inner) {
-                self::setValueBySegments($inner, $segments, $value, $overwrite);
+                self::setValueBySegments($inner, $segments, $position, $value, $overwrite);
             }
         } elseif ($overwrite) {
             foreach ($target as &$inner) {
@@ -178,26 +180,15 @@ class DotNotation
     private static function setValue(array &$target, string $key, mixed $value, bool $overwrite): void
     {
         $segments = self::splitPath($key);
-        $first = self::shiftSegment($segments);
-        if ($first === null) {
-            return;
-        }
+        $segment = $segments[0];
 
-        if ($first === '*') {
-            if ($segments !== []) {
-                foreach ($target as &$inner) {
-                    self::setValueBySegments($inner, $segments, $value, $overwrite);
-                }
-            } elseif ($overwrite) {
-                foreach ($target as &$inner) {
-                    $inner = $value;
-                }
-            }
+        if ($segment === '*') {
+            self::handleWildcardSet($target, $segments, 1, $value, $overwrite);
 
             return;
         }
 
-        self::setValueArray($target, $first, $segments, $value, $overwrite);
+        self::setValueArray($target, $segment, $segments, 1, $value, $overwrite);
     }
 
     /**
@@ -206,15 +197,22 @@ class DotNotation
      * @param array<array-key, mixed> &$target
      * @param array<int, string> $segments
      */
-    private static function setValueArray(array &$target, string $segment, array $segments, mixed $value, bool $overwrite): void
-    {
+    private static function setValueArray(
+        array &$target,
+        string $segment,
+        array $segments,
+        int $position,
+        mixed $value,
+        bool $overwrite,
+    ): void {
         $segment = self::unescapeSegment($segment);
 
-        if (!empty($segments)) {
+        if ($position < count($segments)) {
             if (!ArraySingle::exists($target, $segment)) {
                 $target[$segment] = [];
             }
-            self::setValueBySegments($target[$segment], $segments, $value, $overwrite);
+
+            self::setValueBySegments($target[$segment], $segments, $position, $value, $overwrite);
         } else {
             if ($overwrite || !ArraySingle::exists($target, $segment)) {
                 $target[$segment] = $value;
@@ -225,29 +223,36 @@ class DotNotation
     /**
      * @param array<int, string> $segments
      */
-    private static function setValueBySegments(mixed &$target, array $segments, mixed $value, bool $overwrite): void
-    {
-        if ($segments === []) {
+    private static function setValueBySegments(
+        mixed &$target,
+        array $segments,
+        int $position,
+        mixed $value,
+        bool $overwrite,
+    ): void {
+        if ($position >= count($segments)) {
             return;
         }
 
-        $first = self::shiftSegment($segments);
-        if ($first === null) {
-            return;
-        }
+        $segment = $segments[$position];
+        $next = $position + 1;
 
-        if ($first === '*') {
-            self::handleWildcardSet($target, $segments, $value, $overwrite);
+        if ($segment === '*') {
+            if (!is_array($target)) {
+                $target = [];
+            }
+
+            self::handleWildcardSet($target, $segments, $next, $value, $overwrite);
 
             return;
         }
 
         if (is_array($target)) {
-            self::setValueArray($target, $first, $segments, $value, $overwrite);
+            self::setValueArray($target, $segment, $segments, $next, $value, $overwrite);
         } elseif (is_object($target)) {
-            self::setValueObject($target, $first, $segments, $value, $overwrite);
+            self::setValueObject($target, $segment, $segments, $next, $value, $overwrite);
         } else {
-            self::setValueFallback($target, $first, $segments, $value, $overwrite);
+            self::setValueFallback($target, $segment, $segments, $next, $value, $overwrite);
         }
     }
 
@@ -256,12 +261,18 @@ class DotNotation
      *
      * @param array<int, string> $segments
      */
-    private static function setValueFallback(mixed &$target, string $segment, array $segments, mixed $value, bool $overwrite): void
-    {
+    private static function setValueFallback(
+        mixed &$target,
+        string $segment,
+        array $segments,
+        int $position,
+        mixed $value,
+        bool $overwrite,
+    ): void {
         $segment = self::unescapeSegment($segment);
         $target = [];
-        if (!empty($segments)) {
-            self::setValueBySegments($target[$segment], $segments, $value, $overwrite);
+        if ($position < count($segments)) {
+            self::setValueBySegments($target[$segment], $segments, $position, $value, $overwrite);
         } elseif ($overwrite) {
             $target[$segment] = $value;
         }
@@ -272,36 +283,28 @@ class DotNotation
      *
      * @param array<int, string> $segments
      */
-    private static function setValueObject(object &$target, string $segment, array $segments, mixed $value, bool $overwrite): void
-    {
+    private static function setValueObject(
+        object &$target,
+        string $segment,
+        array $segments,
+        int $position,
+        mixed $value,
+        bool $overwrite,
+    ): void {
         $segment = self::unescapeSegment($segment);
         $propertyExists = property_exists($target, $segment);
 
-        if (!empty($segments)) {
+        if ($position < count($segments)) {
             if (!$propertyExists) {
                 $target->{$segment} = [];
             }
-            self::setValueBySegments($target->{$segment}, $segments, $value, $overwrite);
+
+            self::setValueBySegments($target->{$segment}, $segments, $position, $value, $overwrite);
         } else {
             if ($overwrite || !$propertyExists) {
                 $target->{$segment} = $value;
             }
         }
-    }
-
-    /**
-     * @param array<int, string> $segments
-     */
-    private static function shiftSegment(array &$segments): ?string
-    {
-        if ($segments === []) {
-            return null;
-        }
-
-        $segment = $segments[0] ?? null;
-        array_shift($segments);
-
-        return is_string($segment) ? $segment : null;
     }
 
     /**

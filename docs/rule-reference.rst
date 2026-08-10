@@ -197,7 +197,7 @@ ArraySingle
     public static function isNegative(array $array): bool
     public static function shuffle(array $array, ?int $seed = null): array
     public static function isInt(array $array): bool
-    public static function nonEmpty(array $array): array
+    public static function nonEmpty(array $array, bool $preserveKeys = false): array
     public static function avg(array $array): float|int
     public static function isUnique(array $array): bool
     public static function positive(array $array): array
@@ -387,11 +387,6 @@ Collection uses ``BaseCollectionTrait``. Public API:
     public function offsetSet(mixed $offset, mixed $value): void
     public function offsetUnset(mixed $offset): void
     public function getIterator(): Traversable
-    public function current(): mixed
-    public function key(): string|int|null
-    public function next(): void
-    public function valid(): bool
-    public function rewind(): void
     public function count(): int
     public function jsonSerialize(): array
 
@@ -532,6 +527,7 @@ LazyFileConfig
 --------------------------------------
 
 LazyFileConfig loads top-level config files on first keyed access:
+Calling ``all()`` throws by design because lazy configuration requires a key.
 
 .. code-block:: php
 
@@ -549,7 +545,7 @@ LazyFileConfig loads top-level config files on first keyed access:
     public function namespaceCacheDirectory(): ?string
     public function warmNamespaceCache(string|array|null $namespaces = null): static
     public function flushNamespaceCache(string|array|null $namespaces = null): static
-    public function all(): array // throws (design choice)
+    public function all(): array
 
 Config Hook-Aware Variants
 --------------------------------------
