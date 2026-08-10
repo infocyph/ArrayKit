@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\Array;
 
+/** @internal */
 final class ArraySharedOps
 {
     public static function asString(mixed $value): string
@@ -51,7 +52,7 @@ final class ArraySharedOps
      */
     public static function every(array $array, callable $callback): bool
     {
-        return array_all($array, static fn(mixed $value, int|string $key): bool => (bool) $callback($value, $key));
+        return array_all($array, $callback);
     }
 
     public static function normalizeArrayKey(mixed $value): int|string

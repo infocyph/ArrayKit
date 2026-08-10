@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\Array;
 
+/** @internal */
 final class DotNotationPathOps
 {
     /**
@@ -29,6 +30,15 @@ final class DotNotationPathOps
         } catch (\Error) {
             return $missing;
         }
+    }
+
+    public static function escapePathSegment(string $segment): string
+    {
+        return str_replace(
+            ['\\', '.', '*', '{first}', '{last}'],
+            ['\\\\', '\\.', '\\*', '\\{first}', '\\{last}'],
+            $segment,
+        );
     }
 
     /**

@@ -7,8 +7,11 @@ namespace Infocyph\ArrayKit\Config\Concerns;
 use RuntimeException;
 use UnexpectedValueException;
 
+/** @internal */
 trait LazyFileConfigCacheTrait
 {
+    private const string CACHE_LOCK_FILE = '.arraykit-cache.lock';
+
     /**
      * @var array<string, scalar|null>
      */
@@ -27,22 +30,29 @@ trait LazyFileConfigCacheTrait
             return $this;
         }
 
-        if ($namespaces === null) {
-            $this->flushAllNamespaceCacheFiles();
+        if (!is_dir($this->namespaceCacheDirectory)) {
+            $this->flatLeafIndex = [];
+            $this->flatLeafIndexLoaded = false;
 
             return $this;
         }
 
-        foreach ($this->resolveWarmNamespaces($namespaces) as $namespace) {
-            $path = $this->cachedNamespacePath($namespace);
-            if ($path !== null && is_file($path)) {
-                unlink($path);
+        return $this->withNamespaceCacheLock(function () use ($namespaces): void {
+            if ($namespaces === null) {
+                $this->flushAllNamespaceCacheFiles();
+
+                return;
             }
-        }
 
-        $this->writeFlatLeafIndexFromCacheDirectory();
+            foreach ($this->resolveWarmNamespaces($namespaces) as $namespace) {
+                $path = $this->cachedNamespacePath($namespace);
+                if ($path !== null && is_file($path)) {
+                    unlink($path);
+                }
+            }
 
-        return $this;
+            $this->writeFlatLeafIndexFromCacheDirectory();
+        });
     }
 
     public function namespaceCache(?string $directory): static
@@ -75,24 +85,24 @@ trait LazyFileConfigCacheTrait
             throw new RuntimeException("Unable to create namespace cache directory [{$directory}].");
         }
 
-        foreach ($this->resolveWarmNamespaces($namespaces) as $namespace) {
-            $this->loadNamespace($namespace);
+        return $this->withNamespaceCacheLock(function () use ($namespaces): void {
+            foreach ($this->resolveWarmNamespaces($namespaces) as $namespace) {
+                $this->loadNamespace($namespace);
 
-            if (!array_key_exists($namespace, $this->items) || !is_array($this->items[$namespace])) {
-                throw new UnexpectedValueException("Lazy namespace [{$namespace}] must resolve to an array to be cached.");
+                if (!array_key_exists($namespace, $this->items) || !is_array($this->items[$namespace])) {
+                    throw new UnexpectedValueException("Lazy namespace [{$namespace}] must resolve to an array to be cached.");
+                }
+
+                $export = var_export($this->materializeCacheValue($this->items[$namespace]), true);
+                $path = $this->cachedNamespacePath($namespace);
+
+                if ($path === null || !$this->writeCacheFile($path, "<?php\n\nreturn {$export};\n")) {
+                    throw new RuntimeException("Unable to write namespace cache for [{$namespace}].");
+                }
             }
 
-            $export = var_export($this->materializeCacheValue($this->items[$namespace]), true);
-            $path = $this->cachedNamespacePath($namespace);
-
-            if ($path === null || !$this->writeCacheFile($path, "<?php\n\nreturn {$export};\n")) {
-                throw new RuntimeException("Unable to write namespace cache for [{$namespace}].");
-            }
-        }
-
-        $this->writeFlatLeafIndexFromCacheDirectory();
-
-        return $this;
+            $this->writeFlatLeafIndexFromCacheDirectory();
+        });
     }
 
     protected function cachedNamespacePath(string $namespace): ?string
@@ -111,6 +121,10 @@ trait LazyFileConfigCacheTrait
     protected function collectFlatLeafIndex(string $namespace, array $namespaceData, array &$index, string $prefix = ''): void
     {
         foreach ($namespaceData as $key => $value) {
+            if (!$this->isFlatPathSafeSegment((string) $key)) {
+                continue;
+            }
+
             $path = $prefix === ''
                 ? $namespace . '.' . $key
                 : $prefix . '.' . $key;
@@ -368,6 +382,14 @@ trait LazyFileConfigCacheTrait
         $this->flatLeafIndexLoaded = false;
     }
 
+    private function isFlatPathSafeSegment(string $segment): bool
+    {
+        return !str_contains($segment, '.')
+            && !str_contains($segment, '\\')
+            && !str_contains($segment, '*')
+            && !str_contains($segment, '{');
+    }
+
     private function isOwnedNamespaceCacheEntry(string $entry): bool
     {
         if ($entry === self::FLAT_INDEX_FILE) {
@@ -382,5 +404,34 @@ trait LazyFileConfigCacheTrait
         $namespace = substr($entry, 0, -strlen($suffix));
 
         return $namespace !== '' && preg_match('/^[A-Za-z0-9_-]+$/', $namespace) === 1;
+    }
+
+    /**
+     * Hold one exclusive lock across namespace writes/deletes and flat-index rebuilding.
+     */
+    private function withNamespaceCacheLock(\Closure $operation): static
+    {
+        $directory = $this->namespaceCacheDirectory;
+        if ($directory === null) {
+            throw new RuntimeException('Namespace cache directory is not configured.');
+        }
+
+        $lock = fopen($directory . DIRECTORY_SEPARATOR . self::CACHE_LOCK_FILE, 'c+');
+        if ($lock === false) {
+            throw new RuntimeException('Unable to open lazy-config cache lock.');
+        }
+
+        try {
+            if (!flock($lock, LOCK_EX)) {
+                throw new RuntimeException('Unable to acquire lazy-config cache lock.');
+            }
+
+            $operation();
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+
+        return $this;
     }
 }

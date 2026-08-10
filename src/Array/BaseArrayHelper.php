@@ -69,7 +69,7 @@ class BaseArrayHelper
     {
         $results = [];
 
-        if (is_callable($callback)) {
+        if (!is_string($callback) && is_callable($callback)) {
             foreach ($array as $key => $value) {
                 if (!(bool) $callback($value, $key)) {
                     $results[$key] = $value;
@@ -98,7 +98,7 @@ class BaseArrayHelper
     public static function findKey(array $array, callable $callback): int|string|null
     {
         foreach ($array as $key => $value) {
-            if ($callback($value, $key) === true) {
+            if ($callback($value, $key)) {
                 return $key;
             }
         }
@@ -171,7 +171,7 @@ class BaseArrayHelper
      */
     public static function haveAny(array $array, callable $callback): bool
     {
-        return array_any($array, fn($value, $key) => $callback($value, $key) === true);
+        return array_any($array, $callback);
     }
 
     /**
@@ -183,7 +183,7 @@ class BaseArrayHelper
      */
     public static function isAll(array $array, callable $callback): bool
     {
-        return array_all($array, fn($value, $key) => !($callback($value, $key) === false));
+        return array_all($array, $callback);
     }
 
     /**
@@ -198,8 +198,11 @@ class BaseArrayHelper
      */
     public static function isMultiDimensional(mixed $array): bool
     {
-        return is_array($array)
-            && count($array) !== count($array, COUNT_RECURSIVE);
+        if (!is_array($array)) {
+            return false;
+        }
+
+        return array_any($array, fn($value) => is_array($value));
     }
 
     /**
@@ -245,7 +248,7 @@ class BaseArrayHelper
      * Generate an array containing a sequence of numbers.
      *
      * This function creates an array of numbers starting from $start up to $end,
-     * incrementing by $step. If $step is zero, an empty array is returned.
+     * incrementing by $step.
      *
      * @param int $start The starting number of the sequence.
      * @param int $end The ending number of the sequence.
@@ -255,7 +258,7 @@ class BaseArrayHelper
     public static function range(int $start, int $end, int $step = 1): array
     {
         if ($step === 0) {
-            return [];
+            throw new InvalidArgumentException('Range step must not be zero.');
         }
 
         return range($start, $end, $step);

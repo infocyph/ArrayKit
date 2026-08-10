@@ -15,7 +15,10 @@ use Infocyph\ArrayKit\Collection\LazyCollection;
 use Infocyph\ArrayKit\Collection\Pipeline;
 use Infocyph\ArrayKit\Concerns\HookTrait;
 use Infocyph\ArrayKit\Config\Config;
+use Infocyph\ArrayKit\Config\EnvParser;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
+use Infocyph\ArrayKit\Config\Support\Environment;
+use Infocyph\ArrayKit\DTO\DTO;
 use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
 use Infocyph\ArrayKit\Facade\ModuleProxy;
 
@@ -35,6 +38,9 @@ it('keeps documented public signatures aligned with reflection', function () {
         'Config' => Config::class,
         'LazyFileConfig' => LazyFileConfig::class,
         'Config Hook-Aware Variants' => Config::class,
+        'EnvParser' => EnvParser::class,
+        'Environment' => Environment::class,
+        'DTO' => DTO::class,
         'DTOTrait' => DTOTrait::class,
         'HookTrait' => HookTrait::class,
         'LazyCollection' => LazyCollection::class,
@@ -113,6 +119,8 @@ it('keeps documented public signatures aligned with reflection', function () {
     expect($lines)->toBeArray();
 
     $activeClass = null;
+    $documentedMethods = [];
+    $documentedFunctions = [];
     foreach ($lines as $index => $line) {
         $nextLine = $lines[$index + 1] ?? '';
         if (preg_match('/^-{3,}$/', $nextLine) === 1) {
@@ -121,9 +129,36 @@ it('keeps documented public signatures aligned with reflection', function () {
             continue;
         }
 
+        if (preg_match('/^\s+function Infocyph\\\\ArrayKit\\\\(?<name>[A-Za-z_][A-Za-z0-9_]*)\((?<parameters>.*)\)(?:: (?<return>[^\/]+))?/', $line, $functionMatches) === 1) {
+            $functionName = 'Infocyph\\ArrayKit\\' . $functionMatches['name'];
+            $function = new ReflectionFunction($functionName);
+            $documentedFunctions[$functionName] = true;
+            $documentedParameters = trim($functionMatches['parameters']) === ''
+                ? []
+                : array_map($parseParameter, preg_split('/,\s*/', $functionMatches['parameters']));
+
+            expect($documentedParameters)->toHaveCount(count($function->getParameters()), $functionName)
+                ->and($reflectionType($function->getReturnType()))->toBe(
+                    $normalizeType(isset($functionMatches['return']) ? trim($functionMatches['return']) : null),
+                    $functionName . ' return type',
+                );
+
+            foreach ($function->getParameters() as $parameterIndex => $actual) {
+                $documented = $documentedParameters[$parameterIndex];
+                expect($documented['name'])->toBe($actual->getName(), $functionName)
+                    ->and($documented['type'])->toBe($reflectionType($actual->getType()), $functionName . ' $' . $actual->getName())
+                    ->and($documented['reference'])->toBe($actual->isPassedByReference(), $functionName . ' $' . $actual->getName())
+                    ->and($documented['hasDefault'])->toBe($actual->isDefaultValueAvailable(), $functionName . ' $' . $actual->getName());
+            }
+
+            continue;
+        }
+
         if ($activeClass === null || preg_match('/^\s+public (?<static>static )?function (?<name>[A-Za-z_][A-Za-z0-9_]*)\((?<parameters>.*)\)(?:: (?<return>[^\/]+))?/', $line, $matches) !== 1) {
             continue;
         }
+
+        $documentedMethods[$activeClass][$matches['name']] = true;
 
         $method = new ReflectionMethod($activeClass, $matches['name']);
         $declaringType = $method->getDeclaringClass()->getShortName();
@@ -164,4 +199,33 @@ it('keeps documented public signatures aligned with reflection', function () {
                 ->and($documented['default'])->toBe($actualDefault, $activeClass . '::' . $method->getName() . ' $' . $actual->getName());
         }
     }
+
+    foreach (array_unique(array_values($sections)) as $class) {
+        $reflection = new ReflectionClass($class);
+        $actualMethods = [];
+        foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+            if ($method->getDeclaringClass()->getName() === $reflection->getName()) {
+                $actualMethods[] = $method->getName();
+            }
+        }
+
+        $documented = array_keys($documentedMethods[$class] ?? []);
+        sort($actualMethods);
+        sort($documented);
+        expect($documented)->toBe($actualMethods, $class . ' documented method set');
+    }
+
+    $actualFunctions = [];
+    $helperPath = realpath(__DIR__ . '/../../src/namespaced-functions.php');
+    foreach (get_defined_functions()['user'] as $functionName) {
+        $function = new ReflectionFunction($functionName);
+        if ($function->getFileName() === $helperPath) {
+            $actualFunctions[] = $function->getName();
+        }
+    }
+
+    $documentedFunctionNames = array_keys($documentedFunctions);
+    sort($actualFunctions);
+    sort($documentedFunctionNames);
+    expect($documentedFunctionNames)->toBe($actualFunctions, 'Namespaced helper function set');
 });

@@ -17,6 +17,18 @@ class HookedCollection extends Collection
     use HookTrait;
 
     /**
+     * Create an isolated copy while retaining registered hooks.
+     */
+    #[\Override]
+    public function copy(): static
+    {
+        $copy = parent::copy();
+        $copy->hooks = $this->hooks;
+
+        return $copy;
+    }
+
+    /**
      * Gets an item at the given offset.
      *
      * Applies any "on get" hooks associated with that offset.

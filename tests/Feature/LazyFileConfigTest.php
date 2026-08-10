@@ -411,6 +411,83 @@ it('writes a flat leaf index containing only final scalar values', function () {
     ]);
 });
 
+it('excludes path-sensitive keys from the flat leaf index and falls back to namespace data', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'app', [
+        'safe' => 'indexed',
+        'literal.key' => 'namespace',
+        '*' => 'wildcard',
+        '{first}' => 'selector',
+    ]);
+
+    $config = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+    $config->warmNamespaceCache('app');
+
+    expect(lazyConfigFlatIndex($this->cachePath))->toBe(['app.safe' => 'indexed']);
+
+    $fresh = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+    expect($fresh->get('app.literal\\.key'))->toBe('namespace')
+        ->and($fresh->loaded('app'))->toBeTrue();
+});
+
+it('can atomically replace existing namespace and flat cache files', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'app', ['version' => 1]);
+    $config = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+    $config->warmNamespaceCache('app');
+
+    $config->replace(['app' => ['version' => 2]]);
+    $config->warmNamespaceCache('app');
+
+    $fresh = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+    expect($fresh->get('app.version'))->toBe(2)
+        ->and(lazyConfigFlatIndex($this->cachePath))->toBe(['app.version' => 2]);
+});
+
+it('keeps namespace and flat cache rebuilds coherent across two processes', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'app', ['version' => 1, 'name' => 'ArrayKit']);
+
+    $worker = <<<'PHP'
+require '__AUTOLOAD__';
+$config = new \Infocyph\ArrayKit\Config\LazyFileConfig('__CONFIG__', namespaceCacheDirectory: '__CACHE__');
+for ($index = 0; $index < 20; $index++) {
+    if (__FLUSH__) {
+        $config->flushNamespaceCache('app');
+    }
+    $config->warmNamespaceCache('app');
+}
+PHP;
+    $replacements = [
+        '__AUTOLOAD__' => addslashes(dirname(__DIR__, 2).DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'autoload.php'),
+        '__CONFIG__' => addslashes($this->configPath),
+        '__CACHE__' => addslashes($this->cachePath),
+    ];
+    $warmCode = strtr($worker, [...$replacements, '__FLUSH__' => 'false']);
+    $flushCode = strtr($worker, [...$replacements, '__FLUSH__' => 'true']);
+    $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+
+    $warm = proc_open([PHP_BINARY, '-r', $warmCode], $descriptors, $warmPipes);
+    $flush = proc_open([PHP_BINARY, '-r', $flushCode], $descriptors, $flushPipes);
+
+    expect(is_resource($warm))->toBeTrue()
+        ->and(is_resource($flush))->toBeTrue();
+
+    $warmError = stream_get_contents($warmPipes[2]);
+    $flushError = stream_get_contents($flushPipes[2]);
+    foreach ([...$warmPipes, ...$flushPipes] as $pipe) {
+        fclose($pipe);
+    }
+
+    expect(proc_close($warm))->toBe(0, $warmError)
+        ->and(proc_close($flush))->toBe(0, $flushError);
+
+    $fresh = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
+    expect($fresh->get('app.version'))->toBe(1)
+        ->and($fresh->get('app.name'))->toBe('ArrayKit')
+        ->and(lazyConfigFlatIndex($this->cachePath))->toBe([
+            'app.name' => 'ArrayKit',
+            'app.version' => 1,
+        ]);
+});
+
 it('can resolve exact scalar paths from the flat index when namespace structure is unavailable', function () {
     lazyConfigWriteArrayFile($this->configPath, 'db', [
         'host' => 'localhost',

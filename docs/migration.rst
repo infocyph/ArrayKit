@@ -30,7 +30,8 @@ Recent Additions
 Compatibility Notes
 -------------------
 
-- ``unWrap()`` is the current helper/pipeline method name.
+- ``wrap()`` and ``unWrap()`` remain array-helper methods but are no longer
+  exposed on ``Pipeline`` because pipeline state is always an array.
 - Pipeline methods are mutable by design: most transformation methods update the same collection instance and return it.
 - Use ``copy()`` or ``immutable()`` before pipeline operations when functional immutability is preferred.
 
@@ -47,6 +48,14 @@ Behavior Changes
 - ``Collection`` relies on ``IteratorAggregate``. Calls to the former manual
   pointer surface (``current()``, ``key()``, ``next()``, ``rewind()``, and
   ``valid()``) should be replaced with ``foreach`` or ``getIterator()``.
+- Plain dotted strings now consistently identify DotNotation paths across reads
+  and mutations. Escape literal dots (for example ``service\\.name``).
+- ``duplicates()`` now mirrors ``unique()`` with loose comparison by default and
+  an optional ``$strict`` flag.
+- Strings in ``string|callable`` row APIs always identify field names. Use a
+  closure or another non-string callable to select callback behavior.
+- Numeric selection and accumulation preserve integer precision instead of
+  coercing all values to ``float``.
 
 Recommended Upgrade Checklist
 -----------------------------

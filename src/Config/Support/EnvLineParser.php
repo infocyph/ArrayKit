@@ -200,7 +200,7 @@ final class EnvLineParser
     {
         $length = strlen($value);
         for ($index = 0; $index < $length; $index++) {
-            if ($value[$index] === '#' && $index > 0 && ctype_space($value[$index - 1])) {
+            if ($value[$index] === '#' && $index > 0 && str_contains(" \t\n\r\0\x0B", $value[$index - 1])) {
                 return substr($value, 0, $index);
             }
         }

@@ -7,6 +7,7 @@ namespace Infocyph\ArrayKit\Array\Concerns;
 use Infocyph\ArrayKit\Array\ArraySingle;
 use InvalidArgumentException;
 
+/** @internal */
 trait DotNotationPublicApiTrait
 {
     /**
@@ -189,7 +190,7 @@ trait DotNotationPublicApiTrait
             return false;
         }
 
-        if (is_string($keys) && ArraySingle::exists($array, $keys)) {
+        if (is_string($keys) && self::isDirectKey($keys) && ArraySingle::exists($array, $keys)) {
             return true;
         }
 
@@ -197,7 +198,7 @@ trait DotNotationPublicApiTrait
         $missing = self::missing();
         foreach ($keys as $key) {
             $resolvedKey = (string) $key;
-            if (ArraySingle::exists($array, $resolvedKey)) {
+            if (self::isDirectKey($resolvedKey) && ArraySingle::exists($array, $resolvedKey)) {
                 continue;
             }
             if (self::segmentExact($array, $resolvedKey, $missing) === $missing) {
@@ -359,8 +360,8 @@ trait DotNotationPublicApiTrait
         }
 
         $value = self::get($array, $from);
-        self::set($array, $to, $value, $overwrite);
         self::forget($array, $from);
+        self::set($array, $to, $value, $overwrite);
 
         return true;
     }

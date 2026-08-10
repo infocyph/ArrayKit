@@ -45,6 +45,10 @@ Use ``\\.`` inside a path segment to target literal key dots:
     DotNotation::set($data, 'service\\.env', 'prod');
     DotNotation::forget($data, 'service\\.env');
 
+Plain dotted strings always identify paths. Direct lookup is reserved for keys
+without path syntax, so reads and mutations resolve the same location even when
+both a literal dotted key and an equivalent nested path exist.
+
 Reading Multiple Keys
 ---------------------
 
@@ -79,6 +83,9 @@ Fill vs Set
     DotNotation::set($data, 'app.env', 'local');    // overwrite -> local
     DotNotation::fill($data, 'app.env', 'staging'); // does not overwrite
     DotNotation::fill($data, 'app.debug', true);    // writes
+
+If an intermediate segment is already a scalar, ``fill()`` leaves it unchanged;
+it does not replace existing data merely to create a deeper path.
 
 Object properties (including null-valued properties) are treated as existing
 when filling:
@@ -144,6 +151,12 @@ Forgetting Keys
 
     // Wildcard remove (all users.*.secret)
     DotNotation::forget($data, 'users.*.secret');
+
+    // Terminal wildcards clear every item at their target
+    DotNotation::forget($data, 'users.*');
+
+Forgetting an impossible child path never deletes its scalar parent. For example,
+``forget($data, 'a.b')`` leaves ``a`` unchanged when ``a`` is scalar.
 
 Wildcards and Special Segments in get()
 ---------------------------------------
@@ -258,7 +271,18 @@ Behavior Notes
 - Existing keys with ``null`` values return ``null`` (not the default).
 - Existing object properties with ``null`` values are also treated as present.
 - Missing integer keys return the provided default.
-- Defaults may be plain values or callables, and callables are only evaluated when path resolution fails.
+- Plain dotted strings are paths; escape a dot (``foo\\.bar``) to address a
+  literal dotted key.
+- ``get()``, ``set()``, ``fill()``, ``forget()``, ``rename()``, and ``move()``
+  share that path-resolution rule.
+- ``flatten()`` and ``paths()`` escape literal dots, backslashes, wildcards, and
+  ``{first}``/``{last}`` selectors, so ``expand(flatten($data))`` round-trips
+  those keys.
+- Object writes support ``stdClass`` additions, existing public writable
+  properties, and magic ``__set`` handlers. Missing ordinary properties and
+  inaccessible or readonly properties fail with ``InvalidArgumentException``.
+- Defaults may be plain values or ``Closure`` instances. Closures are evaluated
+  only when path resolution fails; other callable values are returned unchanged.
 - Wildcard traversal in ``get`` returns arrays of matched results.
 - ``set`` supports wildcards at any path depth, including multiple wildcards.
 - ``forget`` supports wildcard and nested removal across arrays.

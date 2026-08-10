@@ -238,6 +238,13 @@ Reading Values
     $hasAny = $config->hasAny(['missing.path', 'queue.driver']); // true
     $required = $config->getOrFail('app.name');               // throws if missing
 
+Defaults may be plain values or ``Closure`` instances. A closure is evaluated
+only when the requested key is missing; other callable values are returned as
+ordinary config values.
+
+Bulk ``getOrFail([...])`` validates every requested path individually. Existing
+``null`` values are valid; the first missing path raises ``OutOfBoundsException``.
+
 Typed Getters
 -------------
 
@@ -264,6 +271,10 @@ Single key:
     <?php
     $config->set('cache.driver', 'file');
     $config->set('db.port', 5432);
+
+``append()`` and ``prepend()`` create a list when the path is missing and modify
+an existing array. They throw ``InvalidArgumentException`` for scalar paths so
+existing data is never silently discarded.
 
 Bulk set:
 
@@ -318,7 +329,7 @@ Merging, Snapshots, and Read-Only Mode
     $config->snapshot('before-runtime');
 
     $config->merge(['app' => ['env' => 'production']]);   // deep merge
-    $config->overlay(['features' => ['beta' => true]]);   // top-level overlay
+    $config->overlay(['features' => ['beta' => true]]);   // recursive overlay
 
     $changed = $config->changed('before-runtime');         // true/false
     $config->restore('before-runtime');                    // rollback

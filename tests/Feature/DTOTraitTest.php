@@ -70,3 +70,28 @@ it('supports nested DTO hydration and deep export', function () {
         'address' => ['city' => 'Paris'],
     ]);
 });
+
+it('hydrates and exports only public instance properties', function () {
+    $dto = new class
+    {
+        use DTOTrait;
+
+        public static string $shared = 'original';
+
+        public ?string $nickname = 'before';
+
+        protected string $protectedValue = 'protected';
+
+        private string $privateValue = 'private';
+    };
+
+    $dto->hydrate([
+        'shared' => 'changed',
+        'nickname' => null,
+        'protectedValue' => 'changed',
+        'privateValue' => 'changed',
+    ], coerce: true);
+
+    expect($dto->toArray())->toBe(['nickname' => null])
+        ->and($dto::$shared)->toBe('original');
+});

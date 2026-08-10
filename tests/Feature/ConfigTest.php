@@ -51,6 +51,29 @@ it('supports getOrFail for required keys', function () {
         ->and(fn () => $cfg->getOrFail('app.missing'))->toThrow(\OutOfBoundsException::class);
 });
 
+it('validates every required key in bulk getOrFail calls', function () {
+    $cfg = new Config;
+    $cfg->loadArray(['app' => ['name' => 'ArrayKit', 'nullable' => null]]);
+
+    expect($cfg->getOrFail(['app.name', 'app.nullable']))->toBe([
+        'app.name' => 'ArrayKit',
+        'app.nullable' => null,
+    ])->and(fn () => $cfg->getOrFail(['app.name', 'app.missing']))
+        ->toThrow(OutOfBoundsException::class);
+});
+
+it('appends and prepends only to missing or array config values', function () {
+    $cfg = new Config;
+    $cfg->append('plugins', 'cache');
+    $cfg->prepend('plugins', 'auth');
+    $cfg->set('scalar', 'value');
+
+    expect($cfg->get('plugins'))->toBe(['auth', 'cache'])
+        ->and(fn () => $cfg->append('scalar', 'lost'))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => $cfg->prepend('scalar', 'lost'))->toThrow(InvalidArgumentException::class)
+        ->and($cfg->get('scalar'))->toBe('value');
+});
+
 it('supports typed getters with default fallbacks', function () {
     $cfg = new Config;
     $cfg->loadArray([

@@ -7,7 +7,6 @@ namespace Infocyph\ArrayKit;
 use Infocyph\ArrayKit\Array\DotNotation;
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Collection\Pipeline;
-use Infocyph\ArrayKit\Config\EnvParser;
 use Infocyph\ArrayKit\Config\Support\Environment;
 use Infocyph\ArrayKit\Facade\ModuleProxy;
 
@@ -73,6 +72,6 @@ if (!function_exists(__NAMESPACE__ . '\\env')) {
 if (!function_exists(__NAMESPACE__ . '\\dotenv')) {
     function dotenv(): ModuleProxy
     {
-        return new ModuleProxy(EnvParser::class);
+        return ArrayKit::dotenv();
     }
 }

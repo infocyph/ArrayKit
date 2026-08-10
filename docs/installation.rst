@@ -13,6 +13,7 @@ Requirements
 ArrayKit has the following requirements:
 
 * **PHP 8.4+**
+* **ext-hash** (used by collision-safe strict value-set acceleration)
 
 Autoload is PSR-4 based and loads namespaced helper functions from
 ``Infocyph\ArrayKit\*`` by default.

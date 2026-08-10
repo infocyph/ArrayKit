@@ -28,6 +28,60 @@ it('expands a dot-notation array back to nested structure', function () {
     ]);
 });
 
+it('round trips literal path-control characters through flatten and expand', function () {
+    $source = [
+        'service.name' => [
+            'path\\part' => [
+                '*' => ['{first}' => ['{last}' => 'value']],
+            ],
+        ],
+    ];
+
+    $flat = DotNotation::flatten($source);
+
+    expect(DotNotation::expand($flat))->toBe($source)
+        ->and(DotNotation::paths($source))->toBe(array_keys($flat));
+});
+
+it('writes only to supported object properties', function () {
+    $object = new class
+    {
+        public array $profile = [];
+
+        public readonly string $identifier;
+
+        private string $secret = 'hidden';
+
+        public function __construct()
+        {
+            $this->identifier = 'fixed';
+        }
+    };
+    $target = ['object' => $object, 'dynamic' => new stdClass];
+
+    DotNotation::set($target, 'object.profile.name', 'Ada');
+    DotNotation::set($target, 'dynamic.created', true);
+
+    expect($object->profile)->toBe(['name' => 'Ada'])
+        ->and($target['dynamic']->created)->toBeTrue()
+        ->and(fn () => DotNotation::set($target, 'object.secret', 'visible'))
+        ->toThrow(InvalidArgumentException::class)
+        ->and(fn () => DotNotation::set($target, 'object.missing', 'value'))
+        ->toThrow(InvalidArgumentException::class)
+        ->and(fn () => DotNotation::set($target, 'object.identifier', 'changed'))
+        ->toThrow(InvalidArgumentException::class);
+});
+
+it('renames overlapping parent and child paths without losing the captured value', function () {
+    $parentToChild = ['a' => ['b' => 1, 'c' => 2]];
+    $childToParent = ['a' => ['b' => 1, 'c' => 2]];
+
+    expect(DotNotation::rename($parentToChild, 'a', 'a.moved'))->toBeTrue()
+        ->and($parentToChild)->toBe(['a' => ['moved' => ['b' => 1, 'c' => 2]]])
+        ->and(DotNotation::move($childToParent, 'a.b', 'a'))->toBeTrue()
+        ->and($childToParent)->toBe(['a' => 1]);
+});
+
 it('gets a nested value with dot notation', function () {
     $array = ['db' => ['host' => 'localhost', 'port' => 3306]];
     expect(DotNotation::get($array, 'db.port'))
@@ -45,6 +99,69 @@ it('forgets a nested key with dot notation', function () {
     $array = ['user' => ['name' => 'Alice', 'email' => 'alice@example.com']];
     DotNotation::forget($array, 'user.email');
     expect($array)->toBe(['user' => ['name' => 'Alice']]);
+});
+
+it('uses dotted strings as paths and escaped dots as literal keys consistently', function () {
+    $array = [
+        'foo.bar' => 1,
+        'foo' => ['bar' => 2],
+    ];
+
+    expect(DotNotation::get($array, 'foo.bar'))->toBe(2)
+        ->and(DotNotation::get($array, 'foo\\.bar'))->toBe(1)
+        ->and(DotNotation::has($array, 'foo.bar'))->toBeTrue()
+        ->and(DotNotation::has($array, 'foo\\.bar'))->toBeTrue();
+
+    DotNotation::set($array, 'foo.bar', 3);
+    DotNotation::set($array, 'foo\\.bar', 4);
+
+    expect($array)->toBe([
+        'foo.bar' => 4,
+        'foo' => ['bar' => 3],
+    ]);
+
+    DotNotation::forget($array, 'foo.bar');
+    DotNotation::forget($array, 'foo\\.bar');
+
+    expect($array)->toBe(['foo' => []]);
+});
+
+it('does not remove or replace scalar parents when a nested path cannot be filled or forgotten', function () {
+    $array = ['a' => 'scalar'];
+
+    DotNotation::forget($array, 'a.b');
+    DotNotation::fill($array, 'a.b', 1);
+
+    expect($array)->toBe(['a' => 'scalar']);
+});
+
+it('forgets terminal wildcards at root and nested paths', function () {
+    $nested = [
+        'users' => [
+            ['name' => 'Alice'],
+            ['name' => 'Bob'],
+        ],
+        'meta' => true,
+    ];
+    DotNotation::forget($nested, 'users.*');
+
+    expect($nested)->toBe(['users' => [], 'meta' => true]);
+
+    DotNotation::forget($nested, '*');
+    expect($nested)->toBe([]);
+});
+
+it('renames the same path location that it reads', function () {
+    $array = [
+        'foo.bar' => 'literal',
+        'foo' => ['bar' => 'nested'],
+    ];
+
+    expect(DotNotation::rename($array, 'foo.bar', 'foo.baz'))->toBeTrue()
+        ->and($array)->toBe([
+            'foo.bar' => 'literal',
+            'foo' => ['baz' => 'nested'],
+        ]);
 });
 
 //
