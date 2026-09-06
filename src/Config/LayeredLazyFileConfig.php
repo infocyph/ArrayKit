@@ -42,7 +42,7 @@ class LayeredLazyFileConfig extends Config
         );
 
         foreach ([...array_keys($this->fallback), ...array_keys($this->overrides), ...$namespaces] as $namespace) {
-            if (is_string($namespace) && $namespace !== '') {
+            if ($namespace !== '') {
                 $this->knownNamespaces[$namespace] = true;
             }
         }
