@@ -141,9 +141,7 @@ trait LazyFileConfigCacheTrait
         }
     }
 
-    /**
-     * @return string[]
-     */
+    /** @return string[] */
     protected function discoverNamespaces(): array
     {
         $namespaces = [];
@@ -222,20 +220,20 @@ trait LazyFileConfigCacheTrait
         }
 
         $this->flatLeafIndex = [];
-
         $path = $this->flatLeafIndexPath();
-        if ($path === null || !is_file($path) || !is_readable($path)) {
-            $this->flatLeafIndexLoaded = true;
 
-            return;
+        if ($path !== null && is_file($path) && is_readable($path)) {
+            try {
+                $loaded = include $path;
+                if (is_array($loaded)) {
+                    $this->flatLeafIndex = $this->filterFlatLeafIndex($loaded);
+                }
+            } catch (\Throwable) {
+                // Generated flat indexes are disposable acceleration artifacts.
+                // A corrupt index is a cache miss; namespace/source loading remains authoritative.
+            }
         }
 
-        $loaded = include $path;
-        if (!is_array($loaded)) {
-            throw new UnexpectedValueException("Config file [{$path}] must return an array.");
-        }
-
-        $this->flatLeafIndex = $this->filterFlatLeafIndex($loaded);
         $this->flatLeafIndexLoaded = true;
     }
 
@@ -267,8 +265,8 @@ trait LazyFileConfigCacheTrait
         }
 
         $index = $this->buildFlatLeafIndexFromDirectory($directory);
-
         ksort($index);
+
         if (!$this->writeCacheFile($indexPath, "<?php\n\nreturn " . var_export($index, true) . ";\n")) {
             throw new RuntimeException('Unable to write flat lazy-config index cache.');
         }
@@ -277,9 +275,7 @@ trait LazyFileConfigCacheTrait
         $this->flatLeafIndexLoaded = true;
     }
 
-    /**
-     * @param array<string, scalar|null> $index
-     */
+    /** @param array<string, scalar|null> $index */
     private function addFlatLeafIndexValue(array &$index, string $path, mixed $value): void
     {
         if (
@@ -293,11 +289,10 @@ trait LazyFileConfigCacheTrait
         }
     }
 
-    /**
-     * @return array<string, scalar|null>
-     */
+    /** @return array<string, scalar|null> */
     private function buildFlatLeafIndexFromDirectory(string $directory): array
     {
+        /** @var array<string, scalar|null> $index */
         $index = [];
         $entries = scandir($directory);
         if ($entries === false) {
@@ -311,18 +306,20 @@ trait LazyFileConfigCacheTrait
             }
 
             $namespace = substr($entry, 0, -strlen($suffix));
-            if ($namespace === '') {
-                continue;
-            }
-
-            if (!preg_match('/^[A-Za-z0-9_-]+$/', $namespace)) {
+            if ($namespace === '' || preg_match('/^[A-Za-z0-9_-]+$/', $namespace) !== 1) {
                 continue;
             }
 
             $path = $directory . DIRECTORY_SEPARATOR . $entry;
-            $loaded = include $path;
+
+            try {
+                $loaded = include $path;
+            } catch (\Throwable) {
+                continue;
+            }
+
             if (!is_array($loaded)) {
-                throw new UnexpectedValueException("Config file [{$path}] must return an array.");
+                continue;
             }
 
             $this->collectFlatLeafIndex($namespace, $loaded, $index);
@@ -337,6 +334,7 @@ trait LazyFileConfigCacheTrait
      */
     private function filterFlatLeafIndex(array $loaded): array
     {
+        /** @var array<string, scalar|null> $index */
         $index = [];
 
         foreach ($loaded as $key => $value) {
@@ -363,11 +361,7 @@ trait LazyFileConfigCacheTrait
         $entries = scandir($directory);
         if ($entries !== false) {
             foreach ($entries as $entry) {
-                if ($entry === '.' || $entry === '..') {
-                    continue;
-                }
-
-                if (!$this->isOwnedNamespaceCacheEntry($entry)) {
+                if ($entry === '.' || $entry === '..' || !$this->isOwnedNamespaceCacheEntry($entry)) {
                     continue;
                 }
 
@@ -406,9 +400,6 @@ trait LazyFileConfigCacheTrait
         return $namespace !== '' && preg_match('/^[A-Za-z0-9_-]+$/', $namespace) === 1;
     }
 
-    /**
-     * Hold one exclusive lock across namespace writes/deletes and flat-index rebuilding.
-     */
     private function withNamespaceCacheLock(\Closure $operation): static
     {
         $directory = $this->namespaceCacheDirectory;

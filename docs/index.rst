@@ -25,6 +25,7 @@ Contents
     collection
     config
     lazy-config
+    config-layering
     traits-and-helpers
     migration
     rule-reference
