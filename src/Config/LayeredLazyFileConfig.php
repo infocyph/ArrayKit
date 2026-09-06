@@ -14,19 +14,13 @@ namespace Infocyph\ArrayKit\Config;
  */
 class LayeredLazyFileConfig extends Config
 {
-    /** @var array<string, mixed> */
-    private array $fallback;
+    private readonly ResilientLazyFileConfig $source;
 
     /** @var array<string, true> */
     private array $knownNamespaces = [];
 
     /** @var array<string, true> */
     private array $materializedNamespaces = [];
-
-    /** @var array<string, mixed> */
-    private array $overrides;
-
-    private ResilientLazyFileConfig $source;
 
     /**
      * @param array<string, mixed> $fallback
@@ -36,8 +30,8 @@ class LayeredLazyFileConfig extends Config
     public function __construct(
         string $directory,
         ?string $namespaceCacheDirectory = null,
-        array $fallback = [],
-        array $overrides = [],
+        private array $fallback = [],
+        private array $overrides = [],
         array $namespaces = [],
         string $extension = 'php',
     ) {
@@ -46,10 +40,8 @@ class LayeredLazyFileConfig extends Config
             extension: $extension,
             namespaceCacheDirectory: $namespaceCacheDirectory,
         );
-        $this->fallback = $fallback;
-        $this->overrides = $overrides;
 
-        foreach ([...array_keys($fallback), ...array_keys($overrides), ...$namespaces] as $namespace) {
+        foreach ([...array_keys($this->fallback), ...array_keys($this->overrides), ...$namespaces] as $namespace) {
             if (is_string($namespace) && $namespace !== '') {
                 $this->knownNamespaces[$namespace] = true;
             }

@@ -10,6 +10,11 @@ final class ConfigMerge
 {
     private function __construct() {}
 
+    public static function isMap(mixed $value): bool
+    {
+        return is_array($value) && !array_is_list($value);
+    }
+
     /**
      * Recursively overlay configuration maps while replacing list values atomically.
      *
@@ -57,10 +62,5 @@ final class ConfigMerge
         }
 
         return $merged;
-    }
-
-    public static function isMap(mixed $value): bool
-    {
-        return is_array($value) && !array_is_list($value);
     }
 }
