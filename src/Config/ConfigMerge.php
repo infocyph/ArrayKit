@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\Config;
 
-use InvalidArgumentException;
-
 final class ConfigMerge
 {
     private function __construct() {}
@@ -54,10 +52,6 @@ final class ConfigMerge
         $merged = [];
 
         foreach ($layers as $layer) {
-            if (!is_array($layer)) {
-                throw new InvalidArgumentException('Configuration merge layers must be arrays.');
-            }
-
             $merged = self::merge($merged, $layer);
         }
 
