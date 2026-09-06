@@ -21,8 +21,12 @@ final class Environment
         );
 
         $env = array_filter($_ENV, is_string(...), ARRAY_FILTER_USE_KEY);
+        $process = getenv();
+        $process = is_array($process)
+            ? array_filter($process, is_string(...), ARRAY_FILTER_USE_KEY)
+            : [];
 
-        return $env + $server;
+        return $env + $server + $process;
     }
 
     public static function get(?string $key = null, mixed $default = null): mixed
