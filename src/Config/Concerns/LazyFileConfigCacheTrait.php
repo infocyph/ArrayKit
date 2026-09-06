@@ -275,7 +275,7 @@ trait LazyFileConfigCacheTrait
         $this->flatLeafIndexLoaded = true;
     }
 
-    /** @param array<string, scalar|null> $index */
+    /** @param array<string, mixed> $index */
     private function addFlatLeafIndexValue(array &$index, string $path, mixed $value): void
     {
         if ($this->isCacheableLeafValue($value)) {
