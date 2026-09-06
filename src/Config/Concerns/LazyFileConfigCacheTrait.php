@@ -275,10 +275,16 @@ trait LazyFileConfigCacheTrait
         $this->flatLeafIndexLoaded = true;
     }
 
-    /** @param array<string, mixed> $index */
+    /** @param array<string, scalar|null> $index */
     private function addFlatLeafIndexValue(array &$index, string $path, mixed $value): void
     {
-        if ($this->isCacheableLeafValue($value)) {
+        if (
+            $value === null
+            || is_bool($value)
+            || is_int($value)
+            || is_float($value)
+            || is_string($value)
+        ) {
             $index[$path] = $value;
         }
     }
@@ -286,6 +292,7 @@ trait LazyFileConfigCacheTrait
     /** @return array<string, scalar|null> */
     private function buildFlatLeafIndexFromDirectory(string $directory): array
     {
+        /** @var array<string, scalar|null> $index */
         $index = [];
         $entries = scandir($directory);
         if ($entries === false) {
@@ -327,6 +334,7 @@ trait LazyFileConfigCacheTrait
      */
     private function filterFlatLeafIndex(array $loaded): array
     {
+        /** @var array<string, scalar|null> $index */
         $index = [];
 
         foreach ($loaded as $key => $value) {
