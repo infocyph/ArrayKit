@@ -80,65 +80,6 @@ class LazyFileConfig extends Config
         return DotNotation::has($this->items[$namespace], $rest);
     }
 
-    protected function invalidateGeneratedNamespaceState(): void
-    {
-        foreach ($this->loadedNamespaceOrigins as $namespace => $origin) {
-            if ($origin === 'cache') {
-                unset($this->items[$namespace]);
-            }
-
-            if ($origin === 'cache' || $origin === 'missing') {
-                unset($this->loadedNamespaces[$namespace], $this->loadedNamespaceOrigins[$namespace]);
-            }
-        }
-
-        $this->flushReadCache();
-    }
-
-    /**
-     * @return array<array-key, mixed>
-     */
-    protected function namespaceCacheWarmValue(string $namespace): array
-    {
-        if (
-            ($this->loadedNamespaceOrigins[$namespace] ?? null) === 'runtime'
-            && array_key_exists($namespace, $this->items)
-        ) {
-            $value = $this->items[$namespace];
-            if (!is_array($value)) {
-                throw new UnexpectedValueException("Lazy namespace [{$namespace}] must resolve to an array to be cached.");
-            }
-
-            return $value;
-        }
-
-        $sourceFile = $this->resolveNamespaceFile($namespace);
-        if ($sourceFile !== null) {
-            $value = include $sourceFile;
-            if (!is_array($value)) {
-                throw new UnexpectedValueException("Config file [{$sourceFile}] must return an array.");
-            }
-
-            return $value;
-        }
-
-        $cachedFile = $this->resolveCachedNamespaceFile($namespace);
-        if ($cachedFile !== null) {
-            $value = include $cachedFile;
-            if (!is_array($value)) {
-                throw new UnexpectedValueException("Config file [{$cachedFile}] must return an array.");
-            }
-
-            return $value;
-        }
-
-        if (array_key_exists($namespace, $this->items) && is_array($this->items[$namespace])) {
-            return $this->items[$namespace];
-        }
-
-        throw new UnexpectedValueException("Lazy namespace [{$namespace}] must resolve to an array to be cached.");
-    }
-
     protected function loadNamespace(string $namespace): void
     {
         if (isset($this->loadedNamespaces[$namespace])) {
