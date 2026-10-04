@@ -800,7 +800,8 @@ trait ArrayMultiQuerySortTrait
         return $lookup;
     }
 
-    private static function canTraverse(
+    private static function reserveSortNodes(
+        array $array,
         int $currentDepth,
         int &$visitedNodes,
         int $maxDepth,
@@ -815,14 +816,16 @@ trait ArrayMultiQuerySortTrait
             return false;
         }
 
-        $visitedNodes++;
-        if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
+        $requiredNodes = count($array);
+        if ($maxNodes > 0 && $requiredNodes > ($maxNodes - $visitedNodes)) {
             if ($throwOnTooDeep) {
                 throw new \RuntimeException('Recursive sort exceeded max node count.');
             }
 
             return false;
         }
+
+        $visitedNodes += $requiredNodes;
 
         return true;
     }
@@ -1251,23 +1254,32 @@ trait ArrayMultiQuerySortTrait
         int $maxNodes,
         bool $throwOnTooDeep,
     ): array {
-        if (!self::canTraverse($currentDepth, $visitedNodes, $maxDepth, $maxNodes, $throwOnTooDeep)) {
+        if (!self::reserveSortNodes(
+            $array,
+            $currentDepth,
+            $visitedNodes,
+            $maxDepth,
+            $maxNodes,
+            $throwOnTooDeep,
+        )) {
             return $array;
         }
 
         foreach ($array as &$value) {
-            if (is_array($value)) {
-                $value = self::sortRecursiveWithGuards(
-                    $value,
-                    $options,
-                    $descending,
-                    $currentDepth + 1,
-                    $visitedNodes,
-                    $maxDepth,
-                    $maxNodes,
-                    $throwOnTooDeep,
-                );
+            if (!is_array($value)) {
+                continue;
             }
+
+            $value = self::sortRecursiveWithGuards(
+                $value,
+                $options,
+                $descending,
+                $currentDepth + 1,
+                $visitedNodes,
+                $maxDepth,
+                $maxNodes,
+                $throwOnTooDeep,
+            );
         }
         unset($value);
 
