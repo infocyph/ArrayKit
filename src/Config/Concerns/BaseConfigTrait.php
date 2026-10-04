@@ -580,23 +580,113 @@ trait BaseConfigTrait
         return $this->resolveRawValue($key) !== $this->missingValueMarker();
     }
 
+    protected function isReadCacheSafePath(string $path): bool
+    {
+        if (
+            !str_contains($path, '.')
+            || str_contains($path, '\\')
+            || str_contains($path, '*')
+            || str_contains($path, '{')
+        ) {
+            return false;
+        }
+
+        $cursor = $this->items;
+        foreach (explode('.', $path) as $segment) {
+            if (!is_array($cursor)) {
+                return false;
+            }
+
+            if (!array_key_exists($segment, $cursor)) {
+                return true;
+            }
+
+            if (\ReflectionReference::fromArrayElement($cursor, $segment) !== null) {
+                return false;
+            }
+
+            $cursor = $cursor[$segment];
+        }
+
+        return $cursor === null || is_scalar($cursor);
+    }
+
     protected function materializeCacheValue(mixed $value): mixed
     {
-        if ($value instanceof EnvReference) {
-            return $this->materializeCacheValue($value->resolve());
-        }
+        $activeReferences = [];
+        $activeObjects = [];
 
-        if ($value instanceof \Closure) {
-            return $this->materializeCacheValue($value());
-        }
+        return $this->materializeCacheValueRecursive($value, $activeReferences, $activeObjects);
+    }
 
-        if (is_array($value)) {
-            foreach ($value as $key => $entry) {
-                $value[$key] = $this->materializeCacheValue($entry);
+    /**
+     * @param array<string, true> $activeReferences
+     * @param array<int, true> $activeObjects
+     */
+    private function materializeCacheValueRecursive(
+        mixed $value,
+        array &$activeReferences,
+        array &$activeObjects,
+    ): mixed {
+        if ($value instanceof EnvReference || $value instanceof \Closure) {
+            $objectId = spl_object_id($value);
+            if (isset($activeObjects[$objectId])) {
+                throw new UnexpectedValueException('Compiled configuration contains a cyclic deferred value.');
+            }
+
+            $activeObjects[$objectId] = true;
+
+            try {
+                $resolved = $value instanceof EnvReference ? $value->resolve() : $value();
+
+                return $this->materializeCacheValueRecursive($resolved, $activeReferences, $activeObjects);
+            } finally {
+                unset($activeObjects[$objectId]);
             }
         }
 
-        return $value;
+        if ($value instanceof \UnitEnum || $value === null || is_scalar($value)) {
+            return $value;
+        }
+
+        if (is_array($value)) {
+            $materialized = [];
+            foreach ($value as $key => $entry) {
+                $reference = \ReflectionReference::fromArrayElement($value, $key);
+                if ($reference === null) {
+                    $materialized[$key] = $this->materializeCacheValueRecursive(
+                        $entry,
+                        $activeReferences,
+                        $activeObjects,
+                    );
+
+                    continue;
+                }
+
+                $referenceId = bin2hex($reference->getId());
+                if (isset($activeReferences[$referenceId])) {
+                    throw new UnexpectedValueException('Compiled configuration contains a cyclic array reference.');
+                }
+
+                $activeReferences[$referenceId] = true;
+
+                try {
+                    $materialized[$key] = $this->materializeCacheValueRecursive(
+                        $entry,
+                        $activeReferences,
+                        $activeObjects,
+                    );
+                } finally {
+                    unset($activeReferences[$referenceId]);
+                }
+            }
+
+            return $materialized;
+        }
+
+        throw new UnexpectedValueException(
+            'Compiled configuration contains unsupported value type [' . get_debug_type($value) . '].',
+        );
     }
 
     protected function missingValueMarker(): object
@@ -626,7 +716,7 @@ trait BaseConfigTrait
                 : $this->missingValueMarker();
         }
 
-        if (!$this->readCacheEnabled) {
+        if (!$this->readCacheEnabled || !$this->isReadCacheSafePath($key)) {
             return DotNotation::get($this->items, $key, $this->missingValueMarker());
         }
 
@@ -648,13 +738,20 @@ trait BaseConfigTrait
 
     protected function writeCacheFile(string $path, string $contents): bool
     {
+        try {
+            token_get_all($contents, TOKEN_PARSE);
+        } catch (\ParseError $error) {
+            throw new UnexpectedValueException('Generated configuration cache contains invalid PHP syntax.', 0, $error);
+        }
+
         $directory = dirname($path);
         $temporaryPath = tempnam($directory, '.arraykit-');
         if ($temporaryPath === false) {
             return false;
         }
 
-        if (file_put_contents($temporaryPath, $contents, LOCK_EX) === false) {
+        $written = file_put_contents($temporaryPath, $contents, LOCK_EX);
+        if ($written !== strlen($contents)) {
             unlink($temporaryPath);
 
             return false;
