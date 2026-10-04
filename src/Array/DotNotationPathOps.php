@@ -157,13 +157,15 @@ final class DotNotationPathOps
     ): mixed {
         $segmentCount = count($segments);
         for ($index = $position; $index < $segmentCount; $index++) {
-            $segment = $segments[$index];
-
-            $visitedNodes++;
-            if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
-                return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max node count.');
+            if ($maxDepth > 0 && $currentDepth > $maxDepth) {
+                return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max depth.');
             }
 
+            if (!self::consumeTraversalNode($visitedNodes, $maxNodes, $throwOnTooDeep)) {
+                return $missing;
+            }
+
+            $segment = $segments[$index];
             if ($segment === '*') {
                 return self::traverseWildcard(
                     $target,
@@ -174,14 +176,10 @@ final class DotNotationPathOps
                     $maxDepth,
                     $maxNodes,
                     $throwOnTooDeep,
-                    $currentDepth,
+                    $currentDepth + 1,
                     $visitedNodes,
                     $index + 1,
                 );
-            }
-
-            if ($maxDepth > 0 && $currentDepth > $maxDepth) {
-                return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max depth.');
             }
 
             $normalized = self::normalizeSegment($segment, $target);
@@ -221,6 +219,23 @@ final class DotNotationPathOps
         }
 
         return $missing;
+    }
+
+    private static function consumeTraversalNode(
+        int &$visitedNodes,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+    ): bool {
+        $visitedNodes++;
+        if ($maxNodes <= 0 || $visitedNodes <= $maxNodes) {
+            return true;
+        }
+
+        if ($throwOnTooDeep) {
+            throw new \RuntimeException('Dot path traversal exceeded max node count.');
+        }
+
+        return false;
     }
 
     /**
@@ -307,20 +322,38 @@ final class DotNotationPathOps
 
         $result = [];
         foreach ($target as $item) {
-            $resolved = self::traverseGet(
-                $item,
-                $segments,
-                $default,
-                $missing,
-                $defaultResolver,
-                $maxDepth,
-                $maxNodes,
-                $throwOnTooDeep,
-                $currentDepth,
-                $visitedNodes,
-                $position,
-            );
-            $result[] = $resolved === $missing ? $defaultResolver($default) : $resolved;
+            if ($maxDepth > 0 && $currentDepth > $maxDepth) {
+                self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max depth.');
+
+                break;
+            }
+
+            if (!self::consumeTraversalNode($visitedNodes, $maxNodes, $throwOnTooDeep)) {
+                break;
+            }
+
+            if ($position >= count($segments)) {
+                $result[] = $item;
+            } else {
+                $resolved = self::traverseGet(
+                    $item,
+                    $segments,
+                    $default,
+                    $missing,
+                    $defaultResolver,
+                    $maxDepth,
+                    $maxNodes,
+                    $throwOnTooDeep,
+                    $currentDepth,
+                    $visitedNodes,
+                    $position,
+                );
+                $result[] = $resolved === $missing ? $defaultResolver($default) : $resolved;
+            }
+
+            if ($maxNodes > 0 && $visitedNodes >= $maxNodes) {
+                break;
+            }
         }
 
         if (self::hasWildcardFrom($segments, $position)) {
