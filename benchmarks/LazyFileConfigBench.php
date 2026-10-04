@@ -58,29 +58,29 @@ final class LazyFileConfigBench
 
     public function tearDown(): void
     {
-        foreach (['app.php', '__flat.php'] as $file) {
-            $cachePath = $this->cacheDirectory . DIRECTORY_SEPARATOR . $file;
-            if (is_file($cachePath)) {
-                unlink($cachePath);
+        $remove = static function (string $path) use (&$remove): void {
+            if (is_file($path)) {
+                unlink($path);
+
+                return;
             }
-        }
 
-        $sourcePath = $this->sourceDirectory . DIRECTORY_SEPARATOR . 'app.php';
-        if (is_file($sourcePath)) {
-            unlink($sourcePath);
-        }
+            if (!is_dir($path)) {
+                return;
+            }
 
-        if (is_dir($this->cacheDirectory)) {
-            rmdir($this->cacheDirectory);
-        }
-        if (is_dir($this->sourceDirectory)) {
-            rmdir($this->sourceDirectory);
-        }
+            foreach (scandir($path) ?: [] as $entry) {
+                if ($entry === '.' || $entry === '..') {
+                    continue;
+                }
 
-        $base = dirname($this->sourceDirectory);
-        if (is_dir($base)) {
-            rmdir($base);
-        }
+                $remove($path . DIRECTORY_SEPARATOR . $entry);
+            }
+
+            rmdir($path);
+        };
+
+        $remove(dirname($this->sourceDirectory));
     }
 
     public function benchAlreadyLoadedNamespace(): void
