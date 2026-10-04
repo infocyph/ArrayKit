@@ -633,5 +633,4 @@ trait LazyFileConfigCacheTrait
             throw new RuntimeException('Unable to publish lazy-config generation pointer.');
         }
     }
-
 }
