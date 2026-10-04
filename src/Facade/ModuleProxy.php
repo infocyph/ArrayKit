@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Facade;
 
 use BadMethodCallException;
+use UnexpectedValueException;
 
 final readonly class ModuleProxy
 {
@@ -21,15 +22,6 @@ final readonly class ModuleProxy
     public function __call(string $method, array $arguments): mixed
     {
         return $this->invoke($method, $arguments);
-    }
-
-    /**
-     * @param array<array-key, mixed> $array
-     * @param array<array-key, mixed>|string|null $keys
-     */
-    public function set(array &$array, array|string|null $keys = null, mixed $value = null, bool $overwrite = true): bool
-    {
-        return $this->invoke('set', [&$array, $keys, $value, $overwrite]);
     }
 
     /**
@@ -53,17 +45,9 @@ final readonly class ModuleProxy
     /**
      * @param array<array-key, mixed> $array
      */
-    public function rename(array &$array, string $from, string $to, bool $overwrite = true): bool
-    {
-        return $this->invoke('rename', [&$array, $from, $to, $overwrite]);
-    }
-
-    /**
-     * @param array<array-key, mixed> $array
-     */
     public function move(array &$array, string $from, string $to, bool $overwrite = true): bool
     {
-        return $this->invoke('move', [&$array, $from, $to, $overwrite]);
+        return $this->invokeBool('move', [&$array, $from, $to, $overwrite]);
     }
 
     /**
@@ -83,6 +67,23 @@ final readonly class ModuleProxy
     }
 
     /**
+     * @param array<array-key, mixed> $array
+     */
+    public function rename(array &$array, string $from, string $to, bool $overwrite = true): bool
+    {
+        return $this->invokeBool('rename', [&$array, $from, $to, $overwrite]);
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     * @param array<array-key, mixed>|string|null $keys
+     */
+    public function set(array &$array, array|string|null $keys = null, mixed $value = null, bool $overwrite = true): bool
+    {
+        return $this->invokeBool('set', [&$array, $keys, $value, $overwrite]);
+    }
+
+    /**
      * @param array<int, mixed> $arguments
      */
     private function invoke(string $method, array $arguments): mixed
@@ -92,5 +93,18 @@ final readonly class ModuleProxy
         }
 
         return $this->targetClass::$method(...$arguments);
+    }
+
+    /**
+     * @param array<int, mixed> $arguments
+     */
+    private function invokeBool(string $method, array $arguments): bool
+    {
+        $result = $this->invoke($method, $arguments);
+        if (!is_bool($result)) {
+            throw new UnexpectedValueException("Method {$this->targetClass}::{$method} must return bool.");
+        }
+
+        return $result;
     }
 }
