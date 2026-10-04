@@ -612,6 +612,4 @@ class ArrayMulti
 
         return false;
     }
-
 }
-
