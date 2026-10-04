@@ -5,12 +5,7 @@ declare(strict_types=1);
 use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
 use Infocyph\ArrayKit\Config\Support\Environment;
-
-
-enum BatchBCacheMode: string
-{
-    case Production = 'production';
-}
+use Infocyph\ArrayKit\Tests\Fixtures\ConfigMode;
 
 function batchBRemoveDirectory(string $path): void
 {
@@ -413,7 +408,7 @@ it('round-trips supported compiled-cache values including nulls and enums', func
         $config->loadArray([
             'app' => [
                 'enabled' => true,
-                'mode' => BatchBCacheMode::Production,
+                'mode' => ConfigMode::Prod,
                 'nullable' => null,
                 'ports' => [80, 443],
             ],
@@ -423,7 +418,7 @@ it('round-trips supported compiled-cache values including nulls and enums', func
             ->and(include $cache)->toBe([
                 'app' => [
                     'enabled' => true,
-                    'mode' => BatchBCacheMode::Production,
+                    'mode' => ConfigMode::Prod,
                     'nullable' => null,
                     'ports' => [80, 443],
                 ],
