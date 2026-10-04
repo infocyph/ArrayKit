@@ -251,6 +251,28 @@ trait LazyFileConfigCacheTrait
         }
     }
 
+    private function activeNamespaceCacheDirectory(): ?string
+    {
+        $root = $this->namespaceCacheDirectory;
+        if ($root === null || !is_dir($root)) {
+            return null;
+        }
+
+        $pointer = $this->generationPointerPath();
+        if ($pointer === null || !is_file($pointer) || !is_readable($pointer)) {
+            return $root;
+        }
+
+        $generation = trim((string) file_get_contents($pointer));
+        if (preg_match('/^\\.arraykit-gen-[a-f0-9]+$/', $generation) !== 1) {
+            return $root;
+        }
+
+        $directory = $root . DIRECTORY_SEPARATOR . $generation;
+
+        return is_dir($directory) ? $directory : $root;
+    }
+
     /** @return array<string, scalar|null> */
     private function buildFlatLeafIndexFromDirectory(string $directory): array
     {
@@ -293,28 +315,6 @@ trait LazyFileConfigCacheTrait
                 throw new RuntimeException("Unable to copy namespace cache for [{$namespace}].");
             }
         }
-    }
-
-    private function activeNamespaceCacheDirectory(): ?string
-    {
-        $root = $this->namespaceCacheDirectory;
-        if ($root === null || !is_dir($root)) {
-            return null;
-        }
-
-        $pointer = $this->generationPointerPath();
-        if ($pointer === null || !is_file($pointer) || !is_readable($pointer)) {
-            return $root;
-        }
-
-        $generation = trim((string) file_get_contents($pointer));
-        if (preg_match('/^\\.arraykit-gen-[a-f0-9]+$/', $generation) !== 1) {
-            return $root;
-        }
-
-        $directory = $root . DIRECTORY_SEPARATOR . $generation;
-
-        return is_dir($directory) ? $directory : $root;
     }
 
 
