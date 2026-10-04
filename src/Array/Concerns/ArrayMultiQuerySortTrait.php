@@ -800,7 +800,6 @@ trait ArrayMultiQuerySortTrait
         return $lookup;
     }
 
-
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
