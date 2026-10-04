@@ -65,27 +65,26 @@ class LayeredLazyFileConfig extends Config
     }
 
     #[\Override]
-    public function get(string|int|array|null $key = null, mixed $default = null): mixed
+    public function changed(string $snapshot = 'default'): bool
     {
-        if ($key === null) {
-            return $this->all();
-        }
+        $this->materializeKnownNamespaces();
 
-        return parent::get($key, $default);
+        return parent::changed($snapshot);
+    }
+
+    public function clearNamespaceCache(): static
+    {
+        $this->source->flushNamespaceCache();
+
+        return $this;
     }
 
     #[\Override]
-    public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
+    public function exportCache(string $path): bool
     {
-        if ($key === null) {
-            $this->materializeKnownNamespaces();
+        $this->materializeKnownNamespaces();
 
-            return parent::set($key, $value, $overwrite);
-        }
-
-        $this->materializeMutationTargets($key);
-
-        return parent::set($key, $value, $overwrite);
+        return parent::exportCache($path);
     }
 
     #[\Override]
@@ -105,17 +104,13 @@ class LayeredLazyFileConfig extends Config
     }
 
     #[\Override]
-    public function merge(array $items): bool
+    public function get(string|int|array|null $key = null, mixed $default = null): mixed
     {
-        $this->materializeMutationTargets($items);
+        if ($key === null) {
+            return $this->all();
+        }
 
-        return parent::merge($items);
-    }
-
-    #[\Override]
-    public function overlay(array $overlay): bool
-    {
-        return $this->merge($overlay);
+        return parent::get($key, $default);
     }
 
     #[\Override]
@@ -135,15 +130,22 @@ class LayeredLazyFileConfig extends Config
     }
 
     #[\Override]
-    public function replace(array $items): bool
+    public function merge(array $items): bool
     {
-        $result = parent::replace($items);
-        if ($result) {
-            $this->markAllKnownNamespacesMaterialized();
-            $this->registerNamespaces($items);
-        }
+        $this->materializeMutationTargets($items);
 
-        return $result;
+        return parent::merge($items);
+    }
+
+    public function namespaceCacheDirectory(): ?string
+    {
+        return $this->source->namespaceCacheDirectory();
+    }
+
+    #[\Override]
+    public function overlay(array $overlay): bool
+    {
+        return $this->merge($overlay);
     }
 
     #[\Override]
@@ -159,11 +161,15 @@ class LayeredLazyFileConfig extends Config
     }
 
     #[\Override]
-    public function snapshot(string $name = 'default'): bool
+    public function replace(array $items): bool
     {
-        $this->materializeKnownNamespaces();
+        $result = parent::replace($items);
+        if ($result) {
+            $this->markAllKnownNamespacesMaterialized();
+            $this->registerNamespaces($items);
+        }
 
-        return parent::snapshot($name);
+        return $result;
     }
 
     #[\Override]
@@ -179,31 +185,25 @@ class LayeredLazyFileConfig extends Config
     }
 
     #[\Override]
-    public function changed(string $snapshot = 'default'): bool
+    public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
-        $this->materializeKnownNamespaces();
+        if ($key === null) {
+            $this->materializeKnownNamespaces();
 
-        return parent::changed($snapshot);
+            return parent::set($key, $value, $overwrite);
+        }
+
+        $this->materializeMutationTargets($key);
+
+        return parent::set($key, $value, $overwrite);
     }
 
     #[\Override]
-    public function exportCache(string $path): bool
+    public function snapshot(string $name = 'default'): bool
     {
         $this->materializeKnownNamespaces();
 
-        return parent::exportCache($path);
-    }
-
-    public function clearNamespaceCache(): static
-    {
-        $this->source->flushNamespaceCache();
-
-        return $this;
-    }
-
-    public function namespaceCacheDirectory(): ?string
-    {
-        return $this->source->namespaceCacheDirectory();
+        return parent::snapshot($name);
     }
 
     /**
@@ -227,6 +227,13 @@ class LayeredLazyFileConfig extends Config
         $this->materializeNamespace($namespace);
 
         return parent::resolveRawValue($key);
+    }
+
+    private function markAllKnownNamespacesMaterialized(): void
+    {
+        foreach (array_keys($this->knownNamespaces) as $namespace) {
+            $this->materializedNamespaces[$namespace] = true;
+        }
     }
 
     private function materializeKnownNamespaces(): void
@@ -289,11 +296,13 @@ class LayeredLazyFileConfig extends Config
         $this->flushReadCache();
     }
 
-    private function markAllKnownNamespacesMaterialized(): void
+    private function namespaceFromPath(string $path): string
     {
-        foreach (array_keys($this->knownNamespaces) as $namespace) {
-            $this->materializedNamespaces[$namespace] = true;
-        }
+        $dot = strpos($path, '.');
+        $namespace = $dot === false ? $path : substr($path, 0, $dot);
+        $namespace = trim($namespace);
+
+        return $namespace === '' ? $path : $namespace;
     }
 
     /**
@@ -307,18 +316,5 @@ class LayeredLazyFileConfig extends Config
                 $this->materializedNamespaces[$namespace] = true;
             }
         }
-    }
-
-    private function namespaceFromPath(string $path): string
-    {
-        $dot = strpos($path, '.');
-        $namespace = $dot === false ? $path : substr($path, 0, $dot);
-        $namespace = trim($namespace);
-
-        if ($namespace === '') {
-            return $path;
-        }
-
-        return $namespace;
     }
 }
