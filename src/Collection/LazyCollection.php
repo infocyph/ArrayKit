@@ -227,7 +227,9 @@ final readonly class LazyCollection implements IteratorAggregate
         $sourceCursor = null;
         $sourceAdvancePending = false;
         $exhausted = false;
-        $sourceFailure = null;
+        $state = new class {
+            public ?\Throwable $failure = null;
+        };
 
         return static function () use (
             $source,
@@ -235,7 +237,7 @@ final readonly class LazyCollection implements IteratorAggregate
             &$sourceCursor,
             &$sourceAdvancePending,
             &$exhausted,
-            &$sourceFailure,
+            $state,
         ): Generator {
             $position = 0;
 
@@ -248,8 +250,8 @@ final readonly class LazyCollection implements IteratorAggregate
                     continue;
                 }
 
-                if ($sourceFailure instanceof \Throwable) {
-                    throw $sourceFailure;
+                if ($state->failure !== null) {
+                    throw $state->failure;
                 }
 
                 if ($exhausted) {
@@ -275,7 +277,7 @@ final readonly class LazyCollection implements IteratorAggregate
 
                     $entry = [$sourceCursor->key(), $sourceCursor->current()];
                 } catch (\Throwable $error) {
-                    $sourceFailure = $error;
+                    $state->failure = $error;
                     $sourceCursor = null;
                     $sourceAdvancePending = false;
 
