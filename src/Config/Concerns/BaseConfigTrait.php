@@ -18,6 +18,220 @@ trait BaseConfigTrait
 {
     private const int MAX_READ_CACHE_ENTRIES = 1024;
 
+    protected function assertWritable(): void
+    {
+        if ($this->readOnly) {
+            throw new RuntimeException('Configuration is read-only.');
+        }
+    }
+
+    protected function cacheResolvedValue(string $cacheKey, mixed $value): mixed
+    {
+        if (count($this->resolvedValueCache) >= self::MAX_READ_CACHE_ENTRIES) {
+            $this->resolvedValueCache = [];
+        }
+
+        return $this->resolvedValueCache[$cacheKey] = $value;
+    }
+
+    protected function getResolvedValue(int|string $key, mixed $default = null): mixed
+    {
+        $resolved = $this->resolveRawValue($key);
+
+        return $resolved === $this->missingValueMarker() ? $this->resolveDefault($default) : $resolved;
+    }
+
+    protected function hasResolvedValue(int|string $key): bool
+    {
+        return $this->resolveRawValue($key) !== $this->missingValueMarker();
+    }
+
+    protected function isReadCacheSafePath(string $path): bool
+    {
+        if (
+            !str_contains($path, '.')
+            || str_contains($path, '\\')
+            || str_contains($path, '*')
+            || str_contains($path, '{')
+        ) {
+            return false;
+        }
+
+        $cursor = $this->items;
+        foreach (explode('.', $path) as $segment) {
+            if (!is_array($cursor)) {
+                return false;
+            }
+
+            if (!array_key_exists($segment, $cursor)) {
+                return true;
+            }
+
+            if (\ReflectionReference::fromArrayElement($cursor, $segment) !== null) {
+                return false;
+            }
+
+            $cursor = $cursor[$segment];
+        }
+
+        return $cursor === null || is_scalar($cursor);
+    }
+
+    protected function materializeCacheValue(mixed $value): mixed
+    {
+        $activeReferences = [];
+        $activeObjects = [];
+
+        return $this->materializeCacheValueRecursive($value, $activeReferences, $activeObjects);
+    }
+
+    /**
+     * @param array<string, true> $activeReferences
+     * @param array<int, true> $activeObjects
+     */
+    private function materializeCacheValueRecursive(
+        mixed $value,
+        array &$activeReferences,
+        array &$activeObjects,
+    ): mixed {
+        if ($value instanceof EnvReference || $value instanceof \Closure) {
+            $objectId = spl_object_id($value);
+            if (isset($activeObjects[$objectId])) {
+                throw new UnexpectedValueException('Compiled configuration contains a cyclic deferred value.');
+            }
+
+            $activeObjects[$objectId] = true;
+
+            try {
+                $resolved = $value instanceof EnvReference ? $value->resolve() : $value();
+
+                return $this->materializeCacheValueRecursive($resolved, $activeReferences, $activeObjects);
+            } finally {
+                unset($activeObjects[$objectId]);
+            }
+        }
+
+        if ($value instanceof \UnitEnum || $value === null || is_scalar($value)) {
+            return $value;
+        }
+
+        if (is_array($value)) {
+            $materialized = [];
+            foreach ($value as $key => $entry) {
+                $reference = \ReflectionReference::fromArrayElement($value, $key);
+                if ($reference === null) {
+                    $materialized[$key] = $this->materializeCacheValueRecursive(
+                        $entry,
+                        $activeReferences,
+                        $activeObjects,
+                    );
+
+                    continue;
+                }
+
+                $referenceId = bin2hex($reference->getId());
+                if (isset($activeReferences[$referenceId])) {
+                    throw new UnexpectedValueException('Compiled configuration contains a cyclic array reference.');
+                }
+
+                $activeReferences[$referenceId] = true;
+
+                try {
+                    $materialized[$key] = $this->materializeCacheValueRecursive(
+                        $entry,
+                        $activeReferences,
+                        $activeObjects,
+                    );
+                } finally {
+                    unset($activeReferences[$referenceId]);
+                }
+            }
+
+            return $materialized;
+        }
+
+        throw new UnexpectedValueException(
+            'Compiled configuration contains unsupported value type [' . get_debug_type($value) . '].',
+        );
+    }
+
+    protected function missingValueMarker(): object
+    {
+        static $missing;
+
+        if (!is_object($missing)) {
+            $missing = new \stdClass();
+        }
+
+        return $missing;
+    }
+
+    protected function resolveDefault(mixed $default): mixed
+    {
+        return $default instanceof \Closure ? $default() : $default;
+    }
+
+    protected function resolveRawValue(int|string $key): mixed
+    {
+        if (
+            is_int($key)
+            || (!str_contains($key, '.') && !str_contains($key, '\\'))
+        ) {
+            return array_key_exists($key, $this->items)
+                ? $this->items[$key]
+                : $this->missingValueMarker();
+        }
+
+        if (!$this->readCacheEnabled || !$this->isReadCacheSafePath($key)) {
+            return DotNotation::get($this->items, $key, $this->missingValueMarker());
+        }
+
+        $cacheKey = $this->valueCacheKey($key);
+        if (array_key_exists($cacheKey, $this->resolvedValueCache)) {
+            return $this->resolvedValueCache[$cacheKey];
+        }
+
+        return $this->cacheResolvedValue(
+            $cacheKey,
+            DotNotation::get($this->items, $key, $this->missingValueMarker()),
+        );
+    }
+
+    protected function valueCacheKey(int|string $key): string
+    {
+        return is_int($key) ? 'i:' . $key : 's:' . $key;
+    }
+
+    protected function writeCacheFile(string $path, string $contents): bool
+    {
+        try {
+            token_get_all($contents, TOKEN_PARSE);
+        } catch (\ParseError $error) {
+            throw new UnexpectedValueException('Generated configuration cache contains invalid PHP syntax.', 0, $error);
+        }
+
+        $directory = dirname($path);
+        $temporaryPath = tempnam($directory, '.arraykit-');
+        if ($temporaryPath === false) {
+            return false;
+        }
+
+        $written = file_put_contents($temporaryPath, $contents, LOCK_EX);
+        if ($written !== strlen($contents)) {
+            unlink($temporaryPath);
+
+            return false;
+        }
+
+        if (rename($temporaryPath, $path)) {
+            return true;
+        }
+
+        unlink($temporaryPath);
+
+        return false;
+    }
+
     /**
      * @var array<array-key, mixed> Internal storage for config items
      */
@@ -550,219 +764,5 @@ trait BaseConfigTrait
         $this->snapshots[$name] = $this->items;
 
         return true;
-    }
-
-    protected function assertWritable(): void
-    {
-        if ($this->readOnly) {
-            throw new RuntimeException('Configuration is read-only.');
-        }
-    }
-
-    protected function cacheResolvedValue(string $cacheKey, mixed $value): mixed
-    {
-        if (count($this->resolvedValueCache) >= self::MAX_READ_CACHE_ENTRIES) {
-            $this->resolvedValueCache = [];
-        }
-
-        return $this->resolvedValueCache[$cacheKey] = $value;
-    }
-
-    protected function getResolvedValue(int|string $key, mixed $default = null): mixed
-    {
-        $resolved = $this->resolveRawValue($key);
-
-        return $resolved === $this->missingValueMarker() ? $this->resolveDefault($default) : $resolved;
-    }
-
-    protected function hasResolvedValue(int|string $key): bool
-    {
-        return $this->resolveRawValue($key) !== $this->missingValueMarker();
-    }
-
-    protected function isReadCacheSafePath(string $path): bool
-    {
-        if (
-            !str_contains($path, '.')
-            || str_contains($path, '\\')
-            || str_contains($path, '*')
-            || str_contains($path, '{')
-        ) {
-            return false;
-        }
-
-        $cursor = $this->items;
-        foreach (explode('.', $path) as $segment) {
-            if (!is_array($cursor)) {
-                return false;
-            }
-
-            if (!array_key_exists($segment, $cursor)) {
-                return true;
-            }
-
-            if (\ReflectionReference::fromArrayElement($cursor, $segment) !== null) {
-                return false;
-            }
-
-            $cursor = $cursor[$segment];
-        }
-
-        return $cursor === null || is_scalar($cursor);
-    }
-
-    protected function materializeCacheValue(mixed $value): mixed
-    {
-        $activeReferences = [];
-        $activeObjects = [];
-
-        return $this->materializeCacheValueRecursive($value, $activeReferences, $activeObjects);
-    }
-
-    /**
-     * @param array<string, true> $activeReferences
-     * @param array<int, true> $activeObjects
-     */
-    private function materializeCacheValueRecursive(
-        mixed $value,
-        array &$activeReferences,
-        array &$activeObjects,
-    ): mixed {
-        if ($value instanceof EnvReference || $value instanceof \Closure) {
-            $objectId = spl_object_id($value);
-            if (isset($activeObjects[$objectId])) {
-                throw new UnexpectedValueException('Compiled configuration contains a cyclic deferred value.');
-            }
-
-            $activeObjects[$objectId] = true;
-
-            try {
-                $resolved = $value instanceof EnvReference ? $value->resolve() : $value();
-
-                return $this->materializeCacheValueRecursive($resolved, $activeReferences, $activeObjects);
-            } finally {
-                unset($activeObjects[$objectId]);
-            }
-        }
-
-        if ($value instanceof \UnitEnum || $value === null || is_scalar($value)) {
-            return $value;
-        }
-
-        if (is_array($value)) {
-            $materialized = [];
-            foreach ($value as $key => $entry) {
-                $reference = \ReflectionReference::fromArrayElement($value, $key);
-                if ($reference === null) {
-                    $materialized[$key] = $this->materializeCacheValueRecursive(
-                        $entry,
-                        $activeReferences,
-                        $activeObjects,
-                    );
-
-                    continue;
-                }
-
-                $referenceId = bin2hex($reference->getId());
-                if (isset($activeReferences[$referenceId])) {
-                    throw new UnexpectedValueException('Compiled configuration contains a cyclic array reference.');
-                }
-
-                $activeReferences[$referenceId] = true;
-
-                try {
-                    $materialized[$key] = $this->materializeCacheValueRecursive(
-                        $entry,
-                        $activeReferences,
-                        $activeObjects,
-                    );
-                } finally {
-                    unset($activeReferences[$referenceId]);
-                }
-            }
-
-            return $materialized;
-        }
-
-        throw new UnexpectedValueException(
-            'Compiled configuration contains unsupported value type [' . get_debug_type($value) . '].',
-        );
-    }
-
-    protected function missingValueMarker(): object
-    {
-        static $missing;
-
-        if (!is_object($missing)) {
-            $missing = new \stdClass();
-        }
-
-        return $missing;
-    }
-
-    protected function resolveDefault(mixed $default): mixed
-    {
-        return $default instanceof \Closure ? $default() : $default;
-    }
-
-    protected function resolveRawValue(int|string $key): mixed
-    {
-        if (
-            is_int($key)
-            || (!str_contains($key, '.') && !str_contains($key, '\\'))
-        ) {
-            return array_key_exists($key, $this->items)
-                ? $this->items[$key]
-                : $this->missingValueMarker();
-        }
-
-        if (!$this->readCacheEnabled || !$this->isReadCacheSafePath($key)) {
-            return DotNotation::get($this->items, $key, $this->missingValueMarker());
-        }
-
-        $cacheKey = $this->valueCacheKey($key);
-        if (array_key_exists($cacheKey, $this->resolvedValueCache)) {
-            return $this->resolvedValueCache[$cacheKey];
-        }
-
-        return $this->cacheResolvedValue(
-            $cacheKey,
-            DotNotation::get($this->items, $key, $this->missingValueMarker()),
-        );
-    }
-
-    protected function valueCacheKey(int|string $key): string
-    {
-        return is_int($key) ? 'i:' . $key : 's:' . $key;
-    }
-
-    protected function writeCacheFile(string $path, string $contents): bool
-    {
-        try {
-            token_get_all($contents, TOKEN_PARSE);
-        } catch (\ParseError $error) {
-            throw new UnexpectedValueException('Generated configuration cache contains invalid PHP syntax.', 0, $error);
-        }
-
-        $directory = dirname($path);
-        $temporaryPath = tempnam($directory, '.arraykit-');
-        if ($temporaryPath === false) {
-            return false;
-        }
-
-        $written = file_put_contents($temporaryPath, $contents, LOCK_EX);
-        if ($written !== strlen($contents)) {
-            unlink($temporaryPath);
-
-            return false;
-        }
-
-        if (rename($temporaryPath, $path)) {
-            return true;
-        }
-
-        unlink($temporaryPath);
-
-        return false;
     }
 }
