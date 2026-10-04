@@ -55,8 +55,8 @@ trait LazyFileConfigCacheTrait
                 continue;
             }
 
-            if ($this->isCacheableLeafValue($value)) {
-                $this->addFlatLeafIndexValue($index, $path, $value);
+            if ($value === null || is_scalar($value)) {
+                $index[$path] = $value;
             }
         }
     }
@@ -109,6 +109,21 @@ trait LazyFileConfigCacheTrait
             : $this->missingValueMarker();
     }
 
+    protected function invalidateGeneratedNamespaceState(): void
+    {
+        foreach ($this->loadedNamespaceOrigins as $namespace => $origin) {
+            if ($origin === 'cache') {
+                unset($this->items[$namespace]);
+            }
+
+            if ($origin === 'cache' || $origin === 'missing') {
+                unset($this->loadedNamespaces[$namespace], $this->loadedNamespaceOrigins[$namespace]);
+            }
+        }
+
+        $this->flushReadCache();
+    }
+
     protected function isCacheableLeafValue(mixed $value): bool
     {
         return $value === null
@@ -153,6 +168,50 @@ trait LazyFileConfigCacheTrait
      * @param string|array<int, string>|null $namespaces
      * @return string[]
      */
+    /**
+     * @return array<array-key, mixed>
+     */
+    protected function namespaceCacheWarmValue(string $namespace): array
+    {
+        if (
+            ($this->loadedNamespaceOrigins[$namespace] ?? null) === 'runtime'
+            && array_key_exists($namespace, $this->items)
+        ) {
+            $value = $this->items[$namespace];
+            if (!is_array($value)) {
+                throw new UnexpectedValueException("Lazy namespace [{$namespace}] must resolve to an array to be cached.");
+            }
+
+            return $value;
+        }
+
+        $sourceFile = $this->resolveNamespaceFile($namespace);
+        if ($sourceFile !== null) {
+            $value = include $sourceFile;
+            if (!is_array($value)) {
+                throw new UnexpectedValueException("Config file [{$sourceFile}] must return an array.");
+            }
+
+            return $value;
+        }
+
+        $cachedFile = $this->resolveCachedNamespaceFile($namespace);
+        if ($cachedFile !== null) {
+            $value = include $cachedFile;
+            if (!is_array($value)) {
+                throw new UnexpectedValueException("Config file [{$cachedFile}] must return an array.");
+            }
+
+            return $value;
+        }
+
+        if (array_key_exists($namespace, $this->items) && is_array($this->items[$namespace])) {
+            return $this->items[$namespace];
+        }
+
+        throw new UnexpectedValueException("Lazy namespace [{$namespace}] must resolve to an array to be cached.");
+    }
+
     protected function resolveWarmNamespaces(string|array|null $namespaces): array
     {
         if ($namespaces === null) {
@@ -258,16 +317,6 @@ trait LazyFileConfigCacheTrait
         return is_dir($directory) ? $directory : $root;
     }
 
-    /**
-     * @param array<string, scalar|null> $index
-     */
-    private function addFlatLeafIndexValue(array &$index, string $path, mixed $value): void
-    {
-        if ($this->isCacheableLeafValue($value)) {
-            $index[$path] = $value;
-        }
-    }
-
 
 
 
@@ -316,7 +365,9 @@ trait LazyFileConfigCacheTrait
                 continue;
             }
 
-            $this->addFlatLeafIndexValue($index, $key, $value);
+            if ($value === null || is_scalar($value)) {
+                $index[$key] = $value;
+            }
         }
 
         return $index;
