@@ -376,20 +376,9 @@ class ArrayMulti
         return array_values($array);
     }
 
-    private static function traversalDepthAllowed(
-        int $currentDepth,
-        int $maxDepth,
-        bool $throwOnTooDeep,
-    ): bool {
-        if ($maxDepth <= 0 || $currentDepth <= $maxDepth) {
-            return true;
-        }
-
-        self::handleTraversalLimit($throwOnTooDeep, 'Array traversal exceeded max depth.');
-
-        return false;
-    }
-
+    /**
+     * @phpstan-impure
+     */
     private static function consumeTraversalNode(
         int &$visitedNodes,
         int $maxNodes,
@@ -445,48 +434,98 @@ class ArrayMulti
                 break;
             }
 
-            if (!is_array($item)) {
+            if (is_array($item)) {
+                self::flattenNestedGuarded(
+                    $item,
+                    $depth,
+                    $currentDepth,
+                    $visitedNodes,
+                    $maxDepth,
+                    $maxNodes,
+                    $throwOnTooDeep,
+                    $result,
+                );
+            } else {
                 $result[] = $item;
-
-                continue;
             }
 
-            if ($depth === 1) {
-                if (!self::traversalDepthAllowed($currentDepth + 1, $maxDepth, $throwOnTooDeep)) {
-                    break;
-                }
-
-                foreach ($item as $value) {
-                    if (!self::consumeTraversalNode($visitedNodes, $maxNodes, $throwOnTooDeep)) {
-                        break 2;
-                    }
-
-                    $result[] = $value;
-                }
-
-                continue;
-            }
-
-            $values = self::flattenIntoGuarded(
-                $item,
-                $depth - 1,
-                $currentDepth + 1,
-                $visitedNodes,
-                $maxDepth,
-                $maxNodes,
-                $throwOnTooDeep,
-            );
-
-            foreach ($values as $value) {
-                $result[] = $value;
-            }
-
-            if ($maxNodes > 0 && $visitedNodes >= $maxNodes) {
+            if (!$throwOnTooDeep && self::traversalBudgetExhausted($visitedNodes, $maxNodes)) {
                 break;
             }
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<array-key, mixed> $item
+     * @param array<int, mixed> $result
+     */
+    private static function flattenNestedGuarded(
+        array $item,
+        float|int $depth,
+        int $currentDepth,
+        int &$visitedNodes,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+        array &$result,
+    ): void {
+        if ($depth === 1) {
+            self::flattenOneLevelGuarded(
+                $item,
+                $currentDepth + 1,
+                $visitedNodes,
+                $maxDepth,
+                $maxNodes,
+                $throwOnTooDeep,
+                $result,
+            );
+
+            return;
+        }
+
+        foreach (self::flattenIntoGuarded(
+            $item,
+            $depth - 1,
+            $currentDepth + 1,
+            $visitedNodes,
+            $maxDepth,
+            $maxNodes,
+            $throwOnTooDeep,
+        ) as $value) {
+            $result[] = $value;
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $item
+     * @param array<int, mixed> $result
+     */
+    private static function flattenOneLevelGuarded(
+        array $item,
+        int $currentDepth,
+        int &$visitedNodes,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+        array &$result,
+    ): void {
+        if (!self::traversalDepthAllowed($currentDepth, $maxDepth, $throwOnTooDeep)) {
+            return;
+        }
+
+        foreach ($item as $value) {
+            if (!self::consumeTraversalNode($visitedNodes, $maxNodes, $throwOnTooDeep)) {
+                return;
+            }
+
+            $result[] = $value;
+
+            if (!$throwOnTooDeep && self::traversalBudgetExhausted($visitedNodes, $maxNodes)) {
+                return;
+            }
+        }
     }
 
     private static function handleTraversalLimit(bool $throwOnTooDeep, string $message): void
@@ -533,23 +572,21 @@ class ArrayMulti
                 break;
             }
 
-            if (!is_array($value) || $value === []) {
-                continue;
+            if (is_array($value) && $value !== []) {
+                $resolvedMaxDepth = max(
+                    $resolvedMaxDepth,
+                    self::measureDepthGuarded(
+                        $value,
+                        $currentDepth + 1,
+                        $visitedNodes,
+                        $maxDepth,
+                        $maxNodes,
+                        $throwOnTooDeep,
+                    ) + 1,
+                );
             }
 
-            $resolvedMaxDepth = max(
-                $resolvedMaxDepth,
-                self::measureDepthGuarded(
-                    $value,
-                    $currentDepth + 1,
-                    $visitedNodes,
-                    $maxDepth,
-                    $maxNodes,
-                    $throwOnTooDeep,
-                ) + 1,
-            );
-
-            if ($maxNodes > 0 && $visitedNodes >= $maxNodes) {
+            if (!$throwOnTooDeep && self::traversalBudgetExhausted($visitedNodes, $maxNodes)) {
                 break;
             }
         }
@@ -557,4 +594,24 @@ class ArrayMulti
         return $resolvedMaxDepth;
     }
 
+    private static function traversalBudgetExhausted(int $visitedNodes, int $maxNodes): bool
+    {
+        return $maxNodes > 0 && $visitedNodes >= $maxNodes;
+    }
+
+    private static function traversalDepthAllowed(
+        int $currentDepth,
+        int $maxDepth,
+        bool $throwOnTooDeep,
+    ): bool {
+        if ($maxDepth <= 0 || $currentDepth <= $maxDepth) {
+            return true;
+        }
+
+        self::handleTraversalLimit($throwOnTooDeep, 'Array traversal exceeded max depth.');
+
+        return false;
+    }
+
 }
+
