@@ -295,7 +295,7 @@ $row = ArrayShape::require(
 $config = new LazyFileConfig(__DIR__ . '/config', namespaceCacheDirectory: __DIR__ . '/bootstrap/cache/config');
 $config->warmNamespaceCache(['db', 'cache']);
 
-// Exact scalar leaf reads can hit bootstrap/cache/config/__flat.php first.
+// Exact scalar leaf reads can hit the active generation's .arraykit-flat.php first.
 $host = $config->get('db.host');
 ```
 
@@ -308,7 +308,7 @@ $host = $config->get('db.host');
 - `DotNotation` treats existing `null` keys/properties as present (does not fall back to defaults).
 - `DotNotation::hasWildcard()`, `paths()`, `matches()`, `rename()`, and `move()` are available for wildcard/path operations.
 - For untrusted/deep payloads, use bounded traversal variants: `DotNotation::getSafe()`, `ArrayMulti::depthGuarded()`, `flattenGuarded()`, and `sortRecursiveGuarded()`.
-- `LazyFileConfig` namespace cache writes one cache file per namespace plus a shared `__flat.php` file containing only final scalar/null leaf values for exact-key fast paths.
+- `LazyFileConfig` publishes immutable cache generations selected by `.arraykit-generation`; each generation contains namespace files plus `.arraykit-flat.php` for exact scalar/null fast paths.
 
 ## Security
 
