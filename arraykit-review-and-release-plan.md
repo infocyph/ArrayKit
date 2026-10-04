@@ -2,7 +2,7 @@
 
 Date: 2026-10-04 (Asia/Dhaka)
 
-Status: review complete; scope consolidated for a single 5.3.0 release; implementation and release acceptance remain open.
+Status: implementation in progress; Batch A (R01/R02/R03/R07) is implemented and awaiting PR workflow QA before closure.
 
 Reviewed revision: `fdeff013d2892383761aa8ddf2515acfc429d7fe`.
 Published baseline: **5.2.0**, source revision `053440b61071a17332b18879b12026f54a0ad144`.
@@ -224,6 +224,17 @@ Acceptance matrix: Runwire absent; installed/unbound; metadata-only; bound reque
 Implement the binding at `LazyCollection`'s existing iteration owner, with an additive immutable instance method that accepts the upstream context/request/scope objects and returns a bound collection. Forward the binding through derived lazy operations so checkpoints cover upstream consumption, including filtered-out items. Finalize method signatures and checkpoint defaults against the existing generics and measured workloads before freezing the 5.3.0 API. Keep static array helpers and cached facade proxies free of request bindings.
 
 Compare the direct binding against the existing factory-composition prototype for correctness, consumer complexity, fairness, cancellation and overhead. If a candidate design fails a gate, revise it within the 5.3.0 scope; do not split the release or claim acceptance from prototype feasibility alone.
+
+## Implementation tracker
+
+| Batch | Status | Evidence |
+| --- | --- | --- |
+| A — R01/R02/R03/R07 | In QA | Regression coverage and owner fixes committed on PR #35; workflow validation pending. |
+| B — R04/R05/R06/R08 | Pending | Starts only after Batch A QA is green and findings are revalidated. |
+| C — R09/R10/R11/R12 + I03 | Pending | Not started. |
+| D — I01/I02/I04/I05 | Pending | Not started. |
+| E — Runwire 2.1.1 integration | Pending | Not started. |
+| F — integrated release acceptance | Pending | Not started. |
 
 ## Implementation sequence
 
