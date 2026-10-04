@@ -10,26 +10,26 @@ use UnexpectedValueException;
 /** @internal */
 trait LazyFileConfigCacheTrait
 {
-private const string CACHE_FLAT_INDEX_FILE = '.arraykit-flat.php';
+    private const string CACHE_FLAT_INDEX_FILE = '.arraykit-flat.php';
 
-private const string CACHE_GENERATION_POINTER = '.arraykit-generation';
+    private const string CACHE_GENERATION_POINTER = '.arraykit-generation';
 
-private const string CACHE_GENERATION_PREFIX = '.arraykit-gen-';
+    private const string CACHE_GENERATION_PREFIX = '.arraykit-gen-';
 
-private const string CACHE_LOCK_FILE = '.arraykit-cache.lock';
+    private const string CACHE_LOCK_FILE = '.arraykit-cache.lock';
 
-private const string CACHE_STAGE_PREFIX = '.arraykit-stage-';
+    private const string CACHE_STAGE_PREFIX = '.arraykit-stage-';
 
-/**
+    /**
      * @var array<string, scalar|null>
      */
     protected array $flatLeafIndex = [];
 
-protected bool $flatLeafIndexLoaded = false;
+    protected bool $flatLeafIndexLoaded = false;
 
-protected ?string $namespaceCacheDirectory = null;
+    protected ?string $namespaceCacheDirectory = null;
 
-/**
+    /**
      * @param string|array<int, string>|null $namespaces
      */
     public function flushNamespaceCache(string|array|null $namespaces = null): static
@@ -60,7 +60,7 @@ protected ?string $namespaceCacheDirectory = null;
         return $this;
     }
 
-public function namespaceCache(?string $directory): static
+    public function namespaceCache(?string $directory): static
     {
         $this->invalidateGeneratedNamespaceState();
 
@@ -73,12 +73,12 @@ public function namespaceCache(?string $directory): static
         return $this;
     }
 
-public function namespaceCacheDirectory(): ?string
+    public function namespaceCacheDirectory(): ?string
     {
         return $this->namespaceCacheDirectory;
     }
 
-/**
+    /**
      * @param string|array<int, string>|null $namespaces
      */
     public function warmNamespaceCache(string|array|null $namespaces = null): static
@@ -105,7 +105,7 @@ public function namespaceCacheDirectory(): ?string
         return $this;
     }
 
-protected function cachedNamespacePath(string $namespace): ?string
+    protected function cachedNamespacePath(string $namespace): ?string
     {
         $directory = $this->activeNamespaceCacheDirectory();
         if ($directory === null) {
@@ -119,7 +119,7 @@ protected function cachedNamespacePath(string $namespace): ?string
         return $directory . DIRECTORY_SEPARATOR . $namespace . '.' . $this->extension;
     }
 
-/**
+    /**
      * @param array<array-key, mixed> $namespaceData
      * @param array<string, scalar|null> $index
      */
@@ -146,7 +146,7 @@ protected function cachedNamespacePath(string $namespace): ?string
         }
     }
 
-/** @return string[] */
+    /** @return string[] */
     protected function discoverNamespaces(): array
     {
         $namespaces = [];
@@ -171,7 +171,7 @@ protected function cachedNamespacePath(string $namespace): ?string
         return array_keys($namespaces);
     }
 
-protected function flatLeafIndexPath(): ?string
+    protected function flatLeafIndexPath(): ?string
     {
         $directory = $this->activeNamespaceCacheDirectory();
         if ($directory === null) {
@@ -181,7 +181,7 @@ protected function flatLeafIndexPath(): ?string
         return $directory . DIRECTORY_SEPARATOR . self::CACHE_FLAT_INDEX_FILE;
     }
 
-protected function flatLeafValue(string $path): mixed
+    protected function flatLeafValue(string $path): mixed
     {
         $this->loadFlatLeafIndex();
 
@@ -190,7 +190,7 @@ protected function flatLeafValue(string $path): mixed
             : $this->missingValueMarker();
     }
 
-protected function invalidateGeneratedNamespaceState(): void
+    protected function invalidateGeneratedNamespaceState(): void
     {
         foreach ($this->loadedNamespaceOrigins as $namespace => $origin) {
             if ($origin === 'cache') {
@@ -205,7 +205,7 @@ protected function invalidateGeneratedNamespaceState(): void
         $this->flushReadCache();
     }
 
-protected function isCacheableLeafValue(mixed $value): bool
+    protected function isCacheableLeafValue(mixed $value): bool
     {
         return $value === null
             || is_bool($value)
@@ -214,7 +214,7 @@ protected function isCacheableLeafValue(mixed $value): bool
             || is_string($value);
     }
 
-protected function isEligibleFlatLookupPath(string $path): bool
+    protected function isEligibleFlatLookupPath(string $path): bool
     {
         return str_contains($path, '.')
             && !str_contains($path, '*')
@@ -222,7 +222,7 @@ protected function isEligibleFlatLookupPath(string $path): bool
             && !str_contains($path, '{');
     }
 
-protected function loadFlatLeafIndex(): void
+    protected function loadFlatLeafIndex(): void
     {
         if ($this->flatLeafIndexLoaded) {
             return;
@@ -245,7 +245,7 @@ protected function loadFlatLeafIndex(): void
         $this->flatLeafIndexLoaded = true;
     }
 
-/**
+    /**
      * @return array<array-key, mixed>
      */
     protected function namespaceCacheWarmValue(string $namespace): array
@@ -289,7 +289,7 @@ protected function loadFlatLeafIndex(): void
         throw new UnexpectedValueException("Lazy namespace [{$namespace}] must resolve to an array to be cached.");
     }
 
-/**
+    /**
      * @param string|array<int, string>|null $namespaces
      * @return string[]
      */
@@ -307,7 +307,7 @@ protected function loadFlatLeafIndex(): void
         return array_values(array_unique($resolved));
     }
 
-private function activateGeneration(string $stage): void
+    private function activateGeneration(string $stage): void
     {
         $root = $this->namespaceCacheDirectory;
         if ($root === null) {
@@ -330,7 +330,7 @@ private function activateGeneration(string $stage): void
         }
     }
 
-private function activeNamespaceCacheDirectory(): ?string
+    private function activeNamespaceCacheDirectory(): ?string
     {
         $root = $this->namespaceCacheDirectory;
         if ($root === null || !is_dir($root)) {
@@ -352,7 +352,7 @@ private function activeNamespaceCacheDirectory(): ?string
         return is_dir($directory) ? $directory : $root;
     }
 
-/** @return array<string, scalar|null> */
+    /** @return array<string, scalar|null> */
     private function buildFlatLeafIndexFromDirectory(string $directory): array
     {
         $index = [];
@@ -372,7 +372,7 @@ private function activeNamespaceCacheDirectory(): ?string
         return $index;
     }
 
-/**
+    /**
      * @param array<string, true> $excluded
      */
     private function copyActiveNamespaceCacheFiles(string $stage, array $excluded): void
@@ -396,7 +396,7 @@ private function activeNamespaceCacheDirectory(): ?string
         }
     }
 
-private function createGenerationStage(): string
+    private function createGenerationStage(): string
     {
         $root = $this->namespaceCacheDirectory;
         if ($root === null) {
@@ -411,7 +411,7 @@ private function createGenerationStage(): string
         return $stage;
     }
 
-/**
+    /**
      * @param array<string, true> $namespaces
      */
     private function discoverNamespacesInDirectory(string $directory, array &$namespaces, bool $legacy): void
@@ -425,7 +425,7 @@ private function createGenerationStage(): string
         }
     }
 
-/**
+    /**
      * @param array<array-key, mixed> $loaded
      * @return array<string, scalar|null>
      */
@@ -446,14 +446,14 @@ private function createGenerationStage(): string
         return $index;
     }
 
-private function generationPointerPath(): ?string
+    private function generationPointerPath(): ?string
     {
         return $this->namespaceCacheDirectory === null
             ? null
             : $this->namespaceCacheDirectory . DIRECTORY_SEPARATOR . self::CACHE_GENERATION_POINTER;
     }
 
-private function isFlatPathSafeSegment(string $segment): bool
+    private function isFlatPathSafeSegment(string $segment): bool
     {
         return !str_contains($segment, '.')
             && !str_contains($segment, '\\')
@@ -461,7 +461,7 @@ private function isFlatPathSafeSegment(string $segment): bool
             && !str_contains($segment, '{');
     }
 
-/**
+    /**
      * @return array<int, array{0:string, 1:string}>
      */
     private function namespaceCacheEntries(string $directory, bool $legacy): array
@@ -497,7 +497,7 @@ private function isFlatPathSafeSegment(string $segment): bool
         return $resolved;
     }
 
-/**
+    /**
      * @param string[]|null $namespaces
      */
     private function publishFlushGeneration(?array $namespaces): void
@@ -520,7 +520,7 @@ private function isFlatPathSafeSegment(string $segment): bool
         }
     }
 
-/**
+    /**
      * @param string[] $namespaces
      */
     private function publishWarmGeneration(array $namespaces): void
@@ -554,7 +554,7 @@ private function isFlatPathSafeSegment(string $segment): bool
         }
     }
 
-private function removeGenerationDirectory(string $directory): void
+    private function removeGenerationDirectory(string $directory): void
     {
         foreach (scandir($directory) ?: [] as $entry) {
             if ($entry === '.' || $entry === '..') {
@@ -570,7 +570,7 @@ private function removeGenerationDirectory(string $directory): void
         rmdir($directory);
     }
 
-private function withNamespaceCacheLock(\Closure $operation): static
+    private function withNamespaceCacheLock(\Closure $operation): static
     {
         $directory = $this->namespaceCacheDirectory;
         if ($directory === null) {
@@ -596,7 +596,7 @@ private function withNamespaceCacheLock(\Closure $operation): static
         return $this;
     }
 
-private function writeGenerationFlatIndex(string $directory): void
+    private function writeGenerationFlatIndex(string $directory): void
     {
         $index = $this->buildFlatLeafIndexFromDirectory($directory);
         ksort($index);
@@ -607,7 +607,7 @@ private function writeGenerationFlatIndex(string $directory): void
         }
     }
 
-private function writeGenerationPointer(string $generation): void
+    private function writeGenerationPointer(string $generation): void
     {
         $path = $this->generationPointerPath();
         if ($path === null) {
