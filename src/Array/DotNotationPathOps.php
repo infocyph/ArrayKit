@@ -157,10 +157,6 @@ final class DotNotationPathOps
     ): mixed {
         $segmentCount = count($segments);
         for ($index = $position; $index < $segmentCount; $index++) {
-            if ($maxDepth > 0 && $currentDepth > $maxDepth) {
-                return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max depth.');
-            }
-
             if (!self::consumeTraversalNode($visitedNodes, $maxNodes, $throwOnTooDeep)) {
                 return $missing;
             }
@@ -180,6 +176,10 @@ final class DotNotationPathOps
                     $visitedNodes,
                     $index + 1,
                 );
+            }
+
+            if ($maxDepth > 0 && $currentDepth > $maxDepth) {
+                return self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max depth.');
             }
 
             $normalized = self::normalizeSegment($segment, $target);
@@ -212,15 +212,9 @@ final class DotNotationPathOps
         );
     }
 
-    private static function handleTraversalLimit(object $missing, bool $throwOnTooDeep, string $message): mixed
-    {
-        if ($throwOnTooDeep) {
-            throw new \RuntimeException($message);
-        }
-
-        return $missing;
-    }
-
+    /**
+     * @phpstan-impure
+     */
     private static function consumeTraversalNode(
         int &$visitedNodes,
         int $maxNodes,
@@ -236,6 +230,15 @@ final class DotNotationPathOps
         }
 
         return false;
+    }
+
+    private static function handleTraversalLimit(object $missing, bool $throwOnTooDeep, string $message): mixed
+    {
+        if ($throwOnTooDeep) {
+            throw new \RuntimeException($message);
+        }
+
+        return $missing;
     }
 
     /**
@@ -296,6 +299,50 @@ final class DotNotationPathOps
     }
 
     /**
+     * @param array<int, string> $segments
+     * @param callable(mixed): mixed $defaultResolver
+     */
+    private static function resolveWildcardItem(
+        mixed $item,
+        array $segments,
+        mixed $default,
+        object $missing,
+        callable $defaultResolver,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+        int $currentDepth,
+        int &$visitedNodes,
+        int $position,
+    ): mixed {
+        if ($maxDepth > 0 && $currentDepth > $maxDepth) {
+            self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max depth.');
+
+            return $defaultResolver($default);
+        }
+
+        if ($position >= count($segments)) {
+            return $item;
+        }
+
+        $resolved = self::traverseGet(
+            $item,
+            $segments,
+            $default,
+            $missing,
+            $defaultResolver,
+            $maxDepth,
+            $maxNodes,
+            $throwOnTooDeep,
+            $currentDepth,
+            $visitedNodes,
+            $position,
+        );
+
+        return $resolved === $missing ? $defaultResolver($default) : $resolved;
+    }
+
+    /**
      * Traverse a target array/object using dot-notation with wildcard support.
      *
      * @param array<int, string> $segments
@@ -322,44 +369,35 @@ final class DotNotationPathOps
 
         $result = [];
         foreach ($target as $item) {
-            if ($maxDepth > 0 && $currentDepth > $maxDepth) {
-                self::handleTraversalLimit($missing, $throwOnTooDeep, 'Dot path traversal exceeded max depth.');
-
-                break;
-            }
-
             if (!self::consumeTraversalNode($visitedNodes, $maxNodes, $throwOnTooDeep)) {
                 break;
             }
 
-            if ($position >= count($segments)) {
-                $result[] = $item;
-            } else {
-                $resolved = self::traverseGet(
-                    $item,
-                    $segments,
-                    $default,
-                    $missing,
-                    $defaultResolver,
-                    $maxDepth,
-                    $maxNodes,
-                    $throwOnTooDeep,
-                    $currentDepth,
-                    $visitedNodes,
-                    $position,
-                );
-                $result[] = $resolved === $missing ? $defaultResolver($default) : $resolved;
-            }
+            $result[] = self::resolveWildcardItem(
+                $item,
+                $segments,
+                $default,
+                $missing,
+                $defaultResolver,
+                $maxDepth,
+                $maxNodes,
+                $throwOnTooDeep,
+                $currentDepth,
+                $visitedNodes,
+                $position,
+            );
 
-            if ($maxNodes > 0 && $visitedNodes >= $maxNodes) {
+            if (!$throwOnTooDeep && $maxNodes > 0 && $visitedNodes >= $maxNodes) {
                 break;
             }
         }
 
         if (self::hasWildcardFrom($segments, $position)) {
-            $result = ArrayMulti::collapse($result);
+            return ArrayMulti::collapse($result);
         }
 
         return $result;
     }
+
 }
+
