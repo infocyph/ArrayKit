@@ -160,6 +160,8 @@ trait DotNotationPublicApiTrait
             return [];
         }
 
+        $visitedNodes = 0;
+
         if (is_array($keys)) {
             $results = [];
             foreach ($keys as $k) {
@@ -171,13 +173,26 @@ trait DotNotationPublicApiTrait
                     $maxDepth,
                     $maxNodes,
                     $throwOnTooDeep,
+                    $visitedNodes,
                 );
+
+                if ($maxNodes > 0 && $visitedNodes >= $maxNodes) {
+                    break;
+                }
             }
 
             return $results;
         }
 
-        return self::getValueSafe($array, $keys, $default, $maxDepth, $maxNodes, $throwOnTooDeep);
+        return self::getValueSafe(
+            $array,
+            $keys,
+            $default,
+            $maxDepth,
+            $maxNodes,
+            $throwOnTooDeep,
+            $visitedNodes,
+        );
     }
 
     /**
