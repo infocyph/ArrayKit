@@ -435,8 +435,11 @@ Compiled Cache + Read Memoization
     $host = $cached->get('db.host');
 
 When ``exportCache()`` writes the PHP cache file, ``Environment::ref()`` values
-and closures are recursively resolved first. The generated cache contains only
-the resolved values, not closures or reference objects.
+and closures are recursively resolved first. Export accepts scalar/null values,
+arrays of supported values, and enum cases. Unsupported objects/resources and
+cyclic value graphs raise ``UnexpectedValueException`` before publication, so an
+existing valid cache file is left intact. Generated PHP syntax is validated
+before the atomic rename.
 
 Method Summary
 --------------
@@ -458,10 +461,12 @@ Config methods:
 - ``readonly()``, ``isReadonly()``
 
 Read memoization is bounded to 1,024 resolved paths for predictable memory use
-in persistent workers. Plain top-level string and integer keys use direct array
-lookup instead of entering the path cache; nested, escaped, and wildcard paths
-remain memoized. Every mutation family, restore, and reload invalidates the
-memoized values.
+in persistent workers. Plain top-level keys use direct array lookup. Nested
+scalar/null paths through ordinary non-referenced arrays can be memoized;
+object-backed, referenced, escaped, wildcard, selector, and structural values
+are resolved live so externally mutable state cannot become stale. Every
+mutation family, restore, reload, and generated-cache source transition
+invalidates affected memoized values.
 
 Hook-aware methods:
 
