@@ -227,8 +227,16 @@ final readonly class LazyCollection implements IteratorAggregate
         $sourceCursor = null;
         $sourceAdvancePending = false;
         $exhausted = false;
+        $sourceFailure = null;
 
-        return static function () use ($source, &$cache, &$sourceCursor, &$sourceAdvancePending, &$exhausted): Generator {
+        return static function () use (
+            $source,
+            &$cache,
+            &$sourceCursor,
+            &$sourceAdvancePending,
+            &$exhausted,
+            &$sourceFailure,
+        ): Generator {
             $position = 0;
 
             while (true) {
@@ -240,6 +248,10 @@ final readonly class LazyCollection implements IteratorAggregate
                     continue;
                 }
 
+                if ($sourceFailure instanceof \Throwable) {
+                    throw $sourceFailure;
+                }
+
                 if ($exhausted) {
                     return;
                 }
@@ -248,18 +260,28 @@ final readonly class LazyCollection implements IteratorAggregate
                     yield from $source;
                 })();
 
-                if ($sourceAdvancePending) {
-                    $sourceCursor->next();
+                try {
+                    if ($sourceAdvancePending) {
+                        $sourceCursor->next();
+                        $sourceAdvancePending = false;
+                    }
+
+                    if (!$sourceCursor->valid()) {
+                        $exhausted = true;
+                        $sourceCursor = null;
+
+                        return;
+                    }
+
+                    $entry = [$sourceCursor->key(), $sourceCursor->current()];
+                } catch (\Throwable $error) {
+                    $sourceFailure = $error;
+                    $sourceCursor = null;
                     $sourceAdvancePending = false;
+
+                    throw $error;
                 }
 
-                if (!$sourceCursor->valid()) {
-                    $exhausted = true;
-
-                    return;
-                }
-
-                $entry = [$sourceCursor->key(), $sourceCursor->current()];
                 $cache[] = $entry;
                 $sourceAdvancePending = true;
 
