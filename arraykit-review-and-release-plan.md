@@ -2,7 +2,7 @@
 
 Date: 2026-10-04 (Asia/Dhaka)
 
-Status: implementation in progress; Batch A (R01/R02/R03/R07) is implemented and awaiting PR workflow QA before closure.
+Status: implementation in progress; Batch A (R01/R02/R03/R07) is complete and Batch B (R04/R05/R06/R08) is in progress.
 
 Reviewed revision: `fdeff013d2892383761aa8ddf2515acfc429d7fe`.
 Published baseline: **5.2.0**, source revision `053440b61071a17332b18879b12026f54a0ad144`.
@@ -229,8 +229,8 @@ Compare the direct binding against the existing factory-composition prototype fo
 
 | Batch | Status | Evidence |
 | --- | --- | --- |
-| A — R01/R02/R03/R07 | In QA | Regression coverage and owner fixes committed on PR #35; workflow validation pending. |
-| B — R04/R05/R06/R08 | Pending | Starts only after Batch A QA is green and findings are revalidated. |
+| A — R01/R02/R03/R07 | Complete | Expanded regressions pass; PHP 8.4/8.5 analysis, clean install, and all stable/lowest QA jobs are green in workflow run #89. |
+| B — R04/R05/R06/R08 | In progress | Cache/memo/export regressions and owner fixes are being implemented after Batch A closure. |
 | C — R09/R10/R11/R12 + I03 | Pending | Not started. |
 | D — I01/I02/I04/I05 | Pending | Not started. |
 | E — Runwire 2.1.1 integration | Pending | Not started. |
