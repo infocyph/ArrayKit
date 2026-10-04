@@ -149,6 +149,13 @@ Facade ModuleProxy
 
     public function __construct(private string $targetClass)
     public function __call(string $method, array $arguments): mixed
+    public function set(array &$array, array|string|null $keys = null, mixed $value = null, bool $overwrite = true): bool
+    public function fill(array &$array, array|string $keys, mixed $value = null): void
+    public function forget(array &$array, array|string|int|null $keys): void
+    public function rename(array &$array, string $from, string $to, bool $overwrite = true): bool
+    public function move(array &$array, string $from, string $to, bool $overwrite = true): bool
+    public function offsetSet(array &$array, string $key, mixed $value): void
+    public function offsetUnset(array &$array, string $key): void
 
 BaseArrayHelper
 ---------------------------------------
