@@ -185,3 +185,130 @@ it('replays failures before the first lazy yield', function () {
     expect(fn () => $lazy->all())->toThrow(RuntimeException::class, 'initial failure')
         ->and(fn () => $lazy->all())->toThrow(RuntimeException::class, 'initial failure');
 });
+
+it('enforces guarded array budgets at exact flat and cyclic boundaries', function () {
+    expect(ArrayMulti::flattenGuarded([1, 2], maxNodes: 2, throwOnTooDeep: true))->toBe([1, 2])
+        ->and(ArrayMulti::flattenGuarded(range(1, 100), maxNodes: 2))->toBe([1, 2])
+        ->and(fn () => ArrayMulti::depthGuarded(range(1, 100), maxNodes: 2, throwOnTooDeep: true))
+        ->toThrow(RuntimeException::class)
+        ->and(fn () => ArrayMulti::sortRecursiveGuarded([3, 2, 1], maxNodes: 2, throwOnTooDeep: true))
+        ->toThrow(RuntimeException::class)
+        ->and(ArrayMulti::sortRecursiveGuarded([3, 2, 1], maxNodes: 2))->toBe([3, 2, 1]);
+
+    $cycle = [];
+    $cycle['self'] = &$cycle;
+
+    expect(fn () => ArrayMulti::depthGuarded($cycle, maxNodes: 3, throwOnTooDeep: true))
+        ->toThrow(RuntimeException::class);
+});
+
+it('shares safe dot budgets across multiple requested paths', function () {
+    $data = [
+        'a' => ['value' => 1],
+        'b' => ['value' => 2],
+    ];
+
+    expect(DotNotation::getSafe(
+        $data,
+        ['a.value', 'b.value'],
+        'missing',
+        maxNodes: 3,
+    ))->toBe([
+        'a.value' => 1,
+        'b.value' => 'missing',
+    ])->and(fn () => DotNotation::getSafe(
+        $data,
+        ['a.value', 'b.value'],
+        'missing',
+        maxNodes: 3,
+        throwOnTooDeep: true,
+    ))->toThrow(RuntimeException::class);
+});
+
+it('treats non-positive safe traversal limits as unbounded', function () {
+    $data = ['one' => ['two' => ['three' => 'value']]];
+
+    expect(DotNotation::getSafe($data, 'one.two.three', maxDepth: 0, maxNodes: 0))->toBe('value')
+        ->and(DotNotation::getSafe($data, 'one.two.three', maxDepth: -1, maxNodes: -1))->toBe('value');
+});
+
+it('keeps full layered replacements authoritative over previously unknown source namespaces', function () {
+    $directory = sys_get_temp_dir() . '/arraykit-batch-a-' . bin2hex(random_bytes(5));
+    mkdir($directory, 0777, true);
+    file_put_contents($directory . '/app.php', "<?php\n\nreturn ['name' => 'source-app'];\n");
+    file_put_contents($directory . '/extra.php', "<?php\n\nreturn ['name' => 'source-extra'];\n");
+
+    try {
+        $config = new LayeredLazyFileConfig($directory, namespaces: ['app']);
+
+        expect($config->set(null, ['extra' => ['name' => 'caller-extra']]))->toBeTrue()
+            ->and($config->get('extra.name'))->toBe('caller-extra')
+            ->and($config->get('app.name', 'missing'))->toBe('missing');
+    } finally {
+        batchARemoveDirectory($directory);
+    }
+});
+
+it('keeps inherited layered mutations coherent before first read', function () {
+    $directory = sys_get_temp_dir() . '/arraykit-batch-a-' . bin2hex(random_bytes(5));
+    mkdir($directory, 0777, true);
+    file_put_contents(
+        $directory . '/app.php',
+        "<?php\n\nreturn ['name' => 'source', 'items' => ['middle'], 'remove' => true];\n",
+    );
+
+    try {
+        $config = new LayeredLazyFileConfig($directory, namespaces: ['app']);
+
+        expect($config->fill('app.debug', true))->toBeTrue()
+            ->and($config->append('app.items', 'last'))->toBeTrue()
+            ->and($config->prepend('app.items', 'first'))->toBeTrue()
+            ->and($config->forget('app.remove'))->toBeTrue()
+            ->and($config->get('app'))->toBe([
+                'name' => 'source',
+                'items' => ['first', 'middle', 'last'],
+                'debug' => true,
+            ]);
+    } finally {
+        batchARemoveDirectory($directory);
+    }
+});
+
+it('preserves named and offset facade mutations', function () {
+    $data = ['literal.key' => 'old', 'remove' => true];
+
+    expect(ArrayKit::dot()->set(array: $data, keys: 'literal\\.key', value: 'new'))->toBeTrue()
+        ->and($data['literal.key'])->toBe('new');
+
+    ArrayKit::dot()->offsetSet($data, 'added', 1);
+    ArrayKit::dot()->offsetUnset($data, 'remove');
+    ArrayKit::helper()->forget(array: $data, keys: 'added');
+
+    expect($data)->toBe(['literal.key' => 'new']);
+});
+
+it('allows successful lazy prefix replay while preserving a later terminal failure', function () {
+    $lazy = LazyCollection::from((function () {
+        yield 'first' => 1;
+        yield 'second' => 2;
+        throw new RuntimeException('later failure');
+    })());
+
+    expect(fn () => $lazy->all())->toThrow(RuntimeException::class, 'later failure')
+        ->and($lazy->take(2)->all())->toBe(['first' => 1, 'second' => 2])
+        ->and(fn () => $lazy->all())->toThrow(RuntimeException::class, 'later failure');
+});
+
+it('does not confuse lazy consumer callback failures with source failures', function () {
+    $lazy = LazyCollection::from((function () {
+        yield 1;
+        yield 2;
+    })());
+
+    expect(fn () => $lazy->mapLazy(
+        static fn (int $value): int => $value === 1
+            ? throw new RuntimeException('callback failure')
+            : $value,
+    )->all())->toThrow(RuntimeException::class, 'callback failure')
+        ->and($lazy->all())->toBe([1, 2]);
+});
