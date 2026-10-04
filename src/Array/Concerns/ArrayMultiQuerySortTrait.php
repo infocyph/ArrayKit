@@ -800,35 +800,6 @@ trait ArrayMultiQuerySortTrait
         return $lookup;
     }
 
-    private static function reserveSortNodes(
-        array $array,
-        int $currentDepth,
-        int &$visitedNodes,
-        int $maxDepth,
-        int $maxNodes,
-        bool $throwOnTooDeep,
-    ): bool {
-        if ($maxDepth > 0 && $currentDepth > $maxDepth) {
-            if ($throwOnTooDeep) {
-                throw new \RuntimeException('Recursive sort exceeded max depth.');
-            }
-
-            return false;
-        }
-
-        $requiredNodes = count($array);
-        if ($maxNodes > 0 && $requiredNodes > ($maxNodes - $visitedNodes)) {
-            if ($throwOnTooDeep) {
-                throw new \RuntimeException('Recursive sort exceeded max node count.');
-            }
-
-            return false;
-        }
-
-        $visitedNodes += $requiredNodes;
-
-        return true;
-    }
 
     /**
      * @param array<array-key, mixed> $array
@@ -1157,6 +1128,39 @@ trait ArrayMultiQuerySortTrait
         throw new InvalidArgumentException(
             $operation . ' derived key must be an integer or string; ' . get_debug_type($value) . ' given.',
         );
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     */
+    private static function reserveSortNodes(
+        array $array,
+        int $currentDepth,
+        int &$visitedNodes,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+    ): bool {
+        if ($maxDepth > 0 && $currentDepth > $maxDepth) {
+            if ($throwOnTooDeep) {
+                throw new \RuntimeException('Recursive sort exceeded max depth.');
+            }
+
+            return false;
+        }
+
+        $requiredNodes = count($array);
+        if ($maxNodes > 0 && $requiredNodes > ($maxNodes - $visitedNodes)) {
+            if ($throwOnTooDeep) {
+                throw new \RuntimeException('Recursive sort exceeded max node count.');
+            }
+
+            return false;
+        }
+
+        $visitedNodes += $requiredNodes;
+
+        return true;
     }
 
     private static function resolveDerivedValue(mixed $row, string|callable $keyOrCallback, int|string $index): mixed
