@@ -20,91 +20,6 @@ trait LazyFileConfigCacheTrait
 
     private const string CACHE_STAGE_PREFIX = '.arraykit-stage-';
 
-    /**
-     * @var array<string, scalar|null>
-     */
-    protected array $flatLeafIndex = [];
-
-    protected bool $flatLeafIndexLoaded = false;
-
-    protected ?string $namespaceCacheDirectory = null;
-
-    /**
-     * @param string|array<int, string>|null $namespaces
-     */
-    public function flushNamespaceCache(string|array|null $namespaces = null): static
-    {
-        $directory = $this->namespaceCacheDirectory;
-        if ($directory === null) {
-            return $this;
-        }
-
-        if (!is_dir($directory)) {
-            $this->flatLeafIndex = [];
-            $this->flatLeafIndexLoaded = false;
-            $this->invalidateGeneratedNamespaceState();
-
-            return $this;
-        }
-
-        $resolved = $namespaces === null ? null : $this->resolveWarmNamespaces($namespaces);
-
-        $this->withNamespaceCacheLock(function () use ($resolved): void {
-            $this->publishFlushGeneration($resolved);
-        });
-
-        $this->flatLeafIndex = [];
-        $this->flatLeafIndexLoaded = false;
-        $this->invalidateGeneratedNamespaceState();
-
-        return $this;
-    }
-
-    public function namespaceCache(?string $directory): static
-    {
-        $this->invalidateGeneratedNamespaceState();
-
-        $this->namespaceCacheDirectory = $directory !== null
-            ? rtrim($directory, DIRECTORY_SEPARATOR)
-            : null;
-        $this->flatLeafIndex = [];
-        $this->flatLeafIndexLoaded = false;
-
-        return $this;
-    }
-
-    public function namespaceCacheDirectory(): ?string
-    {
-        return $this->namespaceCacheDirectory;
-    }
-
-    /**
-     * @param string|array<int, string>|null $namespaces
-     */
-    public function warmNamespaceCache(string|array|null $namespaces = null): static
-    {
-        $directory = $this->namespaceCacheDirectory;
-        if ($directory === null) {
-            throw new RuntimeException('Namespace cache directory is not configured.');
-        }
-
-        if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-            throw new RuntimeException("Unable to create namespace cache directory [{$directory}].");
-        }
-
-        $resolved = $this->resolveWarmNamespaces($namespaces);
-
-        $this->withNamespaceCacheLock(function () use ($resolved): void {
-            $this->publishWarmGeneration($resolved);
-        });
-
-        $this->flatLeafIndex = [];
-        $this->flatLeafIndexLoaded = false;
-        $this->invalidateGeneratedNamespaceState();
-
-        return $this;
-    }
-
     protected function cachedNamespacePath(string $namespace): ?string
     {
         $directory = $this->activeNamespaceCacheDirectory();
@@ -170,6 +85,10 @@ trait LazyFileConfigCacheTrait
 
         return array_keys($namespaces);
     }
+
+
+
+
 
     protected function flatLeafIndexPath(): ?string
     {
@@ -248,37 +167,7 @@ trait LazyFileConfigCacheTrait
         return array_values(array_unique($resolved));
     }
 
-    private function activeNamespaceCacheDirectory(): ?string
-    {
-        $root = $this->namespaceCacheDirectory;
-        if ($root === null || !is_dir($root)) {
-            return null;
-        }
 
-        $pointer = $this->generationPointerPath();
-        if ($pointer === null || !is_file($pointer) || !is_readable($pointer)) {
-            return $root;
-        }
-
-        $generation = trim((string) file_get_contents($pointer));
-        if (preg_match('/^\\.arraykit-gen-[a-f0-9]+$/', $generation) !== 1) {
-            return $root;
-        }
-
-        $directory = $root . DIRECTORY_SEPARATOR . $generation;
-
-        return is_dir($directory) ? $directory : $root;
-    }
-
-    /**
-     * @param array<string, scalar|null> $index
-     */
-    private function addFlatLeafIndexValue(array &$index, string $path, mixed $value): void
-    {
-        if ($this->isCacheableLeafValue($value)) {
-            $index[$path] = $value;
-        }
-    }
 
     private function activateGeneration(string $stage): void
     {
@@ -347,6 +236,44 @@ trait LazyFileConfigCacheTrait
         }
     }
 
+    private function activeNamespaceCacheDirectory(): ?string
+    {
+        $root = $this->namespaceCacheDirectory;
+        if ($root === null || !is_dir($root)) {
+            return null;
+        }
+
+        $pointer = $this->generationPointerPath();
+        if ($pointer === null || !is_file($pointer) || !is_readable($pointer)) {
+            return $root;
+        }
+
+        $generation = trim((string) file_get_contents($pointer));
+        if (preg_match('/^\\.arraykit-gen-[a-f0-9]+$/', $generation) !== 1) {
+            return $root;
+        }
+
+        $directory = $root . DIRECTORY_SEPARATOR . $generation;
+
+        return is_dir($directory) ? $directory : $root;
+    }
+
+    /**
+     * @param array<string, scalar|null> $index
+     */
+    private function addFlatLeafIndexValue(array &$index, string $path, mixed $value): void
+    {
+        if ($this->isCacheableLeafValue($value)) {
+            $index[$path] = $value;
+        }
+    }
+
+
+
+
+
+
+
     private function createGenerationStage(): string
     {
         $root = $this->namespaceCacheDirectory;
@@ -394,6 +321,10 @@ trait LazyFileConfigCacheTrait
 
         return $index;
     }
+
+
+
+
 
     private function generationPointerPath(): ?string
     {
@@ -501,6 +432,95 @@ trait LazyFileConfigCacheTrait
 
             throw $error;
         }
+    }
+
+
+
+
+
+    /**
+     * @var array<string, scalar|null>
+     */
+    protected array $flatLeafIndex = [];
+
+    protected bool $flatLeafIndexLoaded = false;
+
+    protected ?string $namespaceCacheDirectory = null;
+
+    /**
+     * @param string|array<int, string>|null $namespaces
+     */
+    public function flushNamespaceCache(string|array|null $namespaces = null): static
+    {
+        $directory = $this->namespaceCacheDirectory;
+        if ($directory === null) {
+            return $this;
+        }
+
+        if (!is_dir($directory)) {
+            $this->flatLeafIndex = [];
+            $this->flatLeafIndexLoaded = false;
+            $this->invalidateGeneratedNamespaceState();
+
+            return $this;
+        }
+
+        $resolved = $namespaces === null ? null : $this->resolveWarmNamespaces($namespaces);
+
+        $this->withNamespaceCacheLock(function () use ($resolved): void {
+            $this->publishFlushGeneration($resolved);
+        });
+
+        $this->flatLeafIndex = [];
+        $this->flatLeafIndexLoaded = false;
+        $this->invalidateGeneratedNamespaceState();
+
+        return $this;
+    }
+
+    public function namespaceCache(?string $directory): static
+    {
+        $this->invalidateGeneratedNamespaceState();
+
+        $this->namespaceCacheDirectory = $directory !== null
+            ? rtrim($directory, DIRECTORY_SEPARATOR)
+            : null;
+        $this->flatLeafIndex = [];
+        $this->flatLeafIndexLoaded = false;
+
+        return $this;
+    }
+
+    public function namespaceCacheDirectory(): ?string
+    {
+        return $this->namespaceCacheDirectory;
+    }
+
+    /**
+     * @param string|array<int, string>|null $namespaces
+     */
+    public function warmNamespaceCache(string|array|null $namespaces = null): static
+    {
+        $directory = $this->namespaceCacheDirectory;
+        if ($directory === null) {
+            throw new RuntimeException('Namespace cache directory is not configured.');
+        }
+
+        if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+            throw new RuntimeException("Unable to create namespace cache directory [{$directory}].");
+        }
+
+        $resolved = $this->resolveWarmNamespaces($namespaces);
+
+        $this->withNamespaceCacheLock(function () use ($resolved): void {
+            $this->publishWarmGeneration($resolved);
+        });
+
+        $this->flatLeafIndex = [];
+        $this->flatLeafIndexLoaded = false;
+        $this->invalidateGeneratedNamespaceState();
+
+        return $this;
     }
 
     private function removeGenerationDirectory(string $directory): void
