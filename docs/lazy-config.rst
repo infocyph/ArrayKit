@@ -50,8 +50,9 @@ Important Behavior
 Namespace Cache
 ---------------
 
-``LazyFileConfig`` can warm one cache file per namespace plus a shared exact-leaf
-index.
+``LazyFileConfig`` publishes generated namespace caches for deployment/bootstrap
+use. Publication uses immutable generations rather than overwriting files that
+active workers may already be reading.
 
 .. code-block:: php
 
@@ -68,11 +69,14 @@ index.
 
 Cache behavior:
 
-- ``namespaceCache()`` configures an optional per-namespace cache directory.
-- ``warmNamespaceCache()`` writes cached namespace files and a shared ``__flat.php`` exact-leaf index.
-- Exact-key scalar reads check ``__flat.php`` first.
-- Structural, wildcard, and namespace reads fall back to namespace cache files.
-- ``Environment::ref()`` values and closures are resolved before namespace cache files are written.
+- ``namespaceCache()`` configures an optional generated-cache root.
+- ``warmNamespaceCache()`` builds a complete hidden generation and atomically switches ``.arraykit-generation`` only after publication succeeds.
+- Each generation contains one file per cached namespace plus ``.arraykit-flat.php`` for exact scalar/null leaves.
+- Exact-key scalar reads may use the flat index without materializing the namespace.
+- Structural, wildcard, and namespace reads use the active immutable namespace file.
+- ``Environment::ref()`` values and closures are resolved before publication.
+- Warm-up rereads the authoritative source unless the caller explicitly supplied or mutated that namespace in memory; an older generated cache does not feed a new source-backed generation.
+- Readers do not take the writer lock. Existing readers may continue using the previous immutable generation.
 
 Environment Values in Namespace Files
 -------------------------------------
@@ -90,9 +94,9 @@ Example namespace file with delayed environment values:
         'port' => fn () => env('DB_PORT', 3306),
     ];
 
-``warmNamespaceCache('db')`` resolves those values before writing
-``bootstrap/cache/config/db.php`` and before adding scalar leaves to
-``bootstrap/cache/config/__flat.php``.
+``warmNamespaceCache('db')`` resolves those values before writing the namespace
+inside the newly published generation and before adding scalar leaves to that
+generation's ``.arraykit-flat.php``.
 
 Generated namespace cache file:
 
@@ -100,7 +104,7 @@ Generated namespace cache file:
 
     <?php
 
-    // bootstrap/cache/config/db.php
+    // bootstrap/cache/config/.arraykit-gen-<id>/db.php
     return [
         'host' => 'localhost',
         'port' => 3306,
@@ -112,7 +116,7 @@ Generated flat leaf index:
 
     <?php
 
-    // bootstrap/cache/config/__flat.php
+    // bootstrap/cache/config/.arraykit-gen-<id>/.arraykit-flat.php
     return [
         'db.host' => 'localhost',
         'db.port' => 3306,
@@ -153,7 +157,7 @@ Warm the lazy cache during deployment or first boot:
         namespaceCacheDirectory: $basePath.'/bootstrap/cache/config',
     );
 
-    // Writes bootstrap/cache/config/db.php and updates __flat.php.
+    // Publishes a new immutable generation containing db.php + .arraykit-flat.php.
     $config->warmNamespaceCache('db');
 
 Read from the warmed cache on later requests:
@@ -170,7 +174,7 @@ Read from the warmed cache on later requests:
         namespaceCacheDirectory: $basePath.'/bootstrap/cache/config',
     );
 
-    // Exact scalar reads can come from __flat.php without loading db.php.
+    // Exact scalar reads can come from the active .arraykit-flat.php without loading db.php.
     $host = $config->get('db.host');
 
     // Structural reads load bootstrap/cache/config/db.php when available.
@@ -178,17 +182,26 @@ Read from the warmed cache on later requests:
 
 Important lazy-cache details:
 
-- ``warmNamespaceCache('db')`` writes ``bootstrap/cache/config/db.php``.
-- ``warmNamespaceCache(['db', 'cache'])`` writes one file per namespace.
-- ``__flat.php`` stores exact scalar/null leaves such as ``db.host``.
-- Original source files are preferred only when namespace cache files do not
-  exist or are not readable.
-- If env values change, rerun ``warmNamespaceCache()`` or flush and rebuild the
-  namespace cache.
-- A namespace is marked loaded only after its source returns a valid array, so
-  a corrected file can be retried after a failed read.
-- A full cache flush removes only ``__flat.php`` and valid namespace cache
-  files; unrelated files in the configured directory are preserved.
+- ``warmNamespaceCache(['db', 'cache'])`` publishes both namespace files and one shared ``.arraykit-flat.php`` inside a new immutable generation.
+- ``.arraykit-generation`` is the atomic pointer to the active generation.
+- Source-backed warm-up rereads current source/environment values; explicit in-memory runtime overrides remain authoritative.
+- ``flushNamespaceCache()`` publishes a generation with the selected cached namespaces removed; unrelated root files are preserved.
+- Namespace and generated cache PHP files are trusted deployment-owned inputs, not a sandbox boundary.
+- Prefer deployment/bootstrap/admin warm-up, not request-time regeneration.
+- Retire old generation directories only after workers that may still reference them have been replaced.
+
+
+5.3 Cache Migration
+-------------------
+
+ArrayKit 5.2 used direct root namespace files plus ``__flat.php`` as an internal
+flat index. ArrayKit 5.3 keeps ``__flat`` valid as a caller namespace and moves
+internal metadata to ``.arraykit-flat.php`` inside immutable generations.
+
+After upgrading, rebuild the namespace cache. The old ``__flat.php`` acceleration
+artifact is deliberately not interpreted as the 5.3 flat index because it is
+ambiguous with the valid ``__flat`` namespace. Ordinary legacy namespace files
+remain a compatibility fallback until a 5.3 generation is published.
 
 Method Summary
 --------------
