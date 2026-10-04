@@ -101,8 +101,41 @@ class DotNotation
         int $maxDepth,
         int $maxNodes,
         bool $throwOnTooDeep,
+        int &$visitedNodes,
     ): mixed {
-        return self::resolveValue($target, $key, $default, $maxDepth, $maxNodes, $throwOnTooDeep);
+        if (self::isDirectKey($key) && is_array($target) && ArraySingle::exists($target, $key)) {
+            $visitedNodes++;
+            if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
+                if ($throwOnTooDeep) {
+                    throw new \RuntimeException('Dot path traversal exceeded max node count.');
+                }
+
+                return self::value($default);
+            }
+
+            return $target[$key];
+        }
+
+        $keyPath = (string) $key;
+        if (!str_contains($keyPath, '.') && !str_contains($keyPath, '\\')) {
+            return self::value($default);
+        }
+
+        $missing = self::missing();
+        $resolved = DotNotationPathOps::traverseGet(
+            $target,
+            self::splitPath($keyPath),
+            $default,
+            $missing,
+            static fn(mixed $value): mixed => self::value($value),
+            $maxDepth,
+            $maxNodes,
+            $throwOnTooDeep,
+            1,
+            $visitedNodes,
+        );
+
+        return $resolved === $missing ? self::value($default) : $resolved;
     }
 
     /**
