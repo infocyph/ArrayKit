@@ -189,8 +189,13 @@ class LayeredLazyFileConfig extends Config
     {
         if ($key === null) {
             $this->materializeKnownNamespaces();
+            $result = parent::set($key, $value, $overwrite);
+            if ($result) {
+                $this->markAllKnownNamespacesMaterialized();
+                $this->registerNamespaces($this->items);
+            }
 
-            return parent::set($key, $value, $overwrite);
+            return $result;
         }
 
         $this->materializeMutationTargets($key);
