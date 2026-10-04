@@ -398,6 +398,4 @@ final class DotNotationPathOps
 
         return $result;
     }
-
 }
-
