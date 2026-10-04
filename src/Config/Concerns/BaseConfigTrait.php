@@ -205,7 +205,9 @@ trait BaseConfigTrait
     protected function writeCacheFile(string $path, string $contents): bool
     {
         try {
-            token_get_all($contents, TOKEN_PARSE);
+            if (token_get_all($contents, TOKEN_PARSE) === []) {
+                throw new UnexpectedValueException('Generated configuration cache is empty.');
+            }
         } catch (\ParseError $error) {
             throw new UnexpectedValueException('Generated configuration cache contains invalid PHP syntax.', 0, $error);
         }
