@@ -14,110 +14,6 @@ class LazyFileConfig extends Config
 {
     use LazyFileConfigCacheTrait;
 
-    protected function forgetPath(string $path): void
-    {
-        [$namespace, $rest] = $this->splitPath($path);
-        $this->loadNamespace($namespace);
-
-        if (!array_key_exists($namespace, $this->items)) {
-            $this->markNamespaceRuntime($namespace);
-
-            return;
-        }
-
-        if ($rest === null || $rest === '') {
-            unset($this->items[$namespace]);
-            $this->markNamespaceRuntime($namespace);
-
-            return;
-        }
-
-        if (!is_array($this->items[$namespace])) {
-            return;
-        }
-
-        DotNotation::forget($this->items[$namespace], $rest);
-        $this->markNamespaceRuntime($namespace);
-    }
-
-    protected function getPath(string $path, mixed $default): mixed
-    {
-        [$namespace, $rest] = $this->splitPath($path);
-        $this->loadNamespace($namespace);
-
-        if (!array_key_exists($namespace, $this->items)) {
-            return $this->resolveDefault($default);
-        }
-
-        if ($rest === null || $rest === '') {
-            return $this->items[$namespace];
-        }
-
-        if (!is_array($this->items[$namespace])) {
-            return $this->resolveDefault($default);
-        }
-
-        return DotNotation::get($this->items[$namespace], $rest, $default);
-    }
-
-    protected function hasPath(string $path): bool
-    {
-        [$namespace, $rest] = $this->splitPath($path);
-        $this->loadNamespace($namespace);
-
-        if (!array_key_exists($namespace, $this->items)) {
-            return false;
-        }
-
-        if ($rest === null || $rest === '') {
-            return true;
-        }
-
-        if (!is_array($this->items[$namespace])) {
-            return false;
-        }
-
-        return DotNotation::has($this->items[$namespace], $rest);
-    }
-
-    protected function loadNamespace(string $namespace): void
-    {
-        if (isset($this->loadedNamespaces[$namespace])) {
-            return;
-        }
-
-        $cachedFile = $this->resolveCachedNamespaceFile($namespace);
-        $sourceFile = $this->resolveNamespaceFile($namespace);
-        $file = $cachedFile ?? $sourceFile;
-
-        if ($file === null) {
-            $this->loadedNamespaces[$namespace] = true;
-            $this->loadedNamespaceOrigins[$namespace] = 'missing';
-
-            return;
-        }
-
-        $loaded = include $file;
-        if (!is_array($loaded)) {
-            throw new UnexpectedValueException("Config file [{$file}] must return an array.");
-        }
-
-        $this->loadedNamespaces[$namespace] = true;
-        $this->loadedNamespaceOrigins[$namespace] = $cachedFile !== null ? 'cache' : 'source';
-
-        if (!array_key_exists($namespace, $this->items)) {
-            $this->items[$namespace] = $loaded;
-            $this->flushReadCache();
-
-            return;
-        }
-
-        if (is_array($this->items[$namespace])) {
-            $this->items[$namespace] = array_replace_recursive($loaded, $this->items[$namespace]);
-            $this->flushReadCache();
-        }
-    }
-
     /**
      * @var array<string, 'cache'|'missing'|'runtime'|'source'>
      */
@@ -375,6 +271,110 @@ class LazyFileConfig extends Config
         return true;
     }
 
+    protected function forgetPath(string $path): void
+    {
+        [$namespace, $rest] = $this->splitPath($path);
+        $this->loadNamespace($namespace);
+
+        if (!array_key_exists($namespace, $this->items)) {
+            $this->markNamespaceRuntime($namespace);
+
+            return;
+        }
+
+        if ($rest === null || $rest === '') {
+            unset($this->items[$namespace]);
+            $this->markNamespaceRuntime($namespace);
+
+            return;
+        }
+
+        if (!is_array($this->items[$namespace])) {
+            return;
+        }
+
+        DotNotation::forget($this->items[$namespace], $rest);
+        $this->markNamespaceRuntime($namespace);
+    }
+
+    protected function getPath(string $path, mixed $default): mixed
+    {
+        [$namespace, $rest] = $this->splitPath($path);
+        $this->loadNamespace($namespace);
+
+        if (!array_key_exists($namespace, $this->items)) {
+            return $this->resolveDefault($default);
+        }
+
+        if ($rest === null || $rest === '') {
+            return $this->items[$namespace];
+        }
+
+        if (!is_array($this->items[$namespace])) {
+            return $this->resolveDefault($default);
+        }
+
+        return DotNotation::get($this->items[$namespace], $rest, $default);
+    }
+
+    protected function hasPath(string $path): bool
+    {
+        [$namespace, $rest] = $this->splitPath($path);
+        $this->loadNamespace($namespace);
+
+        if (!array_key_exists($namespace, $this->items)) {
+            return false;
+        }
+
+        if ($rest === null || $rest === '') {
+            return true;
+        }
+
+        if (!is_array($this->items[$namespace])) {
+            return false;
+        }
+
+        return DotNotation::has($this->items[$namespace], $rest);
+    }
+
+    protected function loadNamespace(string $namespace): void
+    {
+        if (isset($this->loadedNamespaces[$namespace])) {
+            return;
+        }
+
+        $cachedFile = $this->resolveCachedNamespaceFile($namespace);
+        $sourceFile = $this->resolveNamespaceFile($namespace);
+        $file = $cachedFile ?? $sourceFile;
+
+        if ($file === null) {
+            $this->loadedNamespaces[$namespace] = true;
+            $this->loadedNamespaceOrigins[$namespace] = 'missing';
+
+            return;
+        }
+
+        $loaded = include $file;
+        if (!is_array($loaded)) {
+            throw new UnexpectedValueException("Config file [{$file}] must return an array.");
+        }
+
+        $this->loadedNamespaces[$namespace] = true;
+        $this->loadedNamespaceOrigins[$namespace] = $cachedFile !== null ? 'cache' : 'source';
+
+        if (!array_key_exists($namespace, $this->items)) {
+            $this->items[$namespace] = $loaded;
+            $this->flushReadCache();
+
+            return;
+        }
+
+        if (is_array($this->items[$namespace])) {
+            $this->items[$namespace] = array_replace_recursive($loaded, $this->items[$namespace]);
+            $this->flushReadCache();
+        }
+    }
+
     protected function normalizeNamespace(string $namespace): string
     {
         $trimmed = trim($namespace);
@@ -516,8 +516,6 @@ class LazyFileConfig extends Config
 
         return [$namespace, $rest === '' ? null : $rest];
     }
-
-
 
     protected function syncLoadedNamespacesFromItems(): void
     {
