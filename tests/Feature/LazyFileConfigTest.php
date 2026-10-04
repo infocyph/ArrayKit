@@ -52,12 +52,27 @@ function lazyConfigItems(LazyFileConfig $config): array
     return (fn (): array => $this->items)->call($config);
 }
 
+function lazyConfigActiveCacheDirectory(string $directory): string
+{
+    $pointer = $directory.DIRECTORY_SEPARATOR.'.arraykit-generation';
+    if (! is_file($pointer)) {
+        return $directory;
+    }
+
+    $generation = trim((string) file_get_contents($pointer));
+    $active = $directory.DIRECTORY_SEPARATOR.$generation;
+
+    return is_dir($active) ? $active : $directory;
+}
+
 /**
  * @return array<string, scalar|null>
  */
 function lazyConfigFlatIndex(string $directory): array
 {
-    $path = $directory.DIRECTORY_SEPARATOR.'__flat.php';
+    $path = lazyConfigActiveCacheDirectory($directory)
+        .DIRECTORY_SEPARATOR
+        .'.arraykit-flat.php';
 
     if (! is_file($path)) {
         return [];
@@ -362,9 +377,11 @@ it('flushes only files owned by the namespace cache', function () {
     $config = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
     $config->warmNamespaceCache('db')->flushNamespaceCache();
 
+    $active = lazyConfigActiveCacheDirectory($this->cachePath);
+
     expect(is_file($this->cachePath.DIRECTORY_SEPARATOR.'keep.txt'))->toBeTrue()
-        ->and(is_file($this->cachePath.DIRECTORY_SEPARATOR.'db.php'))->toBeFalse()
-        ->and(is_file($this->cachePath.DIRECTORY_SEPARATOR.'__flat.php'))->toBeFalse();
+        ->and(is_file($active.DIRECTORY_SEPARATOR.'db.php'))->toBeFalse()
+        ->and(lazyConfigFlatIndex($this->cachePath))->toBe([]);
 });
 
 it('materializes environment references and closures when warming namespace cache', function () {
@@ -498,7 +515,7 @@ it('can resolve exact scalar paths from the flat index when namespace structure 
     $config->warmNamespaceCache('db');
 
     unlink($this->configPath.DIRECTORY_SEPARATOR.'db.php');
-    unlink($this->cachePath.DIRECTORY_SEPARATOR.'db.php');
+    unlink(lazyConfigActiveCacheDirectory($this->cachePath).DIRECTORY_SEPARATOR.'db.php');
 
     $fresh = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
 
