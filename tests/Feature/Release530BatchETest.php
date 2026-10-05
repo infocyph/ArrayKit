@@ -280,14 +280,13 @@ it('treats a closed active-scope binding as terminal before source consumption',
         ->and($factoryCalls)->toBe(0);
 });
 
-it('honors request cancellation inside an active coroutine scope without completing host context', function () {
+it('honors request cancellation while an active coroutine scope is bound without completing host context', function () {
     $runtime = batchERuntime(true);
     $request = RequestContext::create($runtime);
     $coroutines = new CoroutineRuntime();
     $callbackValues = [];
 
-    expect(fn () => $coroutines->runRequest(
-        $request,
+    expect(fn () => $coroutines->run(
         function (CoroutineScope $scope) use ($runtime, $request, &$callbackValues): array {
             return LazyCollection::from([1, 2, 3])
                 ->withRunwire($runtime, $request, $scope, checkpointEvery: 2)
