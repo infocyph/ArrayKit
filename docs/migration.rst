@@ -3,6 +3,39 @@ Migration and Compatibility
 
 This page highlights behavior and API additions that may affect usage patterns.
 
+5.3 Upgrade
+-----------
+
+ArrayKit 5.3 is a correctness and runtime-hardening release. Existing ordinary
+array, collection, config, DTO, and lazy-collection entry points remain
+available; the bounded DTO and Runwire APIs are additive.
+
+Before deploying 5.3:
+
+1. Rebuild ``LazyFileConfig`` generated namespace caches. Do not carry the old
+   5.2 ``__flat.php`` acceleration artifact forward as internal metadata.
+2. Replace/restart workers according to the application's normal deployment and
+   OPcache policy after publishing new generated PHP cache files.
+3. If nested DTO graphs cross an external-data boundary, prefer
+   ``hydrateNestedGuarded()`` / ``toArrayDeepGuarded()`` with limits appropriate
+   to that boundary.
+4. Runwire integration is optional. Applications that use it should forward the
+   exact host-owned ``RuntimeContext`` and optional ``RequestContext`` /
+   ``CoroutineScope`` to ``LazyCollection::withRunwire()``. ArrayKit does not
+   create or drive a runtime, event loop, request lifecycle, or coroutine scope.
+
+Notable 5.3 behavior corrections include strict membership equivalence at
+lookup thresholds, wildcard path-presence detection independent of leaf
+truthiness, true whole-string SQL-like matching, overflow-safe pagination,
+coherent config read-memo invalidation, source-authoritative namespace cache
+warming, failure-safe generated-cache publication, and repeatable terminal
+errors for one-shot lazy streams.
+
+Generated-cache metadata now lives in ``.arraykit-flat.php`` inside an immutable
+generation selected by ``.arraykit-generation``. The caller namespace
+``__flat`` is therefore no longer ambiguous with ArrayKit's internal flat
+index.
+
 Recent Additions
 ----------------
 
