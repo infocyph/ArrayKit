@@ -1,9 +1,6 @@
 ArrayKit 5.3.0
 ==============
 
-Status: release candidate guidance. Tagging and publishing remain separate
-actions after the release-acceptance gates are satisfied.
-
 Highlights
 ----------
 
