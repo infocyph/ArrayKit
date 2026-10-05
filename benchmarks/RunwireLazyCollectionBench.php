@@ -33,7 +33,6 @@ final class RunwireLazyCollectionBench
         $this->request = RequestContext::create($this->runtime);
     }
 
-
     public function benchBoundRequestMapFilter(): void
     {
         LazyCollection::from($this->data)
