@@ -127,8 +127,10 @@ it('anchors SQL-like patterns at the true end of the value', function () {
         'exact' => ['name' => 'admin'],
     ])->and(ArrayMulti::whereLike($rows, 'name', 'a%b', true))->toBe([
         'internal-newline' => ['name' => "a\nb"],
+        'meta' => ['name' => 'a.b'],
     ])->and(ArrayMulti::whereLike($rows, 'name', 'a_b', true))->toBe([
         'internal-newline' => ['name' => "a\nb"],
+        'meta' => ['name' => 'a.b'],
     ])->and(ArrayMulti::whereLike($rows, 'name', 'a.b', true))->toBe([
         'meta' => ['name' => 'a.b'],
     ])->and(ArrayMulti::whereLike($rows, 'name', '', true))->toBe([
@@ -137,18 +139,21 @@ it('anchors SQL-like patterns at the true end of the value', function () {
 });
 
 it('surfaces PCRE execution failures instead of treating them as no match', function () {
-    $previous = ini_get('pcre.backtrack_limit');
-    ini_set('pcre.backtrack_limit', '1');
+    $previousBacktrackLimit = ini_get('pcre.backtrack_limit');
+    $previousJit = ini_get('pcre.jit');
+    ini_set('pcre.jit', '0');
+    ini_set('pcre.backtrack_limit', '10');
 
     try {
         expect(fn () => ArrayMulti::whereLike(
-            [['name' => str_repeat('a', 200)]],
+            [['name' => str_repeat('a', 100)]],
             'name',
-            '%a%a%a%a%a%a%a%z',
+            '%a%a%a%aa%',
             true,
         ))->toThrow(RuntimeException::class);
     } finally {
-        ini_set('pcre.backtrack_limit', (string) $previous);
+        ini_set('pcre.backtrack_limit', (string) $previousBacktrackLimit);
+        ini_set('pcre.jit', (string) $previousJit);
     }
 });
 
