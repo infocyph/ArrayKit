@@ -273,10 +273,11 @@ LazyCollection
 --------------
 
 Use ``LazyCollection`` for generator-backed transformations over large iterables.
-Collections built with ``from()`` replay values already read from a one-shot
-generator without eagerly materializing the source. That replay cache grows with
-the portion consumed, so use ``fromFactory()`` for long-lived or unbounded
-sources when each traversal can create a fresh iterable.
+Array sources passed to ``from()`` are replayed directly without allocating a
+per-entry replay memo. One-shot iterators and generators replay values already
+read without eagerly materializing the remaining source; their replay cache grows
+with the portion consumed. Use ``fromFactory()`` for long-lived or unbounded
+renewable sources when each traversal can create a fresh iterable.
 
 .. code-block:: php
 
