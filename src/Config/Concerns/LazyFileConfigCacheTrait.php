@@ -18,8 +18,6 @@ trait LazyFileConfigCacheTrait
 
     private const string CACHE_LOCK_FILE = '.arraykit-cache.lock';
 
-    private const string FLAT_INDEX_FILE = '.arraykit-flat-v2.php';
-
     private const string CACHE_STAGE_PREFIX = '.arraykit-stage-';
 
     /**
