@@ -230,9 +230,9 @@ Compare the direct binding against the existing factory-composition prototype fo
 | Batch | Status | Evidence |
 | --- | --- | --- |
 | A — R01/R02/R03/R07 | Complete | Expanded regressions pass; PHP 8.4/8.5 analysis, clean install, and all stable/lowest QA jobs are green in workflow run #89. |
-| B — R04/R05/R06/R08 | In progress | Cache/memo/export regressions and owner fixes are being implemented after Batch A closure. |
-| C — R09/R10/R11/R12 + I03 | Pending | Not started. |
-| D — I01/I02/I04/I05 | Pending | Not started. |
+| B — R04/R05/R06/R08 | Complete | Batch B regressions pass; PHP 8.4/8.5 analysis, stable/lowest QA, and clean install are green in workflow run #116. Benchmark/security tail jobs were cancelled by newer branch pushes, not failures. |
+| C — R09/R10/R11/R12 + I03 | In QA | Semantic fixes and threshold/wrapper regressions are implemented; first QA feedback was resolved and the corrected HEAD is awaiting validation. |
+| D — I01/I02/I04/I05 | In progress | Replay-memory specialization, bounded DTO graph APIs, dependency evidence, and lifecycle documentation are being implemented. |
 | E — Runwire 2.1.1 integration | Pending | Not started. |
 | F — integrated release acceptance | Pending | Not started. |
 
