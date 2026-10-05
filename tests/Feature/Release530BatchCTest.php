@@ -43,15 +43,17 @@ it('preserves strict membership for nested resources nan objects and scalar edge
     $otherObject = new stdClass();
 
     $cases = [
-        [['resource' => $right], array_fill(0, 255, null) + [['resource' => $left]]],
-        [NAN, array_fill(0, 255, 0) + [NAN]],
-        [$otherObject, array_fill(0, 255, null) + [$object]],
-        [null, array_fill(0, 255, 'x') + [null]],
-        [false, array_fill(0, 255, 'x') + [0]],
-        [0, array_fill(0, 255, 'x') + [false]],
+        [['resource' => $right], ['resource' => $left], null],
+        [NAN, NAN, 0],
+        [$otherObject, $object, null],
+        [null, null, 'x'],
+        [false, 0, 'x'],
+        [0, false, 'x'],
     ];
 
-    foreach ($cases as [$candidate, $values]) {
+    foreach ($cases as [$candidate, $storedValue, $filler]) {
+        $values = array_fill(0, 255, $filler);
+        $values[] = $storedValue;
         $expected = in_array($candidate, $values, true);
         $actual = ArrayMulti::whereIn([['value' => $candidate]], 'value', $values, true);
 
