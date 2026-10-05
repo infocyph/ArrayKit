@@ -305,6 +305,53 @@ renewable sources when each traversal can create a fresh iterable.
         yield from fetchEvents();
     });
 
+Optional Runwire Binding
+------------------------
+
+Runwire is optional. Ordinary ``LazyCollection`` use does not require or load
+Runwire. When a host already owns a Runwire runtime, pass those exact instances
+to ``withRunwire()``:
+
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Collection\LazyCollection;
+    use Infocyph\Runwire\RequestContext;
+    use Infocyph\Runwire\RuntimeContext;
+
+    /** @var RuntimeContext $runtime */
+    /** @var RequestContext $request */
+
+    $rows = LazyCollection::from($cursor)
+        ->withRunwire(
+            $runtime,
+            request: $request,
+            checkpointEvery: 256,
+        )
+        ->filterLazy(fn (array $row): bool => $row['active'])
+        ->mapLazy(fn (array $row): int => $row['id'])
+        ->all();
+
+An active ``CoroutineScope`` may also be passed. ArrayKit calls
+``yieldNow()`` only when that scope is present **and** the supplied runtime
+advertises Runwire coroutine capability. Request and scope cancellation are
+checked before source consumption and periodically before source advancement.
+Derived lazy operations forward the same binding through upstream work, so
+filtered-out rows are covered too.
+
+``checkpointEvery`` is an item-consumption interval from 1 through 1,000,000.
+A completed request or a request belonging to another ``RuntimeContext`` is
+rejected at the binding boundary. Cancellation, expired deadlines, a closed
+active scope, source errors, and callback errors remain terminal exceptions.
+
+ArrayKit never creates or drives a Runwire runtime/event loop, completes a
+request, closes a scope, or stores these bindings globally. Missing coroutine
+capability disables cooperative yielding; synchronous traversal and applicable
+cancellation checks remain available. ``take(0)`` stays fully lazy.
+
+An intermediary library should forward the exact host-owned instances instead
+of reconstructing runtime metadata.
+
 Terminal calculations:
 
 .. code-block:: php
