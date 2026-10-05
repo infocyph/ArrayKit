@@ -2,7 +2,7 @@
 
 Date: 2026-10-04 (Asia/Dhaka)
 
-Status: implementation complete through Batch E; Batches C-D-E are in final QA and Batch F release acceptance is in progress.
+Status: implementation complete through Batch E; Batches A-E are complete and Batch F release acceptance is in progress.
 
 Reviewed revision: `fdeff013d2892383761aa8ddf2515acfc429d7fe`.
 Published baseline: **5.2.0**, source revision `053440b61071a17332b18879b12026f54a0ad144`.
@@ -232,10 +232,10 @@ Compare the direct binding against the existing factory-composition prototype fo
 | --- | --- | --- |
 | A — R01/R02/R03/R07 | Complete | Expanded regressions pass; PHP 8.4/8.5 analysis, clean install, and all stable/lowest QA jobs are green in workflow run #89. |
 | B — R04/R05/R06/R08 | Complete | Batch B regressions pass; PHP 8.4/8.5 analysis, stable/lowest QA, and clean install are green in workflow run #116. Benchmark/security tail jobs were cancelled by newer branch pushes, not failures. |
-| C — R09/R10/R11/R12 + I03 | In QA | Semantic fixes and threshold/wrapper regressions are implemented; first QA feedback was resolved and the corrected HEAD is awaiting validation. |
-| D — I01/I02/I04/I05 | In QA | Array replay specialization, bounded DTO graph APIs/tests, dependency assessment, benchmarks, and lifecycle/trust documentation are implemented. |
-| E — Runwire 2.1.1 integration | In QA | Optional exact 2.1.1 dev integration, passed-instance binding, propagation, lifecycle matrix, absence smoke, docs, and bound/unbound benchmarks are implemented. |
-| F — integrated release acceptance | In progress | Final PHPForge/compatibility validation is running; 5.3 migration and candidate release notes are consolidated. Production-equivalent baseline comparison, external consumer/host-driver evidence, and soak remain acceptance evidence rather than implementation claims. |
+| C — R09/R10/R11/R12 + I03 | Complete | Threshold/native-semantics, wildcard presence, SQL-like matching, overflow pagination, and wrapper regressions pass across PHP 8.4/8.5 stable/lowest QA in workflow run #165. |
+| D — I01/I02/I04/I05 | Complete | Array replay specialization and benchmarks, bounded DTO graph APIs/regressions, lifecycle/trust docs, and the dev-only PHPBench/Doctrine upstream maintenance outcome pass the PHPForge QA matrix in workflow run #165. |
+| E — Runwire 2.1.1 integration | Complete | Optional exact Runwire 2.1.1 binding, absence/unbound fallback, lifecycle/cancellation/capability matrix, derived propagation/rebinding, intermediary forwarding, docs, and bound/unbound benchmark subjects pass the PHPForge QA matrix in workflow run #165. |
+| F — integrated release acceptance | In progress | Repository-side QA/analysis/clean-install gates are green on run #165 and 5.3 migration/release notes are consolidated. Remaining acceptance evidence: stable production-equivalent baseline comparison, representative external consumer/host-driver validation, and persistent-worker soak/worker-replacement results. |
 
 ## Implementation sequence
 
