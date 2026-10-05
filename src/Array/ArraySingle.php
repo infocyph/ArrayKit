@@ -605,6 +605,16 @@ class ArraySingle
             throw new InvalidArgumentException('Per-page value must be greater than or equal to 1.');
         }
 
+        $count = count($array);
+        if ($count === 0) {
+            return [];
+        }
+
+        $lastPage = intdiv($count - 1, $perPage) + 1;
+        if ($page > $lastPage) {
+            return [];
+        }
+
         return array_slice(
             $array,
             ($page - 1) * $perPage,
