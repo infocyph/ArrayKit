@@ -61,7 +61,7 @@ configuration or object models.
 | **Collection**          | OOP array wrapper implementing `ArrayAccess`, `IteratorAggregate`, `Countable`, `JsonSerializable`. |
 | **HookedCollection**    | Extends `Collection` with **on-get/on-set hooks** for real-time transformation of values.  |
 | **Pipeline**            | Functional-style pipeline for chaining operations on collections.                          |
-| **LazyCollection**      | Repeatable lazy operations (`mapLazy`, `filterLazy`, `chunkLazy`, `take`, `takeUntil`), including one-shot generators and renewable factories. |
+| **LazyCollection**      | Repeatable lazy operations (`mapLazy`, `filterLazy`, `chunkLazy`, `take`, `takeUntil`), including one-shot generators, renewable factories, and optional passed-instance Runwire cancellation/yield checkpoints. |
 | **BaseCollectionTrait** | Shared collection behavior.                                                                |
 
 
@@ -89,6 +89,8 @@ configuration or object models.
 ## Requirements
 
 * **PHP 8.4** or higher
+
+Runwire is optional. ArrayKit 5.3 tests its lazy-runtime integration against `infocyph/runwire` 2.1.1; ordinary ArrayKit installation has no Runwire runtime dependency.
 
 
 ## Installation
@@ -295,7 +297,7 @@ $row = ArrayShape::require(
 $config = new LazyFileConfig(__DIR__ . '/config', namespaceCacheDirectory: __DIR__ . '/bootstrap/cache/config');
 $config->warmNamespaceCache(['db', 'cache']);
 
-// Exact scalar leaf reads can hit bootstrap/cache/config/__flat.php first.
+// Exact scalar leaf reads can hit the active generation's .arraykit-flat.php first.
 $host = $config->get('db.host');
 ```
 
@@ -308,7 +310,7 @@ $host = $config->get('db.host');
 - `DotNotation` treats existing `null` keys/properties as present (does not fall back to defaults).
 - `DotNotation::hasWildcard()`, `paths()`, `matches()`, `rename()`, and `move()` are available for wildcard/path operations.
 - For untrusted/deep payloads, use bounded traversal variants: `DotNotation::getSafe()`, `ArrayMulti::depthGuarded()`, `flattenGuarded()`, and `sortRecursiveGuarded()`.
-- `LazyFileConfig` namespace cache writes one cache file per namespace plus a shared `__flat.php` file containing only final scalar/null leaf values for exact-key fast paths.
+- `LazyFileConfig` publishes immutable cache generations selected by `.arraykit-generation`; each generation contains namespace files plus `.arraykit-flat.php` for exact scalar/null fast paths.
 
 ## Security
 

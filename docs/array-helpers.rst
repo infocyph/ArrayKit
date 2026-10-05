@@ -358,6 +358,7 @@ Behavior Notes
   the two-argument shorthand form.
 - ``ArrayMulti::flatten($array, 0)`` returns unchanged top-level values.
 - Use ``depthGuarded()``, ``flattenGuarded()``, and ``sortRecursiveGuarded()`` when processing untrusted/deep inputs.
+- A non-throwing recursive sort retains the order of a parent whose child traversal was cut short, instead of comparing unvisited nested values. Throwing mode rejects the limit breach.
 - ``ArrayMulti`` callback helpers such as ``sortBy()``, ``sum()``, ``maxBy()``, ``minBy()`` support ``($row, $key)``.
 - In ``string|callable`` row APIs, strings always identify fields; use a closure or
   another non-string callable for callback behavior.

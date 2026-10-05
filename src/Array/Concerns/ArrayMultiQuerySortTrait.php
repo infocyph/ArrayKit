@@ -485,6 +485,7 @@ trait ArrayMultiQuerySortTrait
         bool $throwOnTooDeep = false,
     ): array {
         $visitedNodes = 0;
+        $complete = true;
 
         return self::sortRecursiveWithGuards(
             $array,
@@ -495,6 +496,7 @@ trait ArrayMultiQuerySortTrait
             $maxDepth,
             $maxNodes,
             $throwOnTooDeep,
+            $complete,
         );
     }
 
@@ -658,7 +660,7 @@ trait ArrayMultiQuerySortTrait
     public static function whereLike(array $array, string $key, string $pattern, bool $caseSensitive = false): array
     {
         $quoted = preg_quote($pattern, '/');
-        $regex = '/^' . str_replace(['%', '_'], ['.*', '.'], $quoted) . '$/' . ($caseSensitive ? '' : 'i');
+        $regex = '/\\A' . str_replace(['%', '_'], ['.*', '.'], $quoted) . '\\z/s' . ($caseSensitive ? '' : 'i');
         $results = [];
 
         foreach ($array as $index => $row) {
@@ -671,8 +673,12 @@ trait ArrayMultiQuerySortTrait
                 continue;
             }
 
-            $text = (string) $value;
-            if (preg_match($regex, $text) === 1) {
+            $matched = preg_match($regex, (string) $value);
+            if ($matched === false) {
+                throw new \RuntimeException('SQL-like pattern matching failed: ' . preg_last_error_msg());
+            }
+
+            if ($matched === 1) {
                 $results[$index] = $row;
             }
         }
@@ -776,16 +782,7 @@ trait ArrayMultiQuerySortTrait
         }
 
         if ($strict) {
-            $lookup = [];
-            foreach ($values as $value) {
-                if (self::containsNonReflexiveStrictValue($value)) {
-                    return null;
-                }
-
-                $lookup[ArraySingleOps::fingerprint($value, true)] = true;
-            }
-
-            return $lookup;
+            return ArrayValueSetOps::strictLookup($values);
         }
 
         $lookup = ['type:non-numeric-string' => true];
@@ -798,33 +795,6 @@ trait ArrayMultiQuerySortTrait
         }
 
         return $lookup;
-    }
-
-    private static function canTraverse(
-        int $currentDepth,
-        int &$visitedNodes,
-        int $maxDepth,
-        int $maxNodes,
-        bool $throwOnTooDeep,
-    ): bool {
-        if ($maxDepth > 0 && $currentDepth > $maxDepth) {
-            if ($throwOnTooDeep) {
-                throw new \RuntimeException('Recursive sort exceeded max depth.');
-            }
-
-            return false;
-        }
-
-        $visitedNodes++;
-        if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
-            if ($throwOnTooDeep) {
-                throw new \RuntimeException('Recursive sort exceeded max node count.');
-            }
-
-            return false;
-        }
-
-        return true;
     }
 
     /**
@@ -956,19 +926,6 @@ trait ArrayMultiQuerySortTrait
             \SORT_LOCALE_STRING => strcoll(self::asString($left), self::asString($right)),
             default => $left <=> $right,
         };
-    }
-
-    private static function containsNonReflexiveStrictValue(mixed $value): bool
-    {
-        if (is_float($value)) {
-            return is_nan($value);
-        }
-
-        if (!is_array($value)) {
-            return false;
-        }
-
-        return array_any($value, self::containsNonReflexiveStrictValue(...));
     }
 
     private static function extractComparableValue(mixed $row, string|callable $keyOrCallback, int|string $key): float|int|null
@@ -1156,6 +1113,39 @@ trait ArrayMultiQuerySortTrait
         );
     }
 
+    /**
+     * @param array<array-key, mixed> $array
+     */
+    private static function reserveSortNodes(
+        array $array,
+        int $currentDepth,
+        int &$visitedNodes,
+        int $maxDepth,
+        int $maxNodes,
+        bool $throwOnTooDeep,
+    ): bool {
+        if ($maxDepth > 0 && $currentDepth > $maxDepth) {
+            if ($throwOnTooDeep) {
+                throw new \RuntimeException('Recursive sort exceeded max depth.');
+            }
+
+            return false;
+        }
+
+        $requiredNodes = count($array);
+        if ($maxNodes > 0 && $requiredNodes > ($maxNodes - $visitedNodes)) {
+            if ($throwOnTooDeep) {
+                throw new \RuntimeException('Recursive sort exceeded max node count.');
+            }
+
+            return false;
+        }
+
+        $visitedNodes += $requiredNodes;
+
+        return true;
+    }
+
     private static function resolveDerivedValue(mixed $row, string|callable $keyOrCallback, int|string $index): mixed
     {
         if (!is_string($keyOrCallback)) {
@@ -1181,7 +1171,7 @@ trait ArrayMultiQuerySortTrait
     private static function rowLookupContains(array $lookup, array $values, mixed $candidate, bool $strict): bool
     {
         if ($strict) {
-            return isset($lookup[ArraySingleOps::fingerprint($candidate, true)]);
+            return ArrayValueSetOps::strictLookupContains($lookup, $candidate);
         }
 
         if (is_string($candidate) && !is_numeric($candidate)) {
@@ -1250,23 +1240,41 @@ trait ArrayMultiQuerySortTrait
         int $maxDepth,
         int $maxNodes,
         bool $throwOnTooDeep,
+        bool &$complete,
     ): array {
-        if (!self::canTraverse($currentDepth, $visitedNodes, $maxDepth, $maxNodes, $throwOnTooDeep)) {
+        if (!self::reserveSortNodes(
+            $array,
+            $currentDepth,
+            $visitedNodes,
+            $maxDepth,
+            $maxNodes,
+            $throwOnTooDeep,
+        )) {
+            $complete = false;
+
             return $array;
         }
 
         foreach ($array as &$value) {
-            if (is_array($value)) {
-                $value = self::sortRecursiveWithGuards(
-                    $value,
-                    $options,
-                    $descending,
-                    $currentDepth + 1,
-                    $visitedNodes,
-                    $maxDepth,
-                    $maxNodes,
-                    $throwOnTooDeep,
-                );
+            if (!is_array($value)) {
+                continue;
+            }
+
+            $value = self::sortRecursiveWithGuards(
+                $value,
+                $options,
+                $descending,
+                $currentDepth + 1,
+                $visitedNodes,
+                $maxDepth,
+                $maxNodes,
+                $throwOnTooDeep,
+                $complete,
+            );
+            if (!$complete) {
+                unset($value);
+
+                return $array;
             }
         }
         unset($value);

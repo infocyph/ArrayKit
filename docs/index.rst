@@ -26,8 +26,10 @@ Contents
     config
     lazy-config
     config-layering
+    lifecycle
     traits-and-helpers
     migration
+    release-5.3.0
     rule-reference
 
 The feature pages above are guide-style usage docs.

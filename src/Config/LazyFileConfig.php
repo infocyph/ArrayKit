@@ -14,7 +14,10 @@ class LazyFileConfig extends Config
 {
     use LazyFileConfigCacheTrait;
 
-    private const string FLAT_INDEX_FILE = '__flat.php';
+    /**
+     * @var array<string, 'cache'|'missing'|'runtime'|'source'>
+     */
+    protected array $loadedNamespaceOrigins = [];
 
     /**
      * @var array<string, bool>
@@ -195,7 +198,16 @@ class LazyFileConfig extends Config
      */
     public function merge(array $items): bool
     {
-        return $this->syncLoadedNamespacesAfter(parent::merge($items));
+        $changed = parent::merge($items);
+        if ($changed) {
+            foreach (array_keys($items) as $namespace) {
+                if (is_string($namespace) && preg_match('/^[A-Za-z0-9_-]+$/', $namespace) === 1) {
+                    $this->markNamespaceRuntime($namespace);
+                }
+            }
+        }
+
+        return $changed;
     }
 
     /**
@@ -274,11 +286,14 @@ class LazyFileConfig extends Config
         $this->loadNamespace($namespace);
 
         if (!array_key_exists($namespace, $this->items)) {
+            $this->markNamespaceRuntime($namespace);
+
             return;
         }
 
         if ($rest === null || $rest === '') {
             unset($this->items[$namespace]);
+            $this->markNamespaceRuntime($namespace);
 
             return;
         }
@@ -288,6 +303,7 @@ class LazyFileConfig extends Config
         }
 
         DotNotation::forget($this->items[$namespace], $rest);
+        $this->markNamespaceRuntime($namespace);
     }
 
     protected function getPath(string $path, mixed $default): mixed
@@ -336,9 +352,13 @@ class LazyFileConfig extends Config
             return;
         }
 
-        $file = $this->resolveCachedNamespaceFile($namespace) ?? $this->resolveNamespaceFile($namespace);
+        $cachedFile = $this->resolveCachedNamespaceFile($namespace);
+        $sourceFile = $this->resolveNamespaceFile($namespace);
+        $file = $cachedFile ?? $sourceFile;
+
         if ($file === null) {
             $this->loadedNamespaces[$namespace] = true;
+            $this->loadedNamespaceOrigins[$namespace] = 'missing';
 
             return;
         }
@@ -349,15 +369,18 @@ class LazyFileConfig extends Config
         }
 
         $this->loadedNamespaces[$namespace] = true;
+        $this->loadedNamespaceOrigins[$namespace] = $cachedFile !== null ? 'cache' : 'source';
 
         if (!array_key_exists($namespace, $this->items)) {
             $this->items[$namespace] = $loaded;
+            $this->flushReadCache();
 
             return;
         }
 
         if (is_array($this->items[$namespace])) {
             $this->items[$namespace] = array_replace_recursive($loaded, $this->items[$namespace]);
+            $this->flushReadCache();
         }
     }
 
@@ -444,7 +467,7 @@ class LazyFileConfig extends Config
             return parent::resolveRawValue($key);
         }
 
-        if (!$this->readCacheEnabled()) {
+        if (!$this->readCacheEnabled() || !$this->isReadCacheSafePath($key)) {
             return $this->resolveLazyRawValue($key);
         }
 
@@ -464,6 +487,7 @@ class LazyFileConfig extends Config
         if ($rest === null || $rest === '') {
             if ($overwrite || !array_key_exists($namespace, $this->items)) {
                 $this->items[$namespace] = $value;
+                $this->markNamespaceRuntime($namespace);
             }
 
             return;
@@ -476,6 +500,7 @@ class LazyFileConfig extends Config
 
         DotNotation::set($namespaceConfig, $rest, $value, $overwrite);
         $this->items[$namespace] = $namespaceConfig;
+        $this->markNamespaceRuntime($namespace);
     }
 
     /**
@@ -505,6 +530,7 @@ class LazyFileConfig extends Config
     {
         parent::flushReadCache();
         $this->loadedNamespaces = [];
+        $this->loadedNamespaceOrigins = [];
 
         foreach ($this->items as $namespace => $_) {
             if (!is_string($namespace) || !preg_match('/^[A-Za-z0-9_-]+$/', $namespace)) {
@@ -512,7 +538,14 @@ class LazyFileConfig extends Config
             }
 
             $this->loadedNamespaces[$namespace] = true;
+            $this->loadedNamespaceOrigins[$namespace] = 'runtime';
         }
+    }
+
+    private function markNamespaceRuntime(string $namespace): void
+    {
+        $this->loadedNamespaces[$namespace] = true;
+        $this->loadedNamespaceOrigins[$namespace] = 'runtime';
     }
 
     private function syncLoadedNamespacesAfter(bool $changed): bool

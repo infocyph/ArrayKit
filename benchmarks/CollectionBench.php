@@ -37,6 +37,11 @@ final class CollectionBench
         Collection::make($this->data)->map(static fn(int $value): int => $value * 2);
     }
 
+    public function benchLazyArrayReplayMaterialization(): void
+    {
+        LazyCollection::from($this->data)->all();
+    }
+
     public function benchLazyChunkMaterialization(): void
     {
         LazyCollection::fromFactory(fn(): array => $this->data)
@@ -44,11 +49,26 @@ final class CollectionBench
             ->all();
     }
 
+    public function benchLazyFactoryArrayMaterialization(): void
+    {
+        LazyCollection::fromFactory(fn(): array => $this->data)->all();
+    }
+
     public function benchLazyFilterMaterialization(): void
     {
         LazyCollection::fromFactory(fn(): array => $this->data)
             ->filterLazy(static fn(int $value): bool => ($value % 2) === 0)
             ->all();
+    }
+
+    public function benchLazyGeneratorReplayMaterialization(): void
+    {
+        $data = $this->data;
+        $source = (static function () use ($data): \Generator {
+            yield from $data;
+        })();
+
+        LazyCollection::from($source)->all();
     }
 
     public function benchLazyMapFilterTake(): void

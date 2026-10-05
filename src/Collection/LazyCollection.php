@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Collection;
 
 use Generator;
+use Infocyph\Runwire\Coroutine\CoroutineScope;
+use Infocyph\Runwire\RequestContext;
+use Infocyph\Runwire\RuntimeContext;
 use IteratorAggregate;
 use Traversable;
 
@@ -17,9 +20,13 @@ use Traversable;
 final readonly class LazyCollection implements IteratorAggregate
 {
     /**
-     * @param \Closure(): iterable<TKey, TValue> $factory
+     * @param \Closure(?RunwireLazyBinding): iterable<TKey, TValue> $factory
      */
-    private function __construct(private \Closure $factory) {}
+    private function __construct(
+        private \Closure $factory,
+        private ?RunwireLazyBinding $runwire = null,
+        private bool $factoryChecksRunwire = false,
+    ) {}
 
     /**
      * @template TFromKey of array-key
@@ -30,6 +37,14 @@ final readonly class LazyCollection implements IteratorAggregate
      */
     public static function from(iterable $source): self
     {
+        if (is_array($source) && !self::hasReferencedEntries($source)) {
+            return new self(static function (?RunwireLazyBinding $binding) use ($source): array {
+                unset($binding);
+
+                return $source;
+            });
+        }
+
         return new self(self::replayableFactory($source));
     }
 
@@ -45,7 +60,13 @@ final readonly class LazyCollection implements IteratorAggregate
      */
     public static function fromFactory(\Closure $factory): self
     {
-        return new self($factory);
+        return new self(
+            static function (?RunwireLazyBinding $binding) use ($factory): iterable {
+                unset($binding);
+
+                return $factory();
+            },
+        );
     }
 
     /**
@@ -85,25 +106,29 @@ final readonly class LazyCollection implements IteratorAggregate
             throw new \InvalidArgumentException('Chunk size must be at least 1.');
         }
 
-        return new self(function () use ($size, $preserveKeys): Generator {
-            $chunk = [];
-            foreach ($this->cursor() as $key => $value) {
-                if ($preserveKeys) {
-                    $chunk[$key] = $value;
-                } else {
-                    $chunk[] = $value;
+        return new self(
+            function (?RunwireLazyBinding $binding) use ($size, $preserveKeys): Generator {
+                $chunk = [];
+                foreach ($this->cursorWithBinding($binding) as $key => $value) {
+                    if ($preserveKeys) {
+                        $chunk[$key] = $value;
+                    } else {
+                        $chunk[] = $value;
+                    }
+
+                    if (count($chunk) === $size) {
+                        yield $chunk;
+                        $chunk = [];
+                    }
                 }
 
-                if (count($chunk) === $size) {
+                if ($chunk !== []) {
                     yield $chunk;
-                    $chunk = [];
                 }
-            }
-
-            if ($chunk !== []) {
-                yield $chunk;
-            }
-        });
+            },
+            $this->runwire,
+            true,
+        );
     }
 
     /**
@@ -111,10 +136,7 @@ final readonly class LazyCollection implements IteratorAggregate
      */
     public function cursor(): Generator
     {
-        $factory = $this->factory;
-        foreach ($factory() as $key => $value) {
-            yield $key => $value;
-        }
+        yield from $this->cursorWithBinding($this->runwire);
     }
 
     /**
@@ -123,13 +145,17 @@ final readonly class LazyCollection implements IteratorAggregate
      */
     public function filterLazy(callable $callback): self
     {
-        return new self(function () use ($callback): Generator {
-            foreach ($this->cursor() as $key => $value) {
-                if ($callback($value, $key)) {
-                    yield $key => $value;
+        return new self(
+            function (?RunwireLazyBinding $binding) use ($callback): Generator {
+                foreach ($this->cursorWithBinding($binding) as $key => $value) {
+                    if ($callback($value, $key)) {
+                        yield $key => $value;
+                    }
                 }
-            }
-        });
+            },
+            $this->runwire,
+            true,
+        );
     }
 
     /**
@@ -148,11 +174,15 @@ final readonly class LazyCollection implements IteratorAggregate
      */
     public function mapLazy(callable $callback): self
     {
-        return new self(function () use ($callback): Generator {
-            foreach ($this->cursor() as $key => $value) {
-                yield $key => $callback($value, $key);
-            }
-        });
+        return new self(
+            function (?RunwireLazyBinding $binding) use ($callback): Generator {
+                foreach ($this->cursorWithBinding($binding) as $key => $value) {
+                    yield $key => $callback($value, $key);
+                }
+            },
+            $this->runwire,
+            true,
+        );
     }
 
     /**
@@ -165,20 +195,32 @@ final readonly class LazyCollection implements IteratorAggregate
         }
 
         if ($limit === 0) {
-            return self::from([]);
+            return new self(
+                static function (?RunwireLazyBinding $binding): array {
+                    unset($binding);
+
+                    return [];
+                },
+                $this->runwire,
+                true,
+            );
         }
 
-        return new self(function () use ($limit): Generator {
-            $count = 0;
-            foreach ($this->cursor() as $key => $value) {
-                yield $key => $value;
-                $count++;
+        return new self(
+            function (?RunwireLazyBinding $binding) use ($limit): Generator {
+                $count = 0;
+                foreach ($this->cursorWithBinding($binding) as $key => $value) {
+                    yield $key => $value;
+                    $count++;
 
-                if ($count >= $limit) {
-                    return;
+                    if ($count >= $limit) {
+                        return;
+                    }
                 }
-            }
-        });
+            },
+            $this->runwire,
+            true,
+        );
     }
 
     /**
@@ -187,15 +229,37 @@ final readonly class LazyCollection implements IteratorAggregate
      */
     public function takeUntil(callable $callback): self
     {
-        return new self(function () use ($callback): Generator {
-            foreach ($this->cursor() as $key => $value) {
-                if ($callback($value, $key)) {
-                    break;
-                }
+        return new self(
+            function (?RunwireLazyBinding $binding) use ($callback): Generator {
+                foreach ($this->cursorWithBinding($binding) as $key => $value) {
+                    if ($callback($value, $key)) {
+                        break;
+                    }
 
-                yield $key => $value;
-            }
-        });
+                    yield $key => $value;
+                }
+            },
+            $this->runwire,
+            true,
+        );
+    }
+
+    /**
+     * Bind explicit Runwire runtime/request/scope instances to this collection.
+     *
+     * @return self<TKey, TValue>
+     */
+    public function withRunwire(
+        RuntimeContext $runtime,
+        ?RequestContext $request = null,
+        ?CoroutineScope $scope = null,
+        int $checkpointEvery = 256,
+    ): self {
+        return new self(
+            $this->factory,
+            new RunwireLazyBinding($runtime, $request, $scope, $checkpointEvery),
+            $this->factoryChecksRunwire,
+        );
     }
 
     /**
@@ -209,6 +273,12 @@ final readonly class LazyCollection implements IteratorAggregate
         return new self(self::replayableFactory($source));
     }
 
+    /** @param array<array-key, mixed> $source */
+    private static function hasReferencedEntries(array $source): bool
+    {
+        return array_any(array_keys($source), fn($key) => \ReflectionReference::fromArrayElement($source, $key) !== null);
+    }
+
     /**
      * Adapt any iterable into a repeatable lazy source without eagerly
      * materializing it. Values already consumed from a one-shot iterator are
@@ -218,7 +288,7 @@ final readonly class LazyCollection implements IteratorAggregate
      * @template TSourceValue
      *
      * @param iterable<TSourceKey, TSourceValue> $source
-     * @return \Closure(): iterable<TSourceKey, TSourceValue>
+     * @return \Closure(?RunwireLazyBinding): iterable<TSourceKey, TSourceValue>
      */
     private static function replayableFactory(iterable $source): \Closure
     {
@@ -227,8 +297,20 @@ final readonly class LazyCollection implements IteratorAggregate
         $sourceCursor = null;
         $sourceAdvancePending = false;
         $exhausted = false;
+        $state = new class {
+            public ?\Throwable $failure = null;
+        };
 
-        return static function () use ($source, &$cache, &$sourceCursor, &$sourceAdvancePending, &$exhausted): Generator {
+        return static function (?RunwireLazyBinding $binding) use (
+            $source,
+            &$cache,
+            &$sourceCursor,
+            &$sourceAdvancePending,
+            &$exhausted,
+            $state,
+        ): Generator {
+            unset($binding);
+
             $position = 0;
 
             while (true) {
@@ -240,6 +322,10 @@ final readonly class LazyCollection implements IteratorAggregate
                     continue;
                 }
 
+                if ($state->failure !== null) {
+                    throw $state->failure;
+                }
+
                 if ($exhausted) {
                     return;
                 }
@@ -248,18 +334,28 @@ final readonly class LazyCollection implements IteratorAggregate
                     yield from $source;
                 })();
 
-                if ($sourceAdvancePending) {
-                    $sourceCursor->next();
+                try {
+                    if ($sourceAdvancePending) {
+                        $sourceCursor->next();
+                        $sourceAdvancePending = false;
+                    }
+
+                    if (!$sourceCursor->valid()) {
+                        $exhausted = true;
+                        $sourceCursor = null;
+
+                        return;
+                    }
+
+                    $entry = [$sourceCursor->key(), $sourceCursor->current()];
+                } catch (\Throwable $error) {
+                    $state->failure = $error;
+                    $sourceCursor = null;
                     $sourceAdvancePending = false;
+
+                    throw $error;
                 }
 
-                if (!$sourceCursor->valid()) {
-                    $exhausted = true;
-
-                    return;
-                }
-
-                $entry = [$sourceCursor->key(), $sourceCursor->current()];
                 $cache[] = $entry;
                 $sourceAdvancePending = true;
 
@@ -267,5 +363,49 @@ final readonly class LazyCollection implements IteratorAggregate
                 $position++;
             }
         };
+    }
+
+    /**
+     * @return Generator<TKey, TValue>
+     */
+    private function cursorWithBinding(?RunwireLazyBinding $binding): Generator
+    {
+        if ($this->factoryChecksRunwire) {
+            $factory = $this->factory;
+            yield from $factory($binding);
+
+            return;
+        }
+
+        yield from $this->sourceCursorWithBinding($binding);
+    }
+
+    /**
+     * @return Generator<TKey, TValue>
+     */
+    private function sourceCursorWithBinding(?RunwireLazyBinding $binding): Generator
+    {
+        $binding?->checkpoint();
+
+        $factory = $this->factory;
+        $iterable = $factory($binding);
+        $iterator = (static function () use ($iterable): Generator {
+            yield from $iterable;
+        })();
+
+        $processed = 0;
+        while ($iterator->valid()) {
+            yield $iterator->key() => $iterator->current();
+            $processed++;
+
+            if (
+                $binding !== null
+                && ($processed % $binding->checkpointEvery) === 0
+            ) {
+                $binding->checkpoint();
+            }
+
+            $iterator->next();
+        }
     }
 }

@@ -149,6 +149,13 @@ Facade ModuleProxy
 
     public function __construct(private string $targetClass)
     public function __call(string $method, array $arguments): mixed
+    public function set(array &$array, array|string|null $keys = null, mixed $value = null, bool $overwrite = true): bool
+    public function fill(array &$array, array|string $keys, mixed $value = null): void
+    public function forget(?array &$array = null, array|string|int|null $keys = null, ?array &$target = null): void
+    public function rename(array &$array, string $from, string $to, bool $overwrite = true): bool
+    public function move(array &$array, string $from, string $to, bool $overwrite = true): bool
+    public function offsetSet(array &$array, string $key, mixed $value): void
+    public function offsetUnset(array &$array, string $key): void
 
 BaseArrayHelper
 ---------------------------------------
@@ -582,8 +589,10 @@ DTOTrait
     public function fromArray(array $values): static
     public function hydrate(array $values, array $mapping = [], bool $coerce = false): static
     public function hydrateNested(array $values, array $mapping = [], bool $coerce = false): static
+    public function hydrateNestedGuarded(array $values, array $mapping = [], bool $coerce = false, int $maxDepth = 64, int $maxNodes = 100000): static
     public function toArray(): array
     public function toArrayDeep(): array
+    public function toArrayDeepGuarded(int $maxDepth = 64, int $maxNodes = 100000): array
     public function replaceFromArray(array $values, array $mapping = [], bool $coerce = false): static
 
 HookTrait
@@ -628,8 +637,10 @@ methods listed in the ``DTOTrait`` section.
     public function fromArray(array $values): static
     public function hydrate(array $values, array $mapping = [], bool $coerce = false): static
     public function hydrateNested(array $values, array $mapping = [], bool $coerce = false): static
+    public function hydrateNestedGuarded(array $values, array $mapping = [], bool $coerce = false, int $maxDepth = 64, int $maxNodes = 100000): static
     public function toArray(): array
     public function toArrayDeep(): array
+    public function toArrayDeepGuarded(int $maxDepth = 64, int $maxNodes = 100000): array
     public function replaceFromArray(array $values, array $mapping = [], bool $coerce = false): static
 
 LazyCollection
@@ -647,4 +658,5 @@ LazyCollection
     public function chunkLazy(int $size, bool $preserveKeys = false): self
     public function take(int $limit): self
     public function takeUntil(callable $callback): self
+    public function withRunwire(RuntimeContext $runtime, ?RequestContext $request = null, ?CoroutineScope $scope = null, int $checkpointEvery = 256): self
     public function all(): array

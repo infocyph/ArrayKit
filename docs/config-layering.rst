@@ -38,7 +38,7 @@ LayeredLazyFileConfig
 
 ``LayeredLazyFileConfig`` composes three layers with this precedence:
 
-``fallback < lazy source < overrides``
+``fallback < lazy source < overrides < runtime mutations``
 
 Only the requested namespace is materialized. Exact path reads are resolved from
 the fully merged namespace, so list replacement and scalar shadowing cannot leak
@@ -76,9 +76,9 @@ cache miss and retries the authoritative source namespace. Invalid source files
 still fail normally; resilience applies only to disposable generated cache
 artifacts.
 
-Malformed or invalid ``__flat.php`` indexes are also treated as cache misses.
-This keeps an acceleration artifact from preventing source configuration from
-loading.
+Malformed generated namespace files and invalid ``.arraykit-flat.php`` indexes
+are disposable cache artifacts. Generated files live in immutable generations
+selected by ``.arraykit-generation``; authoritative source failures remain visible.
 
 Environment Enumeration
 -----------------------

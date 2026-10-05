@@ -23,27 +23,12 @@ final class ArrayValueSetOps
      */
     public static function containsAll(array $array, array $needles, bool $strict): bool
     {
-        if (!$strict) {
-            return array_all($needles, static fn(mixed $needle): bool => in_array($needle, $array, false));
-        }
-
-        if (count($needles) < self::CONTAINS_ALL_LOOKUP_MIN_NEEDLES) {
-            return array_all($needles, static fn(mixed $needle): bool => in_array($needle, $array, true));
-        }
-
-        $firstKey = array_key_first($needles);
-        if (!in_array($needles[$firstKey], $array, true)) {
-            return false;
-        }
-
-        $lookup = self::buildStrictLookup($array);
-        if ($lookup === null) {
-            return array_all($needles, static fn(mixed $needle): bool => in_array($needle, $array, true));
-        }
-
-        return array_all(
+        return self::containsByMembership(
+            $array,
             $needles,
-            static fn(mixed $needle): bool => isset($lookup[self::fingerprintStrict($needle)]),
+            $strict,
+            self::CONTAINS_ALL_LOOKUP_MIN_NEEDLES,
+            requireAll: true,
         );
     }
 
@@ -53,27 +38,12 @@ final class ArrayValueSetOps
      */
     public static function containsAny(array $array, array $needles, bool $strict): bool
     {
-        if (!$strict) {
-            return array_any($needles, static fn(mixed $needle): bool => in_array($needle, $array, false));
-        }
-
-        if (count($needles) < self::CONTAINS_ANY_LOOKUP_MIN_NEEDLES) {
-            return array_any($needles, static fn(mixed $needle): bool => in_array($needle, $array, true));
-        }
-
-        $firstKey = array_key_first($needles);
-        if (in_array($needles[$firstKey], $array, true)) {
-            return true;
-        }
-
-        $lookup = self::buildStrictLookup($array);
-        if ($lookup === null) {
-            return array_any($needles, static fn(mixed $needle): bool => in_array($needle, $array, true));
-        }
-
-        return array_any(
+        return self::containsByMembership(
+            $array,
             $needles,
-            static fn(mixed $needle): bool => isset($lookup[self::fingerprintStrict($needle)]),
+            $strict,
+            self::CONTAINS_ANY_LOOKUP_MIN_NEEDLES,
+            requireAll: false,
         );
     }
 
@@ -156,6 +126,24 @@ final class ArrayValueSetOps
         ksort($rightCounts);
 
         return $leftCounts === $rightCounts;
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     * @return array<string, bool>|null
+     */
+    public static function strictLookup(array $values): ?array
+    {
+        return self::buildStrictLookup($values);
+    }
+
+    /**
+     * @param array<string, bool> $lookup
+     */
+    public static function strictLookupContains(array $lookup, mixed $value): bool
+    {
+        return self::isStrictHashable($value)
+            && isset($lookup[self::fingerprintStrict($value)]);
     }
 
     /**
@@ -244,6 +232,50 @@ final class ArrayValueSetOps
         }
 
         return $lookup;
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     * @param array<array-key, mixed> $needles
+     */
+    private static function containsByMembership(
+        array $array,
+        array $needles,
+        bool $strict,
+        int $lookupThreshold,
+        bool $requireAll,
+    ): bool {
+        $matcher = $requireAll ? 'array_all' : 'array_any';
+
+        if (!$strict || count($needles) < $lookupThreshold) {
+            return $matcher(
+                $needles,
+                static fn(mixed $needle): bool => in_array($needle, $array, $strict),
+            );
+        }
+
+        $firstKey = array_key_first($needles);
+        if ($firstKey === null) {
+            return $requireAll;
+        }
+
+        $firstMatches = in_array($needles[$firstKey], $array, true);
+        if ($firstMatches !== $requireAll) {
+            return !$requireAll;
+        }
+
+        $lookup = self::buildStrictLookup($array);
+        if ($lookup === null) {
+            return $matcher(
+                $needles,
+                static fn(mixed $needle): bool => in_array($needle, $array, true),
+            );
+        }
+
+        return $matcher(
+            $needles,
+            static fn(mixed $needle): bool => self::strictLookupContains($lookup, $needle),
+        );
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\DTO\Concerns;
 
+use Infocyph\ArrayKit\DTO\DTOGraphGuard;
 use ReflectionNamedType;
 use ReflectionObject;
 use ReflectionProperty;
@@ -80,6 +81,25 @@ trait DTOTrait
     }
 
     /**
+     * Hydrate nested DTO data only after the complete input graph passes the
+     * configured cycle, depth and node limits.
+     *
+     * @param array<array-key, mixed> $values
+     * @param array<string, string> $mapping
+     */
+    public function hydrateNestedGuarded(
+        array $values,
+        array $mapping = [],
+        bool $coerce = false,
+        int $maxDepth = 64,
+        int $maxNodes = 100000,
+    ): static {
+        DTOGraphGuard::assertWithinLimits($values, $maxDepth, $maxNodes);
+
+        return $this->hydrateNested($values, $mapping, $coerce);
+    }
+
+    /**
      * @param array<array-key, mixed> $values
      * @param array<string, string> $mapping
      */
@@ -118,6 +138,17 @@ trait DTOTrait
         }
 
         return $result;
+    }
+
+    /**
+     * Export recursively after the complete public DTO/array graph passes the
+     * configured cycle, depth and node limits.
+     *
+     * @return array<array-key, mixed>
+     */
+    public function toArrayDeepGuarded(int $maxDepth = 64, int $maxNodes = 100000): array
+    {
+        return DTOGraphGuard::export($this, $maxDepth, $maxNodes);
     }
 
     private function assignProperty(string $property, mixed $value, bool $coerce): void

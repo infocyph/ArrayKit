@@ -6,7 +6,7 @@ namespace Infocyph\ArrayKit\Config;
 
 /**
  * Layered lazy configuration with explicit precedence:
- * fallback < lazy source < overrides.
+ * fallback < lazy source < overrides < runtime mutations.
  *
  * Namespace materialization is used deliberately so exact-path reads always
  * match reads against the fully merged configuration, including list/scalar
@@ -52,9 +52,7 @@ class LayeredLazyFileConfig extends Config
     #[\Override]
     public function all(): array
     {
-        foreach (array_keys($this->knownNamespaces) as $namespace) {
-            $this->materializeNamespace($namespace);
-        }
+        $this->materializeKnownNamespaces();
 
         $items = [];
         foreach (parent::all() as $key => $value) {
@@ -66,6 +64,14 @@ class LayeredLazyFileConfig extends Config
         return $items;
     }
 
+    #[\Override]
+    public function changed(string $snapshot = 'default'): bool
+    {
+        $this->materializeKnownNamespaces();
+
+        return parent::changed($snapshot);
+    }
+
     public function clearNamespaceCache(): static
     {
         $this->source->flushNamespaceCache();
@@ -73,9 +79,136 @@ class LayeredLazyFileConfig extends Config
         return $this;
     }
 
+    #[\Override]
+    public function exportCache(string $path): bool
+    {
+        $this->materializeKnownNamespaces();
+
+        return parent::exportCache($path);
+    }
+
+    #[\Override]
+    public function fill(string|array $key, mixed $value = null): bool
+    {
+        $this->materializeMutationTargets($key);
+
+        return parent::fill($key, $value);
+    }
+
+    #[\Override]
+    public function forget(string|int|array $key): bool
+    {
+        $this->materializeMutationTargets($key);
+
+        return parent::forget($key);
+    }
+
+    #[\Override]
+    public function get(string|int|array|null $key = null, mixed $default = null): mixed
+    {
+        if ($key === null) {
+            return $this->all();
+        }
+
+        return parent::get($key, $default);
+    }
+
+    #[\Override]
+    public function loadArray(array $resource): bool
+    {
+        $this->materializeKnownNamespaces();
+
+        return parent::loadArray($resource);
+    }
+
+    #[\Override]
+    public function loadFile(string $path): bool
+    {
+        $this->materializeKnownNamespaces();
+
+        return parent::loadFile($path);
+    }
+
+    #[\Override]
+    public function merge(array $items): bool
+    {
+        $this->materializeMutationTargets($items);
+
+        return parent::merge($items);
+    }
+
     public function namespaceCacheDirectory(): ?string
     {
         return $this->source->namespaceCacheDirectory();
+    }
+
+    #[\Override]
+    public function overlay(array $overlay): bool
+    {
+        return $this->merge($overlay);
+    }
+
+    #[\Override]
+    public function reload(array|string $source): bool
+    {
+        $result = parent::reload($source);
+        if ($result) {
+            $this->markAllKnownNamespacesMaterialized();
+            $this->registerNamespaces($this->items);
+        }
+
+        return $result;
+    }
+
+    #[\Override]
+    public function replace(array $items): bool
+    {
+        $result = parent::replace($items);
+        if ($result) {
+            $this->markAllKnownNamespacesMaterialized();
+            $this->registerNamespaces($items);
+        }
+
+        return $result;
+    }
+
+    #[\Override]
+    public function restore(string $name = 'default'): bool
+    {
+        $restored = parent::restore($name);
+        if ($restored) {
+            $this->markAllKnownNamespacesMaterialized();
+            $this->registerNamespaces($this->items);
+        }
+
+        return $restored;
+    }
+
+    #[\Override]
+    public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
+    {
+        if ($key === null) {
+            $this->materializeKnownNamespaces();
+            $result = parent::set($key, $value, $overwrite);
+            if ($result) {
+                $this->markAllKnownNamespacesMaterialized();
+                $this->registerNamespaces($this->items);
+            }
+
+            return $result;
+        }
+
+        $this->materializeMutationTargets($key);
+
+        return parent::set($key, $value, $overwrite);
+    }
+
+    #[\Override]
+    public function snapshot(string $name = 'default'): bool
+    {
+        $this->materializeKnownNamespaces();
+
+        return parent::snapshot($name);
     }
 
     /**
@@ -101,9 +234,42 @@ class LayeredLazyFileConfig extends Config
         return parent::resolveRawValue($key);
     }
 
+    private function markAllKnownNamespacesMaterialized(): void
+    {
+        foreach (array_keys($this->knownNamespaces) as $namespace) {
+            $this->materializedNamespaces[$namespace] = true;
+        }
+    }
+
+    private function materializeKnownNamespaces(): void
+    {
+        foreach (array_keys($this->knownNamespaces) as $namespace) {
+            $this->materializeNamespace($namespace);
+        }
+    }
+
+    /**
+     * @param string|int|array<array-key, mixed> $targets
+     */
+    private function materializeMutationTargets(string|int|array $targets): void
+    {
+        if (is_array($targets)) {
+            foreach ($targets as $key => $value) {
+                $path = is_int($key) ? $value : $key;
+                if (is_int($path) || is_string($path)) {
+                    $this->materializeNamespace($this->namespaceFromPath((string) $path));
+                }
+            }
+
+            return;
+        }
+
+        $this->materializeNamespace($this->namespaceFromPath((string) $targets));
+    }
+
     private function materializeNamespace(string $namespace): void
     {
-        if (isset($this->materializedNamespaces[$namespace])) {
+        if ($namespace === '' || isset($this->materializedNamespaces[$namespace])) {
             return;
         }
 
@@ -141,10 +307,19 @@ class LayeredLazyFileConfig extends Config
         $namespace = $dot === false ? $path : substr($path, 0, $dot);
         $namespace = trim($namespace);
 
-        if ($namespace === '') {
-            return $path;
-        }
+        return $namespace === '' ? $path : $namespace;
+    }
 
-        return $namespace;
+    /**
+     * @param array<array-key, mixed> $items
+     */
+    private function registerNamespaces(array $items): void
+    {
+        foreach ($items as $namespace => $_value) {
+            if (is_string($namespace) && $namespace !== '') {
+                $this->knownNamespaces[$namespace] = true;
+                $this->materializedNamespaces[$namespace] = true;
+            }
+        }
     }
 }

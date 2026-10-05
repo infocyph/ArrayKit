@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Array\Concerns;
 
 use Infocyph\ArrayKit\Array\ArraySingle;
+use Infocyph\ArrayKit\Array\DotNotationPathOps;
 use InvalidArgumentException;
 
 /** @internal */
@@ -160,9 +161,15 @@ trait DotNotationPublicApiTrait
             return [];
         }
 
+        $visitedNodes = 0;
+
         if (is_array($keys)) {
             $results = [];
             foreach ($keys as $k) {
+                if (!self::canResolveSafeKey($visitedNodes, $maxNodes, $throwOnTooDeep)) {
+                    break;
+                }
+
                 $resolvedKey = (string) $k;
                 $results[$resolvedKey] = self::getValueSafe(
                     $array,
@@ -171,13 +178,22 @@ trait DotNotationPublicApiTrait
                     $maxDepth,
                     $maxNodes,
                     $throwOnTooDeep,
+                    $visitedNodes,
                 );
             }
 
             return $results;
         }
 
-        return self::getValueSafe($array, $keys, $default, $maxDepth, $maxNodes, $throwOnTooDeep);
+        return self::getValueSafe(
+            $array,
+            $keys,
+            $default,
+            $maxDepth,
+            $maxNodes,
+            $throwOnTooDeep,
+            $visitedNodes,
+        );
     }
 
     /**
@@ -264,10 +280,7 @@ trait DotNotationPublicApiTrait
             return self::has($array, $path);
         }
 
-        $missing = self::missing();
-        $resolved = self::get($array, $path, $missing);
-
-        return self::containsResolvedValue($resolved, $missing);
+        return DotNotationPathOps::matchesPath($array, self::splitPath($path));
     }
 
     /**
@@ -411,18 +424,5 @@ trait DotNotationPublicApiTrait
         $callback($array);
 
         return $array;
-    }
-
-    private static function containsResolvedValue(mixed $value, object $missing): bool
-    {
-        if ($value === $missing) {
-            return false;
-        }
-
-        if (!is_array($value)) {
-            return true;
-        }
-
-        return array_any($value, fn($item) => self::containsResolvedValue($item, $missing));
     }
 }
