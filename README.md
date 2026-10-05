@@ -61,7 +61,7 @@ configuration or object models.
 | **Collection**          | OOP array wrapper implementing `ArrayAccess`, `IteratorAggregate`, `Countable`, `JsonSerializable`. |
 | **HookedCollection**    | Extends `Collection` with **on-get/on-set hooks** for real-time transformation of values.  |
 | **Pipeline**            | Functional-style pipeline for chaining operations on collections.                          |
-| **LazyCollection**      | Repeatable lazy operations (`mapLazy`, `filterLazy`, `chunkLazy`, `take`, `takeUntil`), including one-shot generators and renewable factories. |
+| **LazyCollection**      | Repeatable lazy operations (`mapLazy`, `filterLazy`, `chunkLazy`, `take`, `takeUntil`), including one-shot generators, renewable factories, and optional passed-instance Runwire cancellation/yield checkpoints. |
 | **BaseCollectionTrait** | Shared collection behavior.                                                                |
 
 
@@ -89,6 +89,8 @@ configuration or object models.
 ## Requirements
 
 * **PHP 8.4** or higher
+
+Runwire is optional. ArrayKit 5.3 tests its lazy-runtime integration against `infocyph/runwire` 2.1.1; ordinary ArrayKit installation has no Runwire runtime dependency.
 
 
 ## Installation
