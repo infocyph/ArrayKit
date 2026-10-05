@@ -25,21 +25,6 @@ final class RunwireLazyCollectionBench
 
     private RuntimeContext $runtime;
 
-    /** @param array{size:int} $params */
-    public function setUp(array $params): void
-    {
-        $this->data = range(1, $params['size']);
-        $this->runtime = RuntimeContext::standalone();
-        $this->request = RequestContext::create($this->runtime);
-    }
-
-    public function benchBoundRequestMaterialization(): void
-    {
-        LazyCollection::from($this->data)
-            ->withRunwire($this->runtime, $this->request, checkpointEvery: 256)
-            ->all();
-    }
-
     public function benchBoundRequestMapFilter(): void
     {
         LazyCollection::from($this->data)
@@ -49,9 +34,11 @@ final class RunwireLazyCollectionBench
             ->all();
     }
 
-    public function benchUnboundMaterialization(): void
+    public function benchBoundRequestMaterialization(): void
     {
-        LazyCollection::from($this->data)->all();
+        LazyCollection::from($this->data)
+            ->withRunwire($this->runtime, $this->request, checkpointEvery: 256)
+            ->all();
     }
 
     public function benchUnboundMapFilter(): void
@@ -62,6 +49,11 @@ final class RunwireLazyCollectionBench
             ->all();
     }
 
+    public function benchUnboundMaterialization(): void
+    {
+        LazyCollection::from($this->data)->all();
+    }
+
     /** @return array<string, array{size:int}> */
     public function provideSizes(): array
     {
@@ -70,5 +62,13 @@ final class RunwireLazyCollectionBench
             '10k' => ['size' => 10000],
             '100k' => ['size' => 100000],
         ];
+    }
+
+    /** @param array{size:int} $params */
+    public function setUp(array $params): void
+    {
+        $this->data = range(1, $params['size']);
+        $this->runtime = RuntimeContext::standalone();
+        $this->request = RequestContext::create($this->runtime);
     }
 }
