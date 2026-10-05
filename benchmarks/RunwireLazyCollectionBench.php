@@ -25,6 +25,15 @@ final class RunwireLazyCollectionBench
 
     private RuntimeContext $runtime;
 
+    /** @param array{size:int} $params */
+    public function setUp(array $params): void
+    {
+        $this->data = range(1, $params['size']);
+        $this->runtime = RuntimeContext::standalone();
+        $this->request = RequestContext::create($this->runtime);
+    }
+
+
     public function benchBoundRequestMapFilter(): void
     {
         LazyCollection::from($this->data)
@@ -64,11 +73,4 @@ final class RunwireLazyCollectionBench
         ];
     }
 
-    /** @param array{size:int} $params */
-    public function setUp(array $params): void
-    {
-        $this->data = range(1, $params['size']);
-        $this->runtime = RuntimeContext::standalone();
-        $this->request = RequestContext::create($this->runtime);
-    }
 }
