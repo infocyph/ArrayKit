@@ -7,6 +7,8 @@ namespace Infocyph\ArrayKit\Collection;
 use Infocyph\Runwire\CancellationToken;
 use Infocyph\Runwire\Coroutine\CoroutineScope;
 use Infocyph\Runwire\RequestContext;
+use Infocyph\Runwire\Runtime\Enum\RuntimeCapability;
+use Infocyph\Runwire\RuntimeContext;
 use InvalidArgumentException;
 use LogicException;
 
@@ -15,10 +17,15 @@ final readonly class RunwireLazyBinding
 {
     private const int MAX_CHECKPOINT_INTERVAL = 1_000_000;
 
-    public CancellationToken $cancellation;
+    private ?CancellationToken $requestCancellation;
+
+    private ?CancellationToken $scopeCancellation;
+
+    private bool $yieldEnabled;
 
     public function __construct(
-        CancellationToken|RequestContext $context,
+        public RuntimeContext $runtime,
+        ?RequestContext $request = null,
         public ?CoroutineScope $scope = null,
         public int $checkpointEvery = 256,
     ) {
@@ -28,21 +35,32 @@ final readonly class RunwireLazyBinding
             );
         }
 
-        if ($context instanceof RequestContext) {
-            if ($context->completed()) {
+        if ($request !== null) {
+            if ($request->completed()) {
                 throw new LogicException('Completed Runwire request context cannot be bound to a lazy collection.');
             }
 
-            $context = $context->cancellation;
+            if ($request->runtime() !== $runtime) {
+                throw new LogicException('Runwire request context belongs to a different runtime context.');
+            }
         }
 
-        $this->cancellation = $context;
+        $this->requestCancellation = $request?->cancellation;
+        $this->scopeCancellation = $scope?->cancellation();
+        $this->yieldEnabled = $scope !== null
+            && $runtime->supports(RuntimeCapability::RUNWIRE_COROUTINES);
     }
 
     public function checkpoint(): void
     {
-        $this->cancellation->throwIfCancelled();
-        $this->scope?->yieldNow();
-        $this->cancellation->throwIfCancelled();
+        $this->requestCancellation?->throwIfCancelled();
+        $this->scopeCancellation?->throwIfCancelled();
+
+        if ($this->yieldEnabled) {
+            $this->scope?->yieldNow();
+        }
+
+        $this->requestCancellation?->throwIfCancelled();
+        $this->scopeCancellation?->throwIfCancelled();
     }
 }
