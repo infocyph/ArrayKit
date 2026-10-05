@@ -284,19 +284,15 @@ it('honors request cancellation inside an active coroutine scope without complet
     $runtime = batchERuntime(true);
     $request = RequestContext::create($runtime);
     $coroutines = new CoroutineRuntime();
-    $consumed = 0;
+    $callbackValues = [];
 
     expect(fn () => $coroutines->runRequest(
         $request,
-        function (CoroutineScope $scope) use ($runtime, $request, &$consumed): array {
-            return LazyCollection::from((function () use (&$consumed) {
-                foreach ([1, 2, 3] as $value) {
-                    $consumed++;
-                    yield $value;
-                }
-            })())
+        function (CoroutineScope $scope) use ($runtime, $request, &$callbackValues): array {
+            return LazyCollection::from([1, 2, 3])
                 ->withRunwire($runtime, $request, $scope, checkpointEvery: 2)
-                ->mapLazy(function (int $value) use ($request): int {
+                ->mapLazy(function (int $value) use ($request, &$callbackValues): int {
+                    $callbackValues[] = $value;
                     if ($value === 2) {
                         $request->cancel(CancellationReason::HOST_CANCELLED);
                     }
@@ -306,7 +302,8 @@ it('honors request cancellation inside an active coroutine scope without complet
                 ->all();
         },
     ))->toThrow(CancelledException::class)
-        ->and($consumed)->toBe(2)
+        ->and($callbackValues)->toBe([1, 2])
+        ->and($request->cancelled())->toBeTrue()
         ->and($request->completed())->toBeFalse();
 });
 
