@@ -19,8 +19,10 @@ Main methods:
 - ``fromArray(array $values): static`` (hydrate current instance)
 - ``hydrate(array $values, array $mapping = [], bool $coerce = false): static``
 - ``hydrateNested(array $values, array $mapping = [], bool $coerce = false): static``
+- ``hydrateNestedGuarded(array $values, array $mapping = [], bool $coerce = false, int $maxDepth = 64, int $maxNodes = 100000): static``
 - ``toArray(): array`` (export public properties)
 - ``toArrayDeep(): array`` (recursive export)
+- ``toArrayDeepGuarded(int $maxDepth = 64, int $maxNodes = 100000): array``
 - ``replaceFromArray(array $values, array $mapping = [], bool $coerce = false): static``
 
 Basic DTO Flow
@@ -57,6 +59,33 @@ Incremental Hydration
     $user = new UserDTO();
     $user->fromArray(['name' => 'Bob']);
     $user->fromArray(['age' => 32]);
+
+Bounded DTO Graphs
+~~~~~~~~~~~~~~~~~~
+
+Use the guarded entry points when nested DTO or array graphs can be large,
+recursive, or influenced by external input. The complete graph is validated
+before hydration or deep export. ``maxDepth`` and ``maxNodes`` are shared
+across the whole call; both must be positive. Cyclic array references, cyclic
+public object references, or a limit breach raise ``RuntimeException``.
+
+Shared acyclic objects are valid and may appear in more than one branch. The
+ordinary ``hydrateNested()`` and ``toArrayDeep()`` contracts are unchanged and
+remain the lower-overhead choice for trusted, already-bounded graphs.
+
+.. code-block:: php
+
+    <?php
+    $user->hydrateNestedGuarded(
+        $payload,
+        maxDepth: 32,
+        maxNodes: 10_000,
+    );
+
+    $safe = $user->toArrayDeepGuarded(
+        maxDepth: 32,
+        maxNodes: 10_000,
+    );
 
 Unknown Keys
 ~~~~~~~~~~~~
