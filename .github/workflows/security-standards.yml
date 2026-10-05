@@ -40,11 +40,12 @@ jobs:
           php-version: "8.5"
           tools: composer:v2
           extensions: opcache
+          ini-values: opcache.enable_cli=1
           coverage: none
       - name: Install acceptance dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Run ArrayKit release acceptance tests
-        run: php -d opcache.enable_cli=1 vendor/bin/pest tests/Feature/Release530BatchFTest.php
+        run: composer ic:test:pest
       - name: Run persistent-worker soak
         run: |
           mkdir -p build
@@ -56,7 +57,7 @@ jobs:
             --report=build/release-worker-soak.json \
             -- php -d opcache.enable_cli=1 tests/Support/release530-persistent-worker.php
       - name: Upload worker-soak evidence
-        if: always()
+        if: always() && hashFiles('build/release-worker-soak.json') != ''
         uses: actions/upload-artifact@v7
         with:
           name: release-worker-soak
