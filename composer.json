@@ -44,6 +44,9 @@
             "Infocyph\\ArrayKit\\Tests\\": "tests/"
         }
     },
+    "scripts": {
+        "benchmark:representative": "@php benchmarks/release-representative.php"
+    },
     "config": {
         "allow-plugins": {
             "ergebnis/composer-normalize": true,
