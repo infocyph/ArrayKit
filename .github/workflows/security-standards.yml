@@ -45,7 +45,11 @@ jobs:
       - name: Install acceptance dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Run ArrayKit release acceptance tests
-        run: composer ic:test:pest
+        run: >-
+          php vendor/bin/pest
+          --configuration vendor/infocyph/phpforge/resources/pest.xml
+          --bootstrap vendor/autoload.php
+          tests/Feature/Release530BatchFTest.php
       - name: Run persistent-worker soak
         run: |
           mkdir -p build
