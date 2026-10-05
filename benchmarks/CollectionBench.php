@@ -21,6 +21,13 @@ final class CollectionBench
     /** @var array<int, int> */
     private array $data = [];
 
+    /** @param array{size:int} $params */
+    public function setUp(array $params): void
+    {
+        $this->data = range(1, $params['size']);
+    }
+
+
     public function benchArraySingleMap(): void
     {
         ArraySingle::map($this->data, static fn(int $value): int => $value * 2);
@@ -99,9 +106,4 @@ final class CollectionBench
         ];
     }
 
-    /** @param array{size:int} $params */
-    public function setUp(array $params): void
-    {
-        $this->data = range(1, $params['size']);
-    }
 }
