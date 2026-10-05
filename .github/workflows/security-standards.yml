@@ -14,8 +14,52 @@ jobs:
     with:
       integration_services: '[]'
       service_topologies: '{}'
+      benchmark_composer_script: "benchmark:representative"
+      benchmark_result_file: "build/release-candidate.json"
+      benchmark_baseline_file: "build/release-baseline.json"
+      benchmark_max_regression_percent: 2
+      benchmark_stable_environment: false
     permissions:
       security-events: write
       actions: read
       contents: read
 
+
+
+  release-acceptance:
+    name: "Release Acceptance"
+    needs: phpforge
+    runs-on: ubuntu-latest
+    env:
+      XDEBUG_MODE: off
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          tools: composer:v2
+          extensions: opcache
+          coverage: none
+      - name: Install acceptance dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Run ArrayKit release acceptance tests
+        run: php -d opcache.enable_cli=1 vendor/bin/pest tests/Feature/Release530BatchFTest.php
+      - name: Run persistent-worker soak
+        run: |
+          mkdir -p build
+          composer ic:soak:worker \
+            --duration=20 \
+            --warmup=3 \
+            --sample-interval=1 \
+            --max-growth-mb=16 \
+            --report=build/release-worker-soak.json \
+            -- php -d opcache.enable_cli=1 tests/Support/release530-persistent-worker.php
+      - name: Upload worker-soak evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-worker-soak
+          path: build/release-worker-soak.json
+          if-no-files-found: error
+          retention-days: 61
