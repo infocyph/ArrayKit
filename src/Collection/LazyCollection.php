@@ -38,7 +38,11 @@ final readonly class LazyCollection implements IteratorAggregate
     public static function from(iterable $source): self
     {
         if (is_array($source)) {
-            return new self(static fn(?RunwireLazyBinding $binding): array => $source);
+            return new self(static function (?RunwireLazyBinding $binding) use ($source): array {
+                unset($binding);
+
+                return $source;
+            });
         }
 
         return new self(self::replayableFactory($source));
@@ -57,7 +61,11 @@ final readonly class LazyCollection implements IteratorAggregate
     public static function fromFactory(\Closure $factory): self
     {
         return new self(
-            static fn(?RunwireLazyBinding $binding): iterable => $factory(),
+            static function (?RunwireLazyBinding $binding) use ($factory): iterable {
+                unset($binding);
+
+                return $factory();
+            },
         );
     }
 
@@ -188,7 +196,11 @@ final readonly class LazyCollection implements IteratorAggregate
 
         if ($limit === 0) {
             return new self(
-                static fn(?RunwireLazyBinding $binding): array => [],
+                static function (?RunwireLazyBinding $binding): array {
+                    unset($binding);
+
+                    return [];
+                },
                 $this->runwire,
                 true,
             );
@@ -291,6 +303,8 @@ final readonly class LazyCollection implements IteratorAggregate
             &$exhausted,
             $state,
         ): Generator {
+            unset($binding);
+
             $position = 0;
 
             while (true) {
