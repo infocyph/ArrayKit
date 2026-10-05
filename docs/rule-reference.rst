@@ -589,8 +589,10 @@ DTOTrait
     public function fromArray(array $values): static
     public function hydrate(array $values, array $mapping = [], bool $coerce = false): static
     public function hydrateNested(array $values, array $mapping = [], bool $coerce = false): static
+    public function hydrateNestedGuarded(array $values, array $mapping = [], bool $coerce = false, int $maxDepth = 64, int $maxNodes = 100000): static
     public function toArray(): array
     public function toArrayDeep(): array
+    public function toArrayDeepGuarded(int $maxDepth = 64, int $maxNodes = 100000): array
     public function replaceFromArray(array $values, array $mapping = [], bool $coerce = false): static
 
 HookTrait
