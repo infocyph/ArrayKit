@@ -284,29 +284,32 @@ it('honors request cancellation while an active coroutine scope is bound without
     $runtime = batchERuntime(true);
     $request = RequestContext::create($runtime);
     $coroutines = new CoroutineRuntime();
-    $callbackValues = [];
+    $state = new class {
+        public int $factoryCalls = 0;
+    };
 
     expect(fn () => $coroutines->run(
-        function (CoroutineScope $scope) use ($runtime, $request, &$callbackValues): array {
-            return LazyCollection::from([1, 2, 3])
-                ->withRunwire($runtime, $request, $scope, checkpointEvery: 2)
-                ->mapLazy(function (int $value) use ($request, &$callbackValues): int {
-                    $callbackValues[] = $value;
-                    if ($value === 2) {
-                        $request->cancel(CancellationReason::HOST_CANCELLED);
-                    }
+        function (CoroutineScope $scope) use ($runtime, $request, $state): array {
+            $scope->spawn(function () use ($request): void {
+                $request->cancel(CancellationReason::HOST_CANCELLED);
+            });
 
-                    return $value;
-                })
+            return LazyCollection::fromFactory(
+                function () use ($state): array {
+                    $state->factoryCalls++;
+
+                    return [1, 2, 3];
+                },
+            )
+                ->withRunwire($runtime, $request, $scope, checkpointEvery: 1)
                 ->all();
         },
     ))->toThrow(CancelledException::class);
 
-    expect($callbackValues)->toBe([1, 2])
+    expect($state->factoryCalls)->toBe(0)
         ->and($request->cancelled())->toBeTrue()
         ->and($request->completed())->toBeFalse();
 });
-
 it('preserves source and callback exception identity under Runwire binding', function () {
     $runtime = batchERuntime();
 
