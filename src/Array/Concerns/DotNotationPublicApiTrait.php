@@ -279,10 +279,7 @@ trait DotNotationPublicApiTrait
             return self::has($array, $path);
         }
 
-        $missing = self::missing();
-        $resolved = self::get($array, $path, $missing);
-
-        return self::containsResolvedValue($resolved, $missing);
+        return DotNotationPathOps::matchesPath($array, self::splitPath($path));
     }
 
     /**
@@ -428,16 +425,4 @@ trait DotNotationPublicApiTrait
         return $array;
     }
 
-    private static function containsResolvedValue(mixed $value, object $missing): bool
-    {
-        if ($value === $missing) {
-            return false;
-        }
-
-        if (!is_array($value)) {
-            return true;
-        }
-
-        return array_any($value, fn($item) => self::containsResolvedValue($item, $missing));
-    }
 }
