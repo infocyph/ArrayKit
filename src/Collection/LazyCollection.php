@@ -30,6 +30,10 @@ final readonly class LazyCollection implements IteratorAggregate
      */
     public static function from(iterable $source): self
     {
+        if (is_array($source)) {
+            return new self(static fn(): array => $source);
+        }
+
         return new self(self::replayableFactory($source));
     }
 
