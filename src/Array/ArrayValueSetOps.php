@@ -210,6 +210,32 @@ final class ArrayValueSetOps
 
     /**
      * @param array<array-key, mixed> $array
+     */
+    private static function allStrictHashable(array $array): bool
+    {
+        return array_all($array, fn($value) => self::isStrictHashable($value));
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     * @return array<string, bool>|null
+     */
+    private static function buildStrictLookup(array $array): ?array
+    {
+        $lookup = [];
+        foreach ($array as $value) {
+            if (!self::isStrictHashable($value)) {
+                return null;
+            }
+
+            $lookup[self::fingerprintStrict($value)] = true;
+        }
+
+        return $lookup;
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
      * @param array<array-key, mixed> $needles
      */
     private static function containsByMembership(
@@ -250,32 +276,6 @@ final class ArrayValueSetOps
             $needles,
             static fn(mixed $needle): bool => self::strictLookupContains($lookup, $needle),
         );
-    }
-
-    /**
-     * @param array<array-key, mixed> $array
-     */
-    private static function allStrictHashable(array $array): bool
-    {
-        return array_all($array, fn($value) => self::isStrictHashable($value));
-    }
-
-    /**
-     * @param array<array-key, mixed> $array
-     * @return array<string, bool>|null
-     */
-    private static function buildStrictLookup(array $array): ?array
-    {
-        $lookup = [];
-        foreach ($array as $value) {
-            if (!self::isStrictHashable($value)) {
-                return null;
-            }
-
-            $lookup[self::fingerprintStrict($value)] = true;
-        }
-
-        return $lookup;
     }
 
     /**
