@@ -26,6 +26,7 @@ Contents
     config
     lazy-config
     config-layering
+    lifecycle
     traits-and-helpers
     migration
     rule-reference
