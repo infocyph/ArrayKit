@@ -42,6 +42,41 @@ final class DotNotationPathOps
     }
 
     /**
+     * Determine whether a path resolves to at least one existing value.
+     *
+     * @param array<int, string> $segments
+     */
+    public static function matchesPath(mixed $target, array $segments, int $position = 0): bool
+    {
+        if ($position >= count($segments)) {
+            return true;
+        }
+
+        $segment = $segments[$position];
+        if ($segment === '*') {
+            $target = is_object($target) && method_exists($target, 'all') ? $target->all() : $target;
+            if (!is_array($target)) {
+                return false;
+            }
+
+            foreach ($target as $item) {
+                if (self::matchesPath($item, $segments, $position + 1)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        $missing = new \stdClass();
+        $normalized = self::normalizeSegment($segment, $target);
+        $next = self::accessSegment($target, $normalized, $missing);
+
+        return $next !== $missing
+            && self::matchesPath($next, $segments, $position + 1);
+    }
+
+    /**
      * Normalize a dot-notation segment by replacing escaped values and resolving
      * special values such as '{first}' and '{last}'.
      */
