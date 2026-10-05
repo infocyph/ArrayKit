@@ -104,5 +104,4 @@ final class CollectionBench
             '1m' => ['size' => 1000000],
         ];
     }
-
 }
