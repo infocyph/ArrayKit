@@ -300,8 +300,9 @@ it('honors request cancellation while an active coroutine scope is bound without
                 })
                 ->all();
         },
-    ))->toThrow(CancelledException::class)
-        ->and($callbackValues)->toBe([1, 2])
+    ))->toThrow(CancelledException::class);
+
+    expect($callbackValues)->toBe([1, 2])
         ->and($request->cancelled())->toBeTrue()
         ->and($request->completed())->toBeFalse();
 });
