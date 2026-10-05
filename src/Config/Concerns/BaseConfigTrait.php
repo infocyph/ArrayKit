@@ -538,24 +538,6 @@ trait BaseConfigTrait
         return true;
     }
 
-    /**
-     * @return array<array-key, mixed>
-     */
-    private function arrayValueForMutation(string $key): array
-    {
-        $missing = $this->missingValueMarker();
-        $array = $this->get($key, $missing);
-        if ($array === $missing) {
-            return [];
-        }
-
-        if (!is_array($array)) {
-            throw new InvalidArgumentException("Config value [{$key}] must be an array.");
-        }
-
-        return $array;
-    }
-
     protected function assertWritable(): void
     {
         if ($this->readOnly) {
@@ -700,6 +682,24 @@ trait BaseConfigTrait
         unlink($temporaryPath);
 
         return false;
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function arrayValueForMutation(string $key): array
+    {
+        $missing = $this->missingValueMarker();
+        $array = $this->get($key, $missing);
+        if ($array === $missing) {
+            return [];
+        }
+
+        if (!is_array($array)) {
+            throw new InvalidArgumentException("Config value [{$key}] must be an array.");
+        }
+
+        return $array;
     }
 
     /**
