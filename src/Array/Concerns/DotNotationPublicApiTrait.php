@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Array\Concerns;
 
 use Infocyph\ArrayKit\Array\ArraySingle;
+use Infocyph\ArrayKit\Array\DotNotationPathOps;
 use InvalidArgumentException;
 
 /** @internal */
@@ -424,5 +425,4 @@ trait DotNotationPublicApiTrait
 
         return $array;
     }
-
 }
