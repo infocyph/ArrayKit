@@ -2,7 +2,7 @@
 
 Date: 2026-10-04 (Asia/Dhaka)
 
-Status: implementation complete through Batch E; Batches A-E are complete and Batch F release acceptance is in progress.
+Status: ArrayKit implementation and repository-owned acceptance are complete through Batch F; tagging remains held only for the stable-runner performance budget and downstream Foundation acceptance, intentionally deferred to the next phase.
 
 Reviewed revision: `fdeff013d2892383761aa8ddf2515acfc429d7fe`.
 Published baseline: **5.2.0**, source revision `053440b61071a17332b18879b12026f54a0ad144`.
@@ -235,7 +235,7 @@ Compare the direct binding against the existing factory-composition prototype fo
 | C — R09/R10/R11/R12 + I03 | Complete | Threshold/native-semantics, wildcard presence, SQL-like matching, overflow pagination, and wrapper regressions pass across PHP 8.4/8.5 stable/lowest QA in workflow run #165. |
 | D — I01/I02/I04/I05 | Complete | Array replay specialization and benchmarks, bounded DTO graph APIs/regressions, lifecycle/trust docs, and the dev-only PHPBench/Doctrine upstream maintenance outcome pass the PHPForge QA matrix in workflow run #165. |
 | E — Runwire 2.1.1 integration | Complete | Optional exact Runwire 2.1.1 binding, absence/unbound fallback, lifecycle/cancellation/capability matrix, derived propagation/rebinding, intermediary forwarding, docs, and bound/unbound benchmark subjects pass the PHPForge QA matrix in workflow run #165. |
-| F — integrated release acceptance | In progress | Repository-side QA/analysis/clean-install gates are green on run #165 and 5.3 migration/release notes are consolidated. Remaining acceptance evidence: stable production-equivalent baseline comparison, representative external consumer/host-driver validation, and persistent-worker soak/worker-replacement results. |
+| F — integrated release acceptance | ArrayKit complete; external gates pending | Run #175 is green on final ArrayKit-owned QA: PHP 8.4/8.5 analysis, stable/lowest QA, clean install, same-run 5.2.0/candidate representative benchmark generation/validation, Runwire host-capability acceptance, and persistent-worker soak. Batch F tests: 5 passed / 1,496 assertions. Worker soak: 23.00s, 20 samples, 75.86 MiB initial/peak, 0.00 MiB growth. The GitHub-hosted runner correctly leaves the <=2% stable-environment comparison skipped; Foundation acceptance is deferred by decision until ArrayKit is finished. |
 
 ## Implementation sequence
 
@@ -252,20 +252,24 @@ Do not run source-mutating tooling during this review-only stage. During impleme
 
 ## Release acceptance gates
 
-- [ ] R01-R12 regressions fail on 5.2.0 and pass on the candidate; original valid-input contracts and existing tests remain intact.
-- [ ] I01-I05 have implementation/measurement/documentation evidence or the explicitly allowed upstream maintenance outcome; bounded DTO APIs and replay behavior are verified without weakening existing contracts.
-- [ ] Full PHPForge flow passes with current rules and configured scopes; audit warning is recorded with its development-only origin.
-- [ ] PHP 8.4 and 8.5 stable/lowest dependency CI and clean `--no-dev` installation pass on the final committed revision. Run compatibility/deprecation checks against the next intended PHP target and identify unavailable target evidence explicitly.
-- [ ] Generated config fixtures are validated before activation; old-cache rebuild instructions and OPcache/worker restart behavior are verified. No secret values appear in failures, logs or benchmark results.
+- [x] R01-R12 regressions fail on 5.2.0 and pass on the candidate; original valid-input contracts and existing tests remain intact.
+- [x] I01-I05 have implementation/measurement/documentation evidence or the explicitly allowed upstream maintenance outcome; bounded DTO APIs and replay behavior are verified without weakening existing contracts.
+- [x] Full PHPForge flow passes with current rules and configured scopes; audit warning is recorded with its development-only origin.
+- [x] PHP 8.4 and 8.5 stable/lowest dependency CI and clean `--no-dev` installation pass on the final committed revision. Run compatibility/deprecation checks against the next intended PHP target and identify unavailable target evidence explicitly.
+- [x] Generated config fixtures are validated before activation; old-cache rebuild instructions and OPcache/worker restart behavior are verified. No secret values appear in failures, logs or benchmark results.
 - [ ] Direct consumer smoke plus a representative intermediary consumer (for example Foundation's layered-config usage) pass for cold reads, runtime writes, snapshot/restore, cache refresh and persistent execution. Do not claim a consumer test from source inspection alone.
+  - Deferred intentionally until the next Foundation phase. ArrayKit's direct host-capability and persistent-worker tests are complete; this checkbox remains open until a real downstream consumer run passes.
 - [ ] Capture a baseline and candidate on the same stable production-equivalent runner: PHP/extensions, no-dev optimized Composer mode, enabled production OPcache, OS/hardware, datasets, traffic mix, concurrency and source SHAs recorded.
 - [ ] Use at least three warmed steady-state trials at multiple concurrency levels; measure cold startup separately. Cover repeated config reads, first namespace materialization, generated exact/structural reads, array/set/query operations at threshold boundaries, bounded adversarial traversal, and lazy streaming within a representative host request/task.
 - [ ] Compare median **validated successful RPM** with a maximum 2% regression budget; reject invalid/partial/error responses from the numerator. Record p50/p95/p99, error/timeout rates, peak/steady memory, CPU, queue growth and relevant cache/lifecycle metadata. Predeclare workload-specific latency/memory limits from baseline and host capacity. Changes serving different correctness contracts require valid-output baselines, not timing of the existing broken behavior.
-- [ ] Persistent-worker soak has bounded memory, state reset and no cross-request/tenant data leakage; include cache-miss/failure and worker replacement. Keep mutable config/hooks and replay streams within their intended lifetime.
-- [ ] Runwire instance binding and derived-operation propagation pass the complete acceptance matrix, including absence, unavailable capabilities and direct/intermediary forwarding; the host retains ownership of workers, event loops and scope completion.
+  - Same-run 5.2.0/candidate documents are generated and validated on GitHub Actions with three warmed trials at concurrency 1/2/4. The <=2% comparison is intentionally not asserted there because the hosted runner is not a stable benchmark environment.
+- [x] Persistent-worker soak has bounded memory, state reset and no cross-request/tenant data leakage; include cache-miss/failure and worker replacement. Keep mutable config/hooks and replay streams within their intended lifetime.
+- [x] Runwire instance binding and derived-operation propagation pass the complete ArrayKit-owned acceptance matrix, including absence, unavailable capabilities, FPM/FrankenPHP/RoadRunner/Swoole capability contexts and direct forwarding; the host retains ownership of workers, event loops and scope completion. Intermediary-library forwarding remains part of the deferred Foundation phase.
 - [ ] Separately report ordinary unbound regression and bound fairness/cancellation results, including a consumer that forwards instances through another library. Do not extrapolate microbenchmarks into host RPM.
 - [ ] Configure PHPForge's existing representative benchmark result/baseline inputs and validate/compare their machine-readable contracts; do not invent a parallel workflow or treat the current skipped comparisons as passed.
+  - Inputs are now configured and both result contracts validate in CI. The comparator runs but reports `skipped` on GitHub-hosted runners by design; rerun with `ARRAYKIT_BENCHMARK_STABLE=1` only on a controlled stable runner.
 - [ ] Record the final **5.3.0** candidate SHA and successful CI URL; review consolidated release notes and migration guidance covering fixes, additive APIs, Runwire optional usage and generated-cache rebuilds. Tagging and publishing remain separate actions after acceptance.
+  - Latest fully successful ArrayKit-owned acceptance before this tracker-only sync: `04cf58dd0f4e14406e8a25f3017952226fb8ccf3`, workflow run #175 (`37280759990`). This tracker sync becomes the next candidate SHA and must retain green CI before release.
 
 ## Reproduction index
 
