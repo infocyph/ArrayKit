@@ -637,8 +637,10 @@ methods listed in the ``DTOTrait`` section.
     public function fromArray(array $values): static
     public function hydrate(array $values, array $mapping = [], bool $coerce = false): static
     public function hydrateNested(array $values, array $mapping = [], bool $coerce = false): static
+    public function hydrateNestedGuarded(array $values, array $mapping = [], bool $coerce = false, int $maxDepth = 64, int $maxNodes = 100000): static
     public function toArray(): array
     public function toArrayDeep(): array
+    public function toArrayDeepGuarded(int $maxDepth = 64, int $maxNodes = 100000): array
     public function replaceFromArray(array $values, array $mapping = [], bool $coerce = false): static
 
 LazyCollection
@@ -656,4 +658,5 @@ LazyCollection
     public function chunkLazy(int $size, bool $preserveKeys = false): self
     public function take(int $limit): self
     public function takeUntil(callable $callback): self
+    public function withRunwire(RuntimeContext $runtime, ?RequestContext $request = null, ?CoroutineScope $scope = null, int $checkpointEvery = 256): self
     public function all(): array
