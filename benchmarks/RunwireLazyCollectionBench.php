@@ -71,5 +71,4 @@ final class RunwireLazyCollectionBench
             '100k' => ['size' => 100000],
         ];
     }
-
 }
