@@ -54,8 +54,8 @@ jobs:
         run: |
           mkdir -p build
           composer ic:soak:worker \
-            --duration=20 \
-            --warmup=3 \
+            --duration=300 \
+            --warmup=10 \
             --sample-interval=1 \
             --max-growth-mb=16 \
             --report=build/release-worker-soak.json \

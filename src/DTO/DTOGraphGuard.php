@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\DTO;
 
+use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
 use InvalidArgumentException;
+use ReflectionMethod;
 use ReflectionObject;
 use ReflectionProperty;
 use ReflectionReference;
@@ -16,27 +18,18 @@ final class DTOGraphGuard
 {
     public static function assertWithinLimits(mixed $value, int $maxDepth, int $maxNodes): void
     {
-        if ($maxDepth < 1) {
-            throw new InvalidArgumentException('DTO graph max depth must be at least 1.');
+        self::traverse($value, $maxDepth, $maxNodes, false);
+    }
+
+    /** @return array<array-key, mixed> */
+    public static function export(object $value, int $maxDepth, int $maxNodes): array
+    {
+        $result = self::traverse($value, $maxDepth, $maxNodes, true);
+        if (!is_array($result)) {
+            throw new InvalidArgumentException('Guarded export requires the standard DTO exporter.');
         }
 
-        if ($maxNodes < 1) {
-            throw new InvalidArgumentException('DTO graph max node count must be at least 1.');
-        }
-
-        $activeObjects = [];
-        $activeReferences = [];
-        $visitedNodes = 0;
-
-        self::walk(
-            $value,
-            1,
-            $visitedNodes,
-            $maxDepth,
-            $maxNodes,
-            $activeObjects,
-            $activeReferences,
-        );
+        return $result;
     }
 
     private static function assertNodeWithinLimits(
@@ -55,6 +48,51 @@ final class DTOGraphGuard
         }
     }
 
+    private static function isStandardExporter(object $value): bool
+    {
+        if (!is_callable([$value, 'toArrayDeep']) && !is_callable([$value, 'toArray'])) {
+            return false;
+        }
+
+        foreach (['toArray', 'toArrayDeep'] as $method) {
+            if (
+                !method_exists($value, $method)
+                || new ReflectionMethod($value, $method)->getFileName()
+                    !== new ReflectionMethod(DTOTrait::class, $method)->getFileName()
+            ) {
+                throw new InvalidArgumentException('Guarded DTO export does not execute custom exporters.');
+            }
+        }
+
+        return true;
+    }
+
+    private static function traverse(mixed $value, int $maxDepth, int $maxNodes, bool $export): mixed
+    {
+        if ($maxDepth < 1) {
+            throw new InvalidArgumentException('DTO graph max depth must be at least 1.');
+        }
+
+        if ($maxNodes < 1) {
+            throw new InvalidArgumentException('DTO graph max node count must be at least 1.');
+        }
+
+        $activeObjects = [];
+        $activeReferences = [];
+        $visitedNodes = 0;
+
+        return self::walk(
+            $value,
+            1,
+            $visitedNodes,
+            $maxDepth,
+            $maxNodes,
+            $activeObjects,
+            $activeReferences,
+            $export,
+        );
+    }
+
     /**
      * @param array<int, true> $activeObjects
      * @param array<string, true> $activeReferences
@@ -67,11 +105,12 @@ final class DTOGraphGuard
         int $maxNodes,
         array &$activeObjects,
         array &$activeReferences,
-    ): void {
+        bool $export,
+    ): mixed {
         self::assertNodeWithinLimits($depth, $visitedNodes, $maxDepth, $maxNodes);
 
         if (is_array($value)) {
-            self::walkArray(
+            return self::walkArray(
                 $value,
                 $depth,
                 $visitedNodes,
@@ -79,13 +118,12 @@ final class DTOGraphGuard
                 $maxNodes,
                 $activeObjects,
                 $activeReferences,
+                $export,
             );
-
-            return;
         }
 
         if (is_object($value) && !$value instanceof UnitEnum) {
-            self::walkObject(
+            return self::walkObject(
                 $value,
                 $depth,
                 $visitedNodes,
@@ -93,8 +131,11 @@ final class DTOGraphGuard
                 $maxNodes,
                 $activeObjects,
                 $activeReferences,
+                $export,
             );
         }
+
+        return $value;
     }
 
     /**
@@ -110,11 +151,13 @@ final class DTOGraphGuard
         int $maxNodes,
         array &$activeObjects,
         array &$activeReferences,
-    ): void {
+        bool $export,
+    ): mixed {
+        $result = [];
         foreach ($value as $key => $entry) {
             $reference = ReflectionReference::fromArrayElement($value, $key);
             if ($reference === null) {
-                self::walk(
+                $resolved = self::walk(
                     $entry,
                     $depth + 1,
                     $visitedNodes,
@@ -122,7 +165,11 @@ final class DTOGraphGuard
                     $maxNodes,
                     $activeObjects,
                     $activeReferences,
+                    $export,
                 );
+                if ($export) {
+                    $result[$key] = $resolved;
+                }
 
                 continue;
             }
@@ -135,7 +182,7 @@ final class DTOGraphGuard
             $activeReferences[$referenceId] = true;
 
             try {
-                self::walk(
+                $resolved = self::walk(
                     $entry,
                     $depth + 1,
                     $visitedNodes,
@@ -143,11 +190,17 @@ final class DTOGraphGuard
                     $maxNodes,
                     $activeObjects,
                     $activeReferences,
+                    $export,
                 );
+                if ($export) {
+                    $result[$key] = $resolved;
+                }
             } finally {
                 unset($activeReferences[$referenceId]);
             }
         }
+
+        return $export ? $result : $value;
     }
 
     /**
@@ -162,12 +215,15 @@ final class DTOGraphGuard
         int $maxNodes,
         array &$activeObjects,
         array &$activeReferences,
-    ): void {
+        bool $export,
+    ): mixed {
         $objectId = spl_object_id($value);
         if (isset($activeObjects[$objectId])) {
             throw new RuntimeException('DTO graph contains a cyclic object reference.');
         }
 
+        $exportObject = $export && self::isStandardExporter($value);
+        $result = [];
         $activeObjects[$objectId] = true;
 
         try {
@@ -176,7 +232,7 @@ final class DTOGraphGuard
                     continue;
                 }
 
-                self::walk(
+                $resolved = self::walk(
                     $property->getValue($value),
                     $depth + 1,
                     $visitedNodes,
@@ -184,10 +240,16 @@ final class DTOGraphGuard
                     $maxNodes,
                     $activeObjects,
                     $activeReferences,
+                    $exportObject,
                 );
+                if ($exportObject) {
+                    $result[$property->getName()] = $resolved;
+                }
             }
         } finally {
             unset($activeObjects[$objectId]);
         }
+
+        return $exportObject ? $result : $value;
     }
 }

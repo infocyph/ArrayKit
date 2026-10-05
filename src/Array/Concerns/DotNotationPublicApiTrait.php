@@ -166,6 +166,10 @@ trait DotNotationPublicApiTrait
         if (is_array($keys)) {
             $results = [];
             foreach ($keys as $k) {
+                if (!self::canResolveSafeKey($visitedNodes, $maxNodes, $throwOnTooDeep)) {
+                    break;
+                }
+
                 $resolvedKey = (string) $k;
                 $results[$resolvedKey] = self::getValueSafe(
                     $array,
@@ -176,10 +180,6 @@ trait DotNotationPublicApiTrait
                     $throwOnTooDeep,
                     $visitedNodes,
                 );
-
-                if ($maxNodes > 0 && $visitedNodes >= $maxNodes) {
-                    break;
-                }
             }
 
             return $results;

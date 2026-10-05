@@ -485,6 +485,7 @@ trait ArrayMultiQuerySortTrait
         bool $throwOnTooDeep = false,
     ): array {
         $visitedNodes = 0;
+        $complete = true;
 
         return self::sortRecursiveWithGuards(
             $array,
@@ -495,6 +496,7 @@ trait ArrayMultiQuerySortTrait
             $maxDepth,
             $maxNodes,
             $throwOnTooDeep,
+            $complete,
         );
     }
 
@@ -1238,6 +1240,7 @@ trait ArrayMultiQuerySortTrait
         int $maxDepth,
         int $maxNodes,
         bool $throwOnTooDeep,
+        bool &$complete,
     ): array {
         if (!self::reserveSortNodes(
             $array,
@@ -1247,6 +1250,8 @@ trait ArrayMultiQuerySortTrait
             $maxNodes,
             $throwOnTooDeep,
         )) {
+            $complete = false;
+
             return $array;
         }
 
@@ -1264,7 +1269,13 @@ trait ArrayMultiQuerySortTrait
                 $maxDepth,
                 $maxNodes,
                 $throwOnTooDeep,
+                $complete,
             );
+            if (!$complete) {
+                unset($value);
+
+                return $array;
+            }
         }
         unset($value);
 

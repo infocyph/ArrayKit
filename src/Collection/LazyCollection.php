@@ -37,7 +37,7 @@ final readonly class LazyCollection implements IteratorAggregate
      */
     public static function from(iterable $source): self
     {
-        if (is_array($source)) {
+        if (is_array($source) && !self::hasReferencedEntries($source)) {
             return new self(static function (?RunwireLazyBinding $binding) use ($source): array {
                 unset($binding);
 
@@ -271,6 +271,12 @@ final readonly class LazyCollection implements IteratorAggregate
     private static function fromTraversable(Traversable $source): self
     {
         return new self(self::replayableFactory($source));
+    }
+
+    /** @param array<array-key, mixed> $source */
+    private static function hasReferencedEntries(array $source): bool
+    {
+        return array_any(array_keys($source), fn($key) => \ReflectionReference::fromArrayElement($source, $key) !== null);
     }
 
     /**

@@ -148,9 +148,7 @@ trait DTOTrait
      */
     public function toArrayDeepGuarded(int $maxDepth = 64, int $maxNodes = 100000): array
     {
-        DTOGraphGuard::assertWithinLimits($this, $maxDepth, $maxNodes);
-
-        return $this->toArrayDeep();
+        return DTOGraphGuard::export($this, $maxDepth, $maxNodes);
     }
 
     private function assignProperty(string $property, mixed $value, bool $coerce): void

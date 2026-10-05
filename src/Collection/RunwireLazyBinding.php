@@ -6,6 +6,7 @@ namespace Infocyph\ArrayKit\Collection;
 
 use Infocyph\Runwire\CancellationToken;
 use Infocyph\Runwire\Coroutine\CoroutineScope;
+use Infocyph\Runwire\Coroutine\TaskLocal;
 use Infocyph\Runwire\RequestContext;
 use Infocyph\Runwire\Runtime\Enum\RuntimeCapability;
 use Infocyph\Runwire\RuntimeContext;
@@ -21,11 +22,13 @@ final readonly class RunwireLazyBinding
 
     private ?CancellationToken $scopeCancellation;
 
+    private ?TaskLocal $scopeCheckKey;
+
     private bool $yieldEnabled;
 
     public function __construct(
         public RuntimeContext $runtime,
-        ?RequestContext $request = null,
+        private ?RequestContext $request = null,
         public ?CoroutineScope $scope = null,
         public int $checkpointEvery = 256,
     ) {
@@ -47,12 +50,14 @@ final readonly class RunwireLazyBinding
 
         $this->requestCancellation = $request?->cancellation;
         $this->scopeCancellation = $scope?->cancellation();
+        $this->scopeCheckKey = $scope === null ? null : new TaskLocal();
         $this->yieldEnabled = $scope !== null
             && $runtime->supports(RuntimeCapability::RUNWIRE_COROUTINES);
     }
 
     public function checkpoint(): void
     {
+        $this->assertActive();
         $this->requestCancellation?->throwIfCancelled();
         $this->scopeCancellation?->throwIfCancelled();
 
@@ -60,7 +65,20 @@ final readonly class RunwireLazyBinding
             $this->scope?->yieldNow();
         }
 
+        $this->assertActive();
         $this->requestCancellation?->throwIfCancelled();
         $this->scopeCancellation?->throwIfCancelled();
+    }
+
+    private function assertActive(): void
+    {
+        if ($this->request?->completed()) {
+            throw new LogicException('Completed Runwire request context cannot be traversed.');
+        }
+
+        if ($this->scope !== null && $this->scopeCheckKey !== null) {
+            // Runwire 2.1.1 guards this read without yielding or changing task-local state.
+            $this->scope->hasLocal($this->scopeCheckKey);
+        }
     }
 }

@@ -55,6 +55,7 @@ Behavior Notes
 - ``env()`` reads the current runtime environment.
 - ``dotenv()`` exposes the ``.env`` file parser.
 - Proxy calls map directly to target static methods.
+- Reference mutations accept native named arguments: ``dot()->forget(target: $data, keys: 'path')`` and ``helper()->forget(array: $data, keys: 'key')``. Dot callers may also use the proxy's existing ``array:`` argument; supplying both aliases is rejected.
 - Calling a missing method via proxy throws ``BadMethodCallException``.
 
 Related Guides

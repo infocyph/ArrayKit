@@ -73,10 +73,11 @@ Cache behavior:
 - ``warmNamespaceCache()`` builds a complete hidden generation and atomically switches ``.arraykit-generation`` only after publication succeeds.
 - Each generation contains one file per cached namespace plus ``.arraykit-flat.php`` for exact scalar/null leaves.
 - Exact-key scalar reads may use the flat index without materializing the namespace.
-- Structural, wildcard, and namespace reads use the active immutable namespace file.
+- Structural, wildcard, and namespace reads use the same pinned immutable generation as exact reads.
 - ``Environment::ref()`` values and closures are resolved before publication.
 - Warm-up rereads the authoritative source unless the caller explicitly supplied or mutated that namespace in memory; an older generated cache does not feed a new source-backed generation.
-- Readers do not take the writer lock. Existing readers may continue using the previous immutable generation.
+- Readers do not take the writer lock. The first cache lookup pins a generation for that instance. External publication does not change its view. Construct a new instance or call ``namespaceCache()`` explicitly to refresh; warm-up and flush on the instance also reset its generated state, retaining intentional runtime overrides.
+- Writers copy unmodified namespaces from the latest published generation even when that writer was previously a pinned reader. Partial merges retain source/cache origins for untouched namespaces.
 
 Environment Values in Namespace Files
 -------------------------------------

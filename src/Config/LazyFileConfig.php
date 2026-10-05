@@ -198,7 +198,16 @@ class LazyFileConfig extends Config
      */
     public function merge(array $items): bool
     {
-        return $this->syncLoadedNamespacesAfter(parent::merge($items));
+        $changed = parent::merge($items);
+        if ($changed) {
+            foreach (array_keys($items) as $namespace) {
+                if (is_string($namespace) && preg_match('/^[A-Za-z0-9_-]+$/', $namespace) === 1) {
+                    $this->markNamespaceRuntime($namespace);
+                }
+            }
+        }
+
+        return $changed;
     }
 
     /**

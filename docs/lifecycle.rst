@@ -21,8 +21,9 @@ Ownership Model
     normal request handling.
 
 ``LazyCollection``
-    Array sources are replayed directly from the captured array and do not
-    allocate a per-entry replay memo. One-shot iterators/generators retain the
+    Array sources without top-level PHP references are replayed directly from
+    the captured array and do not allocate a per-entry replay memo. Reference
+    arrays and one-shot iterators/generators retain the
     consumed prefix for repeatable traversal and preserve a terminal source
     failure at its stream boundary. That replay state lives as long as the
     collection. Use ``fromFactory()`` when a fresh source can be created per
@@ -65,9 +66,12 @@ new build fails. The flat leaf index is internal metadata named
 
 On upgrade to 5.3, rebuild generated lazy-config artifacts instead of copying
 old ``__flat.php`` metadata forward. Old generation directories are disposable
-after they are no longer active. If OPcache is used for generated PHP cache
-files, deployment tooling remains responsible for its normal invalidation or
-restart policy.
+after all readers pinned to them have finished, including readers in other
+workers. If OPcache is used for generated PHP cache files, deployment tooling
+remains responsible for its normal invalidation or restart policy. PHP also
+retains names of included files for the process lifetime; frequent publication
+of unique generations requires a bounded deployment cadence and host-managed
+worker replacement.
 
 Persistent Worker Guidance
 --------------------------

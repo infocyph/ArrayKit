@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Facade;
 
 use BadMethodCallException;
+use Infocyph\ArrayKit\Array\DotNotation;
 use UnexpectedValueException;
 
 final readonly class ModuleProxy
@@ -34,11 +35,25 @@ final readonly class ModuleProxy
     }
 
     /**
-     * @param array<array-key, mixed> $array
+     * @param array<array-key, mixed>|null $array
+     * @param-out array<array-key, mixed> $array
      * @param array<int, int|string>|int|string|null $keys
+     * @param array<array-key, mixed>|null $target Native dot-module named argument
      */
-    public function forget(array &$array, array|string|int|null $keys): void
+    public function forget(?array &$array = null, array|string|int|null $keys = null, ?array &$target = null): void
     {
+        if ($target !== null) {
+            if ($this->targetClass !== DotNotation::class || $array !== null) {
+                throw new \InvalidArgumentException('The target argument requires the dot module and no array argument.');
+            }
+
+            $array = &$target;
+        }
+
+        if ($array === null) {
+            throw new \ArgumentCountError('An array or dot target is required for forget().');
+        }
+
         $this->invoke('forget', [&$array, $keys]);
     }
 

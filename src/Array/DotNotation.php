@@ -10,6 +10,19 @@ class DotNotation
 {
     use DotNotationPublicApiTrait;
 
+    private static function canResolveSafeKey(int $visitedNodes, int $maxNodes, bool $throwOnTooDeep): bool
+    {
+        if ($maxNodes <= 0 || $visitedNodes < $maxNodes) {
+            return true;
+        }
+
+        if ($throwOnTooDeep) {
+            throw new \RuntimeException('Dot path traversal exceeded max node count.');
+        }
+
+        return false;
+    }
+
     private static function escapePathSegment(string $segment): string
     {
         return DotNotationPathOps::escapePathSegment($segment);
@@ -103,7 +116,7 @@ class DotNotation
         bool $throwOnTooDeep,
         int &$visitedNodes,
     ): mixed {
-        if (self::isDirectKey($key) && is_array($target) && ArraySingle::exists($target, $key)) {
+        if (self::isDirectKey($key)) {
             $visitedNodes++;
             if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
                 if ($throwOnTooDeep) {
@@ -113,7 +126,9 @@ class DotNotation
                 return self::value($default);
             }
 
-            return $target[$key];
+            return is_array($target) && ArraySingle::exists($target, $key)
+                ? $target[$key]
+                : self::value($default);
         }
 
         $keyPath = (string) $key;

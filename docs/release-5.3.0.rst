@@ -59,6 +59,12 @@ Configuration and Cache Lifecycle
 Resolved read memoization is invalidated when configuration/cache sources
 change. Generated namespace warm-up reads the authoritative source unless the
 caller explicitly supplied or mutated that namespace in memory.
+Partial merges retain the source/cache origin of untouched namespaces.
+
+Each reader pins one cache generation for exact and structural lookups.
+``namespaceCache()`` explicitly refreshes that selection while preserving
+intentional runtime overrides. Writers independently use the latest published
+generation when copying namespaces that are not being rebuilt.
 
 Namespace caches are built as immutable generations and activated only after a
 successful build. A failed build leaves the previous valid generation active.
@@ -80,6 +86,10 @@ be large, recursive, or influenced by external input. They enforce one shared
 depth/node budget per call and reject active-path object/array cycles while
 allowing shared acyclic objects. Existing ``hydrateNested()`` and
 ``toArrayDeep()`` remain available for trusted, already-bounded graphs.
+Guarded export walks and produces its output in one bounded pass. Custom
+``toArray()`` / ``toArrayDeep()`` implementations are rejected before invocation
+by the guarded API; ordinary export continues to support them. Application
+property getters and callbacks remain trusted application code.
 
 Optional Runwire Integration
 ----------------------------
@@ -92,6 +102,8 @@ and optional ``RequestContext`` / ``CoroutineScope``. Cancellation is checked
 at the traversal boundary and at the configured item cadence. Cooperative
 ``yieldNow()`` calls are made only when an active scope is passed and the
 runtime advertises Runwire coroutine capability.
+Completed requests and closed scopes are rejected at traversal checkpoints,
+including after cooperative resumption and when yielding is unavailable.
 
 Bindings propagate through derived lazy operations and can be explicitly
 rebound for a new request. ArrayKit never starts/stops a runtime or event loop,
@@ -108,3 +120,17 @@ contract.
 
 See :doc:`migration`, :doc:`lazy-config`, :doc:`collection`,
 :doc:`traits-and-helpers`, and :doc:`lifecycle` for operational details.
+
+Final Review Corrections
+------------------------
+
+- Missing safe dot lookups consume the shared node budget. Throwing multi-key
+  lookup rejects unfinished work while accepting an exactly completed budget.
+- Non-throwing guarded sort preserves ancestor ordering after traversal is
+  cut short, avoiding recursive comparisons of unvisited children.
+- Runwire lifecycle, partial config origin tracking, generation consistency,
+  and guarded DTO output enforce the boundaries described above.
+- Facade ``forget()`` accepts native named reference arguments:
+  ``target:`` for the dot module and ``array:`` for the helper module.
+- Reference-bearing lazy arrays preserve memoized consumed scalar values;
+  unconsumed entries remain lazy.

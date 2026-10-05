@@ -64,10 +64,18 @@ Bounded DTO Graphs
 ~~~~~~~~~~~~~~~~~~
 
 Use the guarded entry points when nested DTO or array graphs can be large,
-recursive, or influenced by external input. The complete graph is validated
-before hydration or deep export. ``maxDepth`` and ``maxNodes`` are shared
+recursive, or influenced by external input. Hydration validates the input graph
+before mutation. Deep export builds the actual output in one bounded traversal
+of standard ``DTOTrait`` public properties. ``maxDepth`` and ``maxNodes`` are shared
 across the whole call; both must be positive. Cyclic array references, cyclic
 public object references, or a limit breach raise ``RuntimeException``.
+
+Guarded export rejects custom ``toArray()`` / ``toArrayDeep()`` implementations
+with ``InvalidArgumentException`` before invoking them, because their arbitrary
+work and generated output cannot be bounded by the public-property budget.
+Property getters are read once during export; their own execution must be
+trusted and bounded by the host. Custom serializers remain supported by the
+ordinary ``toArrayDeep()`` API.
 
 Shared acyclic objects are valid and may appear in more than one branch. The
 ordinary ``hydrateNested()`` and ``toArrayDeep()`` contracts are unchanged and

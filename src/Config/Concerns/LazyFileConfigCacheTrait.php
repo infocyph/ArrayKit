@@ -29,6 +29,10 @@ trait LazyFileConfigCacheTrait
 
     protected ?string $namespaceCacheDirectory = null;
 
+    private bool $namespaceCachePinned = false;
+
+    private ?string $pinnedNamespaceCacheDirectory = null;
+
     /**
      * @param string|array<int, string>|null $namespaces
      */
@@ -108,16 +112,7 @@ trait LazyFileConfigCacheTrait
 
     protected function cachedNamespacePath(string $namespace): ?string
     {
-        $directory = $this->activeNamespaceCacheDirectory();
-        if ($directory === null) {
-            return null;
-        }
-
-        if ($directory === $this->namespaceCacheDirectory && $namespace === '__flat') {
-            return null;
-        }
-
-        return $directory . DIRECTORY_SEPARATOR . $namespace . '.' . $this->extension;
+        return $this->namespaceCachePath($namespace, $this->readerNamespaceCacheDirectory());
     }
 
     /**
@@ -174,7 +169,7 @@ trait LazyFileConfigCacheTrait
 
     protected function flatLeafIndexPath(): ?string
     {
-        $directory = $this->activeNamespaceCacheDirectory();
+        $directory = $this->readerNamespaceCacheDirectory();
         if ($directory === null) {
             return null;
         }
@@ -193,6 +188,8 @@ trait LazyFileConfigCacheTrait
 
     protected function invalidateGeneratedNamespaceState(): void
     {
+        $this->namespaceCachePinned = false;
+        $this->pinnedNamespaceCacheDirectory = null;
         foreach ($this->loadedNamespaceOrigins as $namespace => $origin) {
             if ($origin === 'cache') {
                 unset($this->items[$namespace]);
@@ -273,7 +270,7 @@ trait LazyFileConfigCacheTrait
             return $value;
         }
 
-        $cachedFile = $this->resolveCachedNamespaceFile($namespace);
+        $cachedFile = $this->warmNamespaceCacheFile($namespace);
         if ($cachedFile !== null) {
             $value = include $cachedFile;
             if (!is_array($value)) {
@@ -498,6 +495,19 @@ trait LazyFileConfigCacheTrait
         return $resolved;
     }
 
+    private function namespaceCachePath(string $namespace, ?string $directory): ?string
+    {
+        if ($directory === null) {
+            return null;
+        }
+
+        if ($directory === $this->namespaceCacheDirectory && $namespace === '__flat') {
+            return null;
+        }
+
+        return $directory . DIRECTORY_SEPARATOR . $namespace . '.' . $this->extension;
+    }
+
     /**
      * @param string[]|null $namespaces
      */
@@ -555,6 +565,16 @@ trait LazyFileConfigCacheTrait
         }
     }
 
+    private function readerNamespaceCacheDirectory(): ?string
+    {
+        if (!$this->namespaceCachePinned) {
+            $this->pinnedNamespaceCacheDirectory = $this->activeNamespaceCacheDirectory();
+            $this->namespaceCachePinned = true;
+        }
+
+        return $this->pinnedNamespaceCacheDirectory;
+    }
+
     private function removeGenerationDirectory(string $directory): void
     {
         foreach (scandir($directory) ?: [] as $entry) {
@@ -569,6 +589,13 @@ trait LazyFileConfigCacheTrait
         }
 
         rmdir($directory);
+    }
+
+    private function warmNamespaceCacheFile(string $namespace): ?string
+    {
+        $path = $this->namespaceCachePath($namespace, $this->activeNamespaceCacheDirectory());
+
+        return $path !== null && is_file($path) && is_readable($path) ? $path : null;
     }
 
     private function withNamespaceCacheLock(\Closure $operation): static

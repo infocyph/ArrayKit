@@ -22,6 +22,10 @@ final class Release530PersistentWorkerSoak
 {
     private bool $running = true;
 
+    private int $nextCacheRefreshNanoseconds = 0;
+
+    private int $cacheRefreshes = 0;
+
     private readonly string $cacheDirectory;
 
     private readonly RuntimeContext $runtime;
@@ -94,7 +98,11 @@ final class Release530PersistentWorkerSoak
             if (is_dir($path)) {
                 $this->removeDirectory($path);
             } elseif (is_file($path) || is_link($path)) {
+                if (function_exists('opcache_invalidate')) {
+                    opcache_invalidate($path, true);
+                }
                 unlink($path);
+                clearstatcache(true, $path);
             }
         }
 
@@ -118,8 +126,10 @@ final class Release530PersistentWorkerSoak
             throw new RuntimeException('Layered config state leaked during worker soak.');
         }
 
-        if (($cycle % 50) === 0) {
+        // Cache publication belongs to deployment, not every few requests.
+        if (hrtime(true) >= $this->nextCacheRefreshNanoseconds) {
             $this->refreshGeneratedCache($cycle);
+            $this->nextCacheRefreshNanoseconds = hrtime(true) + 20_000_000_000;
         }
 
         $request = RequestContext::create($this->runtime);
@@ -157,7 +167,28 @@ final class Release530PersistentWorkerSoak
             throw new RuntimeException('ArrayKit completed a host-owned Runwire request.');
         }
 
+        $request->complete();
+
         unset($collection, $config, $request);
+
+        if (($cycle % 100) === 0) {
+            $this->retireInactiveGenerations();
+        }
+    }
+
+    private function retireInactiveGenerations(): void
+    {
+        $pointer = $this->cacheDirectory . '/.arraykit-generation';
+        if (!is_file($pointer)) {
+            return;
+        }
+
+        $active = trim((string) file_get_contents($pointer));
+        foreach (glob($this->cacheDirectory . '/.arraykit-gen-*', GLOB_ONLYDIR) ?: [] as $directory) {
+            if (basename($directory) !== $active) {
+                $this->removeDirectory($directory);
+            }
+        }
     }
 
     private function refreshGeneratedCache(int $cycle): void
@@ -180,7 +211,8 @@ final class Release530PersistentWorkerSoak
             throw new RuntimeException('Generated cache refresh returned stale data during worker soak.');
         }
 
-        if (($cycle % 100) !== 0) {
+        $this->cacheRefreshes++;
+        if (($this->cacheRefreshes % 2) !== 0) {
             return;
         }
 
@@ -238,6 +270,10 @@ final class Release530PersistentWorkerSoak
 
         if (file_put_contents($this->sourceDirectory . '/app.php', $source) === false) {
             throw new RuntimeException('Unable to update worker-soak source config.');
+        }
+
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($this->sourceDirectory . '/app.php', true);
         }
     }
 }
