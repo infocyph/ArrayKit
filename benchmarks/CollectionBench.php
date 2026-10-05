@@ -21,12 +21,6 @@ final class CollectionBench
     /** @var array<int, int> */
     private array $data = [];
 
-    /** @param array{size:int} $params */
-    public function setUp(array $params): void
-    {
-        $this->data = range(1, $params['size']);
-    }
-
     public function benchArraySingleMap(): void
     {
         ArraySingle::map($this->data, static fn(int $value): int => $value * 2);
@@ -42,9 +36,23 @@ final class CollectionBench
         LazyCollection::from($this->data)->all();
     }
 
+    public function benchLazyChunkMaterialization(): void
+    {
+        LazyCollection::fromFactory(fn(): array => $this->data)
+            ->chunkLazy(100)
+            ->all();
+    }
+
     public function benchLazyFactoryArrayMaterialization(): void
     {
         LazyCollection::fromFactory(fn(): array => $this->data)->all();
+    }
+
+    public function benchLazyFilterMaterialization(): void
+    {
+        LazyCollection::fromFactory(fn(): array => $this->data)
+            ->filterLazy(static fn(int $value): bool => ($value % 2) === 0)
+            ->all();
     }
 
     public function benchLazyGeneratorReplayMaterialization(): void
@@ -55,20 +63,6 @@ final class CollectionBench
         })();
 
         LazyCollection::from($source)->all();
-    }
-
-    public function benchLazyChunkMaterialization(): void
-    {
-        LazyCollection::fromFactory(fn(): array => $this->data)
-            ->chunkLazy(100)
-            ->all();
-    }
-
-    public function benchLazyFilterMaterialization(): void
-    {
-        LazyCollection::fromFactory(fn(): array => $this->data)
-            ->filterLazy(static fn(int $value): bool => ($value % 2) === 0)
-            ->all();
     }
 
     public function benchLazyMapFilterTake(): void
@@ -103,5 +97,11 @@ final class CollectionBench
             '100k' => ['size' => 100000],
             '1m' => ['size' => 1000000],
         ];
+    }
+
+    /** @param array{size:int} $params */
+    public function setUp(array $params): void
+    {
+        $this->data = range(1, $params['size']);
     }
 }
