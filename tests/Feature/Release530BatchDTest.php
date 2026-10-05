@@ -3,42 +3,12 @@
 declare(strict_types=1);
 
 use Infocyph\ArrayKit\Collection\LazyCollection;
-use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
-
-class Release530BatchDAddress
-{
-    use DTOTrait;
-
-    public string $city = '';
-}
-
-class Release530BatchDBase
-{
-    public string $base = 'base';
-}
-
-class Release530BatchDInherited extends Release530BatchDBase
-{
-    use DTOTrait;
-
-    public string $name = 'child';
-}
-
-class Release530BatchDReadonly
-{
-    use DTOTrait;
-
-    public readonly string $name;
-}
-
-class Release530BatchDUser
-{
-    use DTOTrait;
-
-    public Release530BatchDAddress $address;
-
-    public mixed $payload = null;
-}
+use Infocyph\ArrayKit\Tests\Fixtures\Release530BatchDAddress;
+use Infocyph\ArrayKit\Tests\Fixtures\Release530BatchDInherited;
+use Infocyph\ArrayKit\Tests\Fixtures\Release530BatchDReadonly;
+use Infocyph\ArrayKit\Tests\Fixtures\Release530BatchDUser;
+use InvalidArgumentException;
+use RuntimeException;
 
 it('replays array-backed lazy collections without changing keys or values', function () {
     $source = ['first' => 1, 'second' => 2];
