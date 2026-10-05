@@ -16,8 +16,9 @@ use RuntimeException;
 unset($script);
 
 if (!is_string($root) || !is_string($workload) || !is_numeric($operations) || !is_numeric($warmup)) {
-    fwrite(STDERR, "Usage: release-workload.php <root> <workload> <operations> <warmup>\n");
-    exit(2);
+    throw new RuntimeException(
+        'Usage: release-workload.php <root> <workload> <operations> <warmup>',
+    );
 }
 
 require rtrim($root, DIRECTORY_SEPARATOR) . '/vendor/autoload.php';
@@ -68,7 +69,7 @@ foreach ($temporaryDirectories as $directory) {
     releaseRemoveDirectory($directory);
 }
 
-echo json_encode([
+fwrite(STDOUT, json_encode([
     'attempted' => $operations,
     'successful' => $successes,
     'failed' => $failures,
@@ -79,7 +80,7 @@ echo json_encode([
     'memory_initial_mb' => $memoryBefore / 1_048_576,
     'memory_final_mb' => $memoryAfter / 1_048_576,
     'memory_peak_mb' => memory_get_peak_usage(true) / 1_048_576,
-], JSON_THROW_ON_ERROR), PHP_EOL;
+], JSON_THROW_ON_ERROR) . PHP_EOL);
 
 /**
  * @return \Closure(): void
