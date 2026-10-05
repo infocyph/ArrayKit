@@ -58,14 +58,7 @@ trait BaseConfigTrait
     {
         $this->assertWritable();
 
-        $missing = $this->missingValueMarker();
-        $array = $this->get($key, $missing);
-        if ($array === $missing) {
-            $array = [];
-        } elseif (!is_array($array)) {
-            throw new InvalidArgumentException("Config value [{$key}] must be an array.");
-        }
-
+        $array = $this->arrayValueForMutation($key);
         $array[] = $value;
 
         return $this->set($key, $array);
@@ -427,14 +420,7 @@ trait BaseConfigTrait
     {
         $this->assertWritable();
 
-        $missing = $this->missingValueMarker();
-        $array = $this->get($key, $missing);
-        if ($array === $missing) {
-            $array = [];
-        } elseif (!is_array($array)) {
-            throw new InvalidArgumentException("Config value [{$key}] must be an array.");
-        }
-
+        $array = $this->arrayValueForMutation($key);
         array_unshift($array, $value);
 
         return $this->set($key, $array);
@@ -550,6 +536,24 @@ trait BaseConfigTrait
         $this->snapshots[$name] = $this->items;
 
         return true;
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function arrayValueForMutation(string $key): array
+    {
+        $missing = $this->missingValueMarker();
+        $array = $this->get($key, $missing);
+        if ($array === $missing) {
+            return [];
+        }
+
+        if (!is_array($array)) {
+            throw new InvalidArgumentException("Config value [{$key}] must be an array.");
+        }
+
+        return $array;
     }
 
     protected function assertWritable(): void
