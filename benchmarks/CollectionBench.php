@@ -27,7 +27,6 @@ final class CollectionBench
         $this->data = range(1, $params['size']);
     }
 
-
     public function benchArraySingleMap(): void
     {
         ArraySingle::map($this->data, static fn(int $value): int => $value * 2);
