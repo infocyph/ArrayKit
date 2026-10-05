@@ -352,6 +352,24 @@ cancellation checks remain available. ``take(0)`` stays fully lazy.
 An intermediary library should forward the exact host-owned instances instead
 of reconstructing runtime metadata.
 
+.. code-block:: php
+
+    <?php
+    use Infocyph\ArrayKit\Collection\LazyCollection;
+    use Infocyph\Runwire\Coroutine\CoroutineScope;
+    use Infocyph\Runwire\RequestContext;
+    use Infocyph\Runwire\RuntimeContext;
+
+    function forwardLazyRuntime(
+        LazyCollection $rows,
+        RuntimeContext $runtime,
+        ?RequestContext $request = null,
+        ?CoroutineScope $scope = null,
+    ): LazyCollection {
+        return $rows->withRunwire($runtime, $request, $scope);
+    }
+
+
 Terminal calculations:
 
 .. code-block:: php
