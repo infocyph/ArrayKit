@@ -59,13 +59,10 @@ final class DotNotationPathOps
                 return false;
             }
 
-            foreach ($target as $item) {
-                if (self::matchesPath($item, $segments, $position + 1)) {
-                    return true;
-                }
-            }
-
-            return false;
+            return array_any(
+                $target,
+                static fn(mixed $item): bool => self::matchesPath($item, $segments, $position + 1),
+            );
         }
 
         $missing = new \stdClass();
