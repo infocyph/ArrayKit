@@ -658,7 +658,7 @@ trait ArrayMultiQuerySortTrait
     public static function whereLike(array $array, string $key, string $pattern, bool $caseSensitive = false): array
     {
         $quoted = preg_quote($pattern, '/');
-        $regex = '/^' . str_replace(['%', '_'], ['.*', '.'], $quoted) . '$/' . ($caseSensitive ? '' : 'i');
+        $regex = '/\\A' . str_replace(['%', '_'], ['.*', '.'], $quoted) . '\\z/s' . ($caseSensitive ? '' : 'i');
         $results = [];
 
         foreach ($array as $index => $row) {
@@ -671,8 +671,12 @@ trait ArrayMultiQuerySortTrait
                 continue;
             }
 
-            $text = (string) $value;
-            if (preg_match($regex, $text) === 1) {
+            $matched = preg_match($regex, (string) $value);
+            if ($matched === false) {
+                throw new \RuntimeException('SQL-like pattern matching failed: ' . preg_last_error_msg());
+            }
+
+            if ($matched === 1) {
                 $results[$index] = $row;
             }
         }
@@ -776,16 +780,7 @@ trait ArrayMultiQuerySortTrait
         }
 
         if ($strict) {
-            $lookup = [];
-            foreach ($values as $value) {
-                if (self::containsNonReflexiveStrictValue($value)) {
-                    return null;
-                }
-
-                $lookup[ArraySingleOps::fingerprint($value, true)] = true;
-            }
-
-            return $lookup;
+            return ArrayValueSetOps::strictLookup($values);
         }
 
         $lookup = ['type:non-numeric-string' => true];
@@ -929,19 +924,6 @@ trait ArrayMultiQuerySortTrait
             \SORT_LOCALE_STRING => strcoll(self::asString($left), self::asString($right)),
             default => $left <=> $right,
         };
-    }
-
-    private static function containsNonReflexiveStrictValue(mixed $value): bool
-    {
-        if (is_float($value)) {
-            return is_nan($value);
-        }
-
-        if (!is_array($value)) {
-            return false;
-        }
-
-        return array_any($value, self::containsNonReflexiveStrictValue(...));
     }
 
     private static function extractComparableValue(mixed $row, string|callable $keyOrCallback, int|string $key): float|int|null
@@ -1187,7 +1169,7 @@ trait ArrayMultiQuerySortTrait
     private static function rowLookupContains(array $lookup, array $values, mixed $candidate, bool $strict): bool
     {
         if ($strict) {
-            return isset($lookup[ArraySingleOps::fingerprint($candidate, true)]);
+            return ArrayValueSetOps::strictLookupContains($lookup, $candidate);
         }
 
         if (is_string($candidate) && !is_numeric($candidate)) {
