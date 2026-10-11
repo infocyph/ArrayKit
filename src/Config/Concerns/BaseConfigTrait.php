@@ -587,7 +587,10 @@ trait BaseConfigTrait
                 return true;
             }
 
-            if (\ReflectionReference::fromArrayElement($cursor, $segment) !== null) {
+            // Array keys like "0" and "-1" are stored as integers by PHP.
+            // ReflectionReference requires the actual key type, unlike array_key_exists().
+            $arrayKey = (string) (int) $segment === $segment ? (int) $segment : $segment;
+            if (\ReflectionReference::fromArrayElement($cursor, $arrayKey) !== null) {
                 return false;
             }
 
@@ -703,6 +706,48 @@ trait BaseConfigTrait
     }
 
     /**
+     * @param array<array-key, mixed> $value
+     * @param array<string, true> $activeReferences
+     * @param array<int, true> $activeObjects
+     * @return array<array-key, mixed>
+     */
+    private function materializeCacheArray(array $value, array &$activeReferences, array &$activeObjects): array
+    {
+        $materialized = [];
+        foreach ($value as $key => $entry) {
+            $reference = \ReflectionReference::fromArrayElement($value, $key);
+            if ($reference === null) {
+                $materialized[$key] = $this->materializeCacheValueRecursive(
+                    $entry,
+                    $activeReferences,
+                    $activeObjects,
+                );
+
+                continue;
+            }
+
+            $referenceId = bin2hex($reference->getId());
+            if (isset($activeReferences[$referenceId])) {
+                throw new UnexpectedValueException('Compiled configuration contains a cyclic array reference.');
+            }
+
+            $activeReferences[$referenceId] = true;
+
+            try {
+                $materialized[$key] = $this->materializeCacheValueRecursive(
+                    $entry,
+                    $activeReferences,
+                    $activeObjects,
+                );
+            } finally {
+                unset($activeReferences[$referenceId]);
+            }
+        }
+
+        return $materialized;
+    }
+
+    /**
      * @param array<string, true> $activeReferences
      * @param array<int, true> $activeObjects
      */
@@ -733,38 +778,7 @@ trait BaseConfigTrait
         }
 
         if (is_array($value)) {
-            $materialized = [];
-            foreach ($value as $key => $entry) {
-                $reference = \ReflectionReference::fromArrayElement($value, $key);
-                if ($reference === null) {
-                    $materialized[$key] = $this->materializeCacheValueRecursive(
-                        $entry,
-                        $activeReferences,
-                        $activeObjects,
-                    );
-
-                    continue;
-                }
-
-                $referenceId = bin2hex($reference->getId());
-                if (isset($activeReferences[$referenceId])) {
-                    throw new UnexpectedValueException('Compiled configuration contains a cyclic array reference.');
-                }
-
-                $activeReferences[$referenceId] = true;
-
-                try {
-                    $materialized[$key] = $this->materializeCacheValueRecursive(
-                        $entry,
-                        $activeReferences,
-                        $activeObjects,
-                    );
-                } finally {
-                    unset($activeReferences[$referenceId]);
-                }
-            }
-
-            return $materialized;
+            return $this->materializeCacheArray($value, $activeReferences, $activeObjects);
         }
 
         throw new UnexpectedValueException(

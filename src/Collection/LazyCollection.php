@@ -280,6 +280,22 @@ final readonly class LazyCollection implements IteratorAggregate
     }
 
     /**
+     * @template TSourceKey of array-key
+     * @template TSourceValue
+     * @param Generator<TSourceKey, TSourceValue> $sourceCursor
+     * @return array{0: TSourceKey, 1: TSourceValue}|null
+     */
+    private static function pullReplayEntry(Generator $sourceCursor, bool &$advancePending): ?array
+    {
+        if ($advancePending) {
+            $sourceCursor->next();
+            $advancePending = false;
+        }
+
+        return $sourceCursor->valid() ? [$sourceCursor->key(), $sourceCursor->current()] : null;
+    }
+
+    /**
      * Adapt any iterable into a repeatable lazy source without eagerly
      * materializing it. Values already consumed from a one-shot iterator are
      * memoized, while later values are fetched only when a cursor needs them.
@@ -297,9 +313,7 @@ final readonly class LazyCollection implements IteratorAggregate
         $sourceCursor = null;
         $sourceAdvancePending = false;
         $exhausted = false;
-        $state = new class {
-            public ?\Throwable $failure = null;
-        };
+        $failure = null;
 
         return static function (?RunwireLazyBinding $binding) use (
             $source,
@@ -307,62 +321,76 @@ final readonly class LazyCollection implements IteratorAggregate
             &$sourceCursor,
             &$sourceAdvancePending,
             &$exhausted,
-            $state,
+            &$failure,
         ): Generator {
             unset($binding);
 
-            $position = 0;
-
-            while (true) {
-                if (isset($cache[$position])) {
-                    [$key, $value] = $cache[$position];
-                    yield $key => $value;
-                    $position++;
-
-                    continue;
-                }
-
-                if ($state->failure !== null) {
-                    throw $state->failure;
-                }
-
-                if ($exhausted) {
-                    return;
-                }
-
-                $sourceCursor ??= (static function () use ($source): Generator {
-                    yield from $source;
-                })();
-
-                try {
-                    if ($sourceAdvancePending) {
-                        $sourceCursor->next();
-                        $sourceAdvancePending = false;
-                    }
-
-                    if (!$sourceCursor->valid()) {
-                        $exhausted = true;
-                        $sourceCursor = null;
-
-                        return;
-                    }
-
-                    $entry = [$sourceCursor->key(), $sourceCursor->current()];
-                } catch (\Throwable $error) {
-                    $state->failure = $error;
-                    $sourceCursor = null;
-                    $sourceAdvancePending = false;
-
-                    throw $error;
-                }
-
-                $cache[] = $entry;
-                $sourceAdvancePending = true;
-
-                yield $entry[0] => $entry[1];
-                $position++;
-            }
+            return self::replayCursor($source, $cache, $sourceCursor, $sourceAdvancePending, $exhausted, $failure);
         };
+    }
+
+    /**
+     * @template TSourceKey of array-key
+     * @template TSourceValue
+     * @param iterable<TSourceKey, TSourceValue> $source
+     * @param list<array{0: TSourceKey, 1: TSourceValue}> $cache
+     * @param Generator<TSourceKey, TSourceValue>|null $sourceCursor
+     * @return Generator<TSourceKey, TSourceValue>
+     */
+    private static function replayCursor(
+        iterable $source,
+        array &$cache,
+        ?Generator &$sourceCursor,
+        bool &$sourceAdvancePending,
+        bool &$exhausted,
+        ?\Throwable &$failure,
+    ): Generator {
+        $position = 0;
+
+        while (true) {
+            if (isset($cache[$position])) {
+                [$key, $value] = $cache[$position];
+                yield $key => $value;
+                $position++;
+
+                continue;
+            }
+
+            if ($failure !== null) {
+                throw $failure;
+            }
+
+            if ($exhausted) {
+                return;
+            }
+
+            $sourceCursor ??= (static function () use ($source): Generator {
+                yield from $source;
+            })();
+
+            try {
+                $entry = self::pullReplayEntry($sourceCursor, $sourceAdvancePending);
+            } catch (\Throwable $error) {
+                $failure = $error;
+                $sourceCursor = null;
+                $sourceAdvancePending = false;
+
+                throw $error;
+            }
+
+            if ($entry === null) {
+                $exhausted = true;
+                $sourceCursor = null;
+
+                return;
+            }
+
+            $cache[] = $entry;
+            $sourceAdvancePending = true;
+
+            yield $entry[0] => $entry[1];
+            $position++;
+        }
     }
 
     /**

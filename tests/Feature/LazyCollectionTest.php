@@ -83,3 +83,34 @@ it('creates a new source for every factory-backed traversal', function () {
         ->and($lazy->all())->toBe([1, 2])
         ->and($created)->toBe(2);
 });
+
+it('shares source progress and the same terminal failure between interleaved replay cursors', function () {
+    $visits = 0;
+    $failure = new RuntimeException('interleaved source failure');
+    $lazy = LazyCollection::from((function () use (&$visits, $failure): Generator {
+        $visits++;
+        yield 'first' => 1;
+        $visits++;
+        yield 'second' => 2;
+        $visits++;
+        throw $failure;
+    })());
+    $left = $lazy->cursor();
+    $right = $lazy->cursor();
+    expect($left->current())->toBe(1)->and($right->current())->toBe(1)->and($visits)->toBe(1);
+    $left->next();
+    expect($left->current())->toBe(2)->and($visits)->toBe(2);
+    $right->next();
+    expect($right->current())->toBe(2)->and($visits)->toBe(2);
+
+    foreach ([$left, $right] as $cursor) {
+        try {
+            $cursor->next();
+            test()->fail('The source failure was lost.');
+        } catch (RuntimeException $error) {
+            expect($error)->toBe($failure);
+        }
+    }
+    expect($visits)->toBe(3)
+        ->and($lazy->take(2)->all())->toBe(['first' => 1, 'second' => 2]);
+});

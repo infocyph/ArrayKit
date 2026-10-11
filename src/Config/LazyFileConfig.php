@@ -60,17 +60,7 @@ class LazyFileConfig extends Config
         $this->assertWritable();
         $this->flushReadCache();
 
-        if (is_array($key)) {
-            foreach ($key as $path => $entry) {
-                if (!is_string($path)) {
-                    throw new InvalidArgumentException('Fill keys must be dot-notation strings.');
-                }
-
-                $this->setPath($path, $entry, false);
-            }
-        } else {
-            $this->setPath($key, $value, false);
-        }
+        $this->writePaths($key, $value, false, 'Fill');
 
         return true;
     }
@@ -265,17 +255,7 @@ class LazyFileConfig extends Config
             throw new RuntimeException('At least one key is required for LazyFileConfig::set().');
         }
 
-        if (is_array($key)) {
-            foreach ($key as $path => $entry) {
-                if (!is_string($path)) {
-                    throw new InvalidArgumentException('Set keys must be dot-notation strings.');
-                }
-
-                $this->setPath($path, $entry, $overwrite);
-            }
-        } else {
-            $this->setPath($key, $value, $overwrite);
-        }
+        $this->writePaths($key, $value, $overwrite, 'Set');
 
         return true;
     }
@@ -311,19 +291,7 @@ class LazyFileConfig extends Config
         [$namespace, $rest] = $this->splitPath($path);
         $this->loadNamespace($namespace);
 
-        if (!array_key_exists($namespace, $this->items)) {
-            return $this->resolveDefault($default);
-        }
-
-        if ($rest === null || $rest === '') {
-            return $this->items[$namespace];
-        }
-
-        if (!is_array($this->items[$namespace])) {
-            return $this->resolveDefault($default);
-        }
-
-        return DotNotation::get($this->items[$namespace], $rest, $default);
+        return $this->resolveLoadedNamespaceValue($namespace, $rest, $default);
     }
 
     protected function hasPath(string $path): bool
@@ -410,15 +378,7 @@ class LazyFileConfig extends Config
         [$namespace, $rest] = $this->splitPath($path);
 
         if (array_key_exists($namespace, $this->items)) {
-            if ($rest === null || $rest === '') {
-                return $this->items[$namespace];
-            }
-
-            if (!is_array($this->items[$namespace])) {
-                return $this->missingValueMarker();
-            }
-
-            return DotNotation::get($this->items[$namespace], $rest, $this->missingValueMarker());
+            return $this->resolveLoadedNamespaceValue($namespace, $rest, $this->missingValueMarker());
         }
 
         if ($this->isLoaded($namespace)) {
@@ -434,19 +394,7 @@ class LazyFileConfig extends Config
 
         $this->loadNamespace($namespace);
 
-        if (!array_key_exists($namespace, $this->items)) {
-            return $this->missingValueMarker();
-        }
-
-        if ($rest === null || $rest === '') {
-            return $this->items[$namespace];
-        }
-
-        if (!is_array($this->items[$namespace])) {
-            return $this->missingValueMarker();
-        }
-
-        return DotNotation::get($this->items[$namespace], $rest, $this->missingValueMarker());
+        return $this->resolveLoadedNamespaceValue($namespace, $rest, $this->missingValueMarker());
     }
 
     protected function resolveNamespaceFile(string $namespace): ?string
@@ -548,6 +496,23 @@ class LazyFileConfig extends Config
         $this->loadedNamespaceOrigins[$namespace] = 'runtime';
     }
 
+    private function resolveLoadedNamespaceValue(string $namespace, ?string $rest, mixed $default): mixed
+    {
+        if (!array_key_exists($namespace, $this->items)) {
+            return $this->resolveDefault($default);
+        }
+
+        if ($rest === null || $rest === '') {
+            return $this->items[$namespace];
+        }
+
+        if (!is_array($this->items[$namespace])) {
+            return $this->resolveDefault($default);
+        }
+
+        return DotNotation::get($this->items[$namespace], $rest, $default);
+    }
+
     private function syncLoadedNamespacesAfter(bool $changed): bool
     {
         if ($changed) {
@@ -555,5 +520,23 @@ class LazyFileConfig extends Config
         }
 
         return $changed;
+    }
+
+    /** @param string|array<array-key, mixed> $key */
+    private function writePaths(string|array $key, mixed $value, bool $overwrite, string $operation): void
+    {
+        if (is_string($key)) {
+            $this->setPath($key, $value, $overwrite);
+
+            return;
+        }
+
+        foreach ($key as $path => $entry) {
+            if (!is_string($path)) {
+                throw new InvalidArgumentException($operation . ' keys must be dot-notation strings.');
+            }
+
+            $this->setPath($path, $entry, $overwrite);
+        }
     }
 }

@@ -119,9 +119,7 @@ class DotNotation
         if (self::isDirectKey($key)) {
             $visitedNodes++;
             if ($maxNodes > 0 && $visitedNodes > $maxNodes) {
-                if ($throwOnTooDeep) {
-                    throw new \RuntimeException('Dot path traversal exceeded max node count.');
-                }
+                self::canResolveSafeKey($visitedNodes, $maxNodes, $throwOnTooDeep);
 
                 return self::value($default);
             }
@@ -131,15 +129,10 @@ class DotNotation
                 : self::value($default);
         }
 
-        $keyPath = (string) $key;
-        if (!str_contains($keyPath, '.') && !str_contains($keyPath, '\\')) {
-            return self::value($default);
-        }
-
         $missing = self::missing();
         $resolved = DotNotationPathOps::traverseGet(
             $target,
-            self::splitPath($keyPath),
+            self::splitPath((string) $key),
             $default,
             $missing,
             static fn(mixed $value): mixed => self::value($value),

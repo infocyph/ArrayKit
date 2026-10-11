@@ -52,6 +52,14 @@ final class EnvLineParser
         return $items;
     }
 
+    private static function assertQuotedValueRemainder(string $remainder): void
+    {
+        $remainder = trim($remainder);
+        if ($remainder !== '' && !str_starts_with($remainder, '#')) {
+            throw new UnexpectedValueException('Unexpected characters after quoted environment value.');
+        }
+    }
+
     /**
      * @param iterable<int, string> $lines
      * @return array<int, string>
@@ -93,6 +101,18 @@ final class EnvLineParser
         return $logical;
     }
 
+    private static function decodeQuotedEscape(string $escaped): string
+    {
+        return match ($escaped) {
+            'n' => "\n",
+            'r' => "\r",
+            't' => "\t",
+            '$' => EnvValueResolver::LITERAL_DOLLAR,
+            '"', '\\' => $escaped,
+            default => '\\' . $escaped,
+        };
+    }
+
     private static function openValueQuote(string $line): ?string
     {
         $trimmed = trim($line);
@@ -118,24 +138,14 @@ final class EnvLineParser
             $char = $value[$index];
 
             if ($char === $quote) {
-                $remainder = trim(substr($value, $index + 1));
-                if ($remainder !== '' && !str_starts_with($remainder, '#')) {
-                    throw new UnexpectedValueException('Unexpected characters after quoted environment value.');
-                }
+                self::assertQuotedValueRemainder(substr($value, $index + 1));
 
                 return $result;
             }
 
             if ($quote === '"' && $char === '\\' && $index + 1 < $length) {
                 $escaped = $value[++$index];
-                $result .= match ($escaped) {
-                    'n' => "\n",
-                    'r' => "\r",
-                    't' => "\t",
-                    '$' => EnvValueResolver::LITERAL_DOLLAR,
-                    '"', '\\' => $escaped,
-                    default => '\\' . $escaped,
-                };
+                $result .= self::decodeQuotedEscape($escaped);
 
                 continue;
             }
