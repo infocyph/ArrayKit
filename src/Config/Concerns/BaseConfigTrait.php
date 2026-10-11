@@ -587,7 +587,10 @@ trait BaseConfigTrait
                 return true;
             }
 
-            if (\ReflectionReference::fromArrayElement($cursor, $segment) !== null) {
+            // Array keys like "0" and "-1" are stored as integers by PHP.
+            // ReflectionReference requires the actual key type, unlike array_key_exists().
+            $arrayKey = (string) (int) $segment === $segment ? (int) $segment : $segment;
+            if (\ReflectionReference::fromArrayElement($cursor, $arrayKey) !== null) {
                 return false;
             }
 
