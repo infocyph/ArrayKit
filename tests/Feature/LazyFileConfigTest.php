@@ -104,6 +104,23 @@ afterEach(function () {
     lazyConfigDeleteDirectory($this->cachePath);
 });
 
+it('preserves per-match default callbacks through the protected namespace reader', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'app', ['rows' => [[], []]]);
+    $config = new class($this->configPath) extends LazyFileConfig {
+        public function readPath(string $path, mixed $default): mixed
+        {
+            return $this->getPath($path, $default);
+        }
+    };
+    $calls = 0;
+    $default = function () use (&$calls): int {
+        return ++$calls;
+    };
+    expect($config->readPath('app.rows.*.missing', $default))->toBe([1, 2])
+        ->and($calls)->toBe(2)
+        ->and($config->readPath('absent.value', $default))->toBe(3);
+});
+
 it('loads only the first namespace file on first dot-path access', function () {
     lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost', 'port' => 3306]);
     lazyConfigWriteArrayFile($this->configPath, 'app', ['name' => 'ArrayKit']);

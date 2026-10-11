@@ -173,7 +173,12 @@ trait DTOTrait
             return;
         }
 
-        $resolved = match ($type->getName()) {
+        $this->{$property} = $this->coerceBuiltinValue($value, $type->getName());
+    }
+
+    private function coerceBuiltinValue(mixed $value, string $type): mixed
+    {
+        return match ($type) {
             'int' => is_numeric($value) ? (int) $value : $value,
             'float' => is_numeric($value) ? (float) $value : $value,
             'string' => is_scalar($value) || $value === null ? (string) $value : $value,
@@ -182,7 +187,6 @@ trait DTOTrait
             default => $value,
         };
 
-        $this->{$property} = $resolved;
     }
 
     private function exportValue(mixed $value): mixed

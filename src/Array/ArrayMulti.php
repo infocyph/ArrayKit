@@ -106,8 +106,12 @@ class ArrayMulti
      */
     public static function first(array $array, ?callable $callback = null, mixed $default = null): mixed
     {
+        if ($array === []) {
+            return $default;
+        }
+
         if ($callback === null) {
-            return empty($array) ? $default : reset($array);
+            return reset($array);
         }
 
         foreach ($array as $key => $value) {
@@ -134,14 +138,12 @@ class ArrayMulti
         foreach ($array as $item) {
             if (!is_array($item)) {
                 $result[] = $item;
-            } else {
-                $values = ($depth === 1)
-                    ? array_values($item)
-                    : static::flatten($item, $depth - 1);
 
-                foreach ($values as $value) {
-                    $result[] = $value;
-                }
+                continue;
+            }
+
+            foreach (self::flattenValues($item, $depth) as $value) {
+                $result[] = $value;
             }
         }
 
@@ -344,9 +346,7 @@ class ArrayMulti
         $results = array_fill_keys($keys, []);
 
         foreach ($matrix as $row) {
-            if (!is_array($row) || array_keys($row) !== $keys) {
-                throw new InvalidArgumentException('Matrix rows must have identical keys for transpose.');
-            }
+            $row = self::validatedMatrixRow($row, $keys);
 
             foreach ($row as $col => $value) {
                 $results[$col][] = $value;
@@ -528,6 +528,15 @@ class ArrayMulti
         }
     }
 
+    /**
+     * @param array<array-key, mixed> $array
+     * @return array<array-key, mixed>
+     */
+    private static function flattenValues(array $array, float|int $depth): array
+    {
+        return $depth === 1 ? array_values($array) : static::flatten($array, $depth - 1);
+    }
+
     private static function handleTraversalLimit(bool $throwOnTooDeep, string $message): void
     {
         if ($throwOnTooDeep) {
@@ -611,5 +620,18 @@ class ArrayMulti
         self::handleTraversalLimit($throwOnTooDeep, 'Array traversal exceeded max depth.');
 
         return false;
+    }
+
+    /**
+     * @param list<array-key> $keys
+     * @return array<array-key, mixed>
+     */
+    private static function validatedMatrixRow(mixed $row, array $keys): array
+    {
+        if (!is_array($row) || array_keys($row) !== $keys) {
+            throw new InvalidArgumentException('Matrix rows must have identical keys for transpose.');
+        }
+
+        return $row;
     }
 }
