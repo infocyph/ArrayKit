@@ -40,6 +40,29 @@ it('keeps shallow object identity but detaches repeated internal array reference
         ->and($config->get('obj'))->toBe($object);
 });
 
+it('detaches snapshot references across lazy and layered configuration owners', function () {
+    $lazyValue = 1;
+    $lazy = new LazyFileConfig(
+        sys_get_temp_dir() . '/arraykit-532-nonexistent',
+        items: ['app' => ['v' => &$lazyValue]],
+    );
+    expect($lazy->snapshot())->toBeTrue();
+    $lazyValue = 8;
+    expect($lazy->restore())->toBeTrue()
+        ->and($lazy->get('app.v'))->toBe(1);
+
+    $layeredValue = 2;
+    $layered = new LayeredLazyFileConfig(
+        sys_get_temp_dir() . '/arraykit-532-nonexistent',
+        fallback: ['app' => ['v' => &$layeredValue]],
+        namespaces: ['app'],
+    );
+    $layered->snapshot();
+    $layeredValue = 9;
+    expect($layered->restore())->toBeTrue()
+        ->and($layered->get('app.v'))->toBe(2);
+});
+
 it('rejects cyclic snapshots without replacing a valid snapshot', function () {
     $config = new Config();
     $config->loadArray(['safe' => ['v' => 1]]);
