@@ -184,10 +184,16 @@ This is a rolling implementation tracker, not a release sign-off. The 5.3.1 base
 
 | Batch | Status at review update | Remaining work |
 | --- | --- | --- |
-| A — R01–R02 | Production corrections and regression tests committed. PHP 8.4/8.5 QA and static checks passed on the intermediate `d22359b` revision; final-revision acceptance remains outstanding. | Final SHA acceptance, edge-case follow-up if needed. |
-| B — R03–R05 | Code corrections and regressions staged for QA. | Validate snapshot copy/cycle contract, explicit refresh and numeric namespaces on PHP 8.4/8.5; close only with green final-head CI. |
-| C — R06–R11 | R06–R11 implementation and regressions committed. Optional Runwire 3.0 Composer CI checks on PHP 8.4/8.5 configured. | Final-version matrix results, additional lifecycle/absent-install verification, green final-revision QA. |
-| D — release acceptance | Not complete. | 5.3.1 comparison baseline; documentation verification; persistent-worker soak; final candidate test matrix and release decision. |
+| A — R01–R02 | **Implemented.** Guarded object comparisons and staged moves have regression tests. An intermediate full workflow passed (`d22359b`). | Verify final candidate SHA. |
+| B — R03–R05 | **Implemented.** Snapshots detach references with cycle rejection, cache refresh invalidates source-derived state, and canonical numeric namespace paths are normalized. Config, lazy and layered regressions passed the QA matrix on intermediate revisions. | Verify final candidate SHA. |
+| C — R06–R11 | **Implemented.** Numeric, enum, median, collection-dispatch and sampling regressions committed. Optional Runwire `^3.0` and exact 3.0.0 PHP 8.4/8.5 CI composition are configured; 2.x support claims removed. | Verify final candidate SHA and worker-soak outcomes. |
+| D — release acceptance | **Acceptance infrastructure implemented.** The benchmark now uses 5.3.1 rather than 5.2.0, validates snapshot behavior, and the Sphinx warnings-as-errors build passed on `6ad1114`. | Final SHA workflow and 300-second Runwire worker soak must complete successfully; the shared-runner 2% regression comparator is correctly labelled unverified. |
+
+## Release-candidate evidence boundaries
+
+The immediately previous tag is `5.3.1` at `e77bf72a40c64b94f62e69f3b2662ce2dc47efec`. The benchmark now compares against that tag and validates representative workload output, including snapshots. GitHub's shared runner does not assert a stable performance environment: the configured 2% regression threshold is reported as *unverified*, not silently passed. This is a separate, explicitly disclosed performance-evidence limitation; correctness and QA checks are required to remain green.
+
+The Sphinx HTML build with warnings treated as errors passed after resolving duplicate section labels, the lexer and heading issues. Runwire 3.0 remains optional, owned by the host application, with no Runwire 2.x qualification. All code and regression batches have been committed. Final release readiness must be established from one exact head SHA, including PHPForge, documentation, clean installation, benchmark validity, Runwire 3.0 on PHP 8.4/8.5, and worker soak. An earlier workflow success is not sufficient to approve publication.
 
 ## Release acceptance
 
