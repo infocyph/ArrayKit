@@ -66,7 +66,7 @@ it('retains the source after a rejecting magic setter and works through the faca
     $target = new class {
         public function __set(string $name, mixed $value): void
         {
-            throw new RuntimeException("Rejected {$name}");
+            throw new RuntimeException("Rejected {$name} value {$value}");
         }
     };
 
