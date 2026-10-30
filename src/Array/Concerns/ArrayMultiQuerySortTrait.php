@@ -1256,6 +1256,19 @@ trait ArrayMultiQuerySortTrait
         }
 
         foreach ($array as &$value) {
+            // Object comparison may traverse unbounded public object graphs inside
+            // PHP's sort implementation. The guarded API deliberately excludes it.
+            if (is_object($value)) {
+                if ($throwOnTooDeep) {
+                    throw new \RuntimeException('Recursive sort cannot safely compare object values.');
+                }
+
+                $complete = false;
+                unset($value);
+
+                return $array;
+            }
+
             if (!is_array($value)) {
                 continue;
             }
