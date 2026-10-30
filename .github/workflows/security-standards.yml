@@ -36,13 +36,12 @@ jobs:
 
   runwire-compat:
     if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
-    name: "Runwire ${{ matrix.runwire }} / PHP ${{ matrix.php }}"
+    name: "Runwire 3.0 / PHP ${{ matrix.php }}"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        runwire: ["2.1.1", "3.0.0"]
         php: ["8.4", "8.5"]
     env:
       XDEBUG_MODE: off
@@ -56,8 +55,8 @@ jobs:
           extensions: opcache
           ini-values: opcache.enable_cli=1
           coverage: none
-      - name: Install exact optional Runwire version
-        run: composer require --dev "infocyph/runwire:${{ matrix.runwire }}" --no-interaction --prefer-dist --no-progress
+      - name: Install exact Runwire 3.0
+        run: composer require --dev "infocyph/runwire:3.0.0" --no-interaction --prefer-dist --no-progress
       - name: Exercise lazy pipeline and host-owned coroutine lifecycle
         run: >-
           php vendor/bin/pest
@@ -67,7 +66,7 @@ jobs:
           tests/Feature/Release530BatchETest.php
           tests/Feature/Release530ReviewRegressionTest.php
           tests/Feature/Release530BatchFTest.php
-      - name: Exercise persistent worker under exact Runwire version
+      - name: Exercise persistent worker with Runwire 3.0
         if: matrix.php == '8.5'
         run: |
           mkdir -p build
@@ -78,11 +77,11 @@ jobs:
             --max-growth-mb=16 \
             --report=build/runwire-worker-soak.json \
             -- php -d opcache.enable_cli=1 tests/Support/release530-persistent-worker.php
-      - name: Upload version-specific worker-soak report
+      - name: Upload Runwire 3.0 worker-soak report
         if: always() && matrix.php == '8.5' && hashFiles('build/runwire-worker-soak.json') != ''
         uses: actions/upload-artifact@v7
         with:
-          name: runwire-${{ matrix.runwire }}-php-${{ matrix.php }}-worker-soak
+          name: runwire-3.0-php-${{ matrix.php }}-worker-soak
           path: build/runwire-worker-soak.json
           if-no-files-found: error
           retention-days: 61

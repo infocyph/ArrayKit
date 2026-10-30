@@ -215,9 +215,6 @@ final class ArraySingleOps
     }
 
     /**
-     * @param array<array-key, mixed> $array
-     */
-    /**
      * Recompute only on overflow; normal finite inputs retain the fast path.
      *
      * @param array<array-key, mixed> $array
@@ -241,6 +238,9 @@ final class ArraySingleOps
         return $average;
     }
 
+    /**
+     * @param array<array-key, mixed> $array
+     */
     private static function pickBy(array $array, callable $callback, bool $pickMax): mixed
     {
         $best = null;

@@ -13,7 +13,7 @@ Highlights
   ``hydrateNestedGuarded()`` and ``toArrayDeepGuarded()``.
 - Lower replay overhead for array-backed ``LazyCollection`` sources while
   retaining repeatability for one-shot iterators.
-- Optional Runwire 2.1.1 integration through
+- Optional Runwire integration through
   ``LazyCollection::withRunwire()``. The host passes its existing
   ``RuntimeContext`` and optional request/scope objects; ArrayKit does not own
   Runwire lifecycle management.
@@ -91,8 +91,8 @@ property getters and callbacks remain trusted application code.
 Optional Runwire Integration
 ----------------------------
 
-Runwire is not a production dependency. ArrayKit 5.3 tests the optional
-integration against ``infocyph/runwire`` 2.1.1.
+Runwire is not a production dependency. The 5.3.2 maintenance line tests the
+optional integration against ``infocyph/runwire`` 3.0.
 
 ``LazyCollection::withRunwire()`` accepts the host's exact ``RuntimeContext``
 and optional ``RequestContext`` / ``CoroutineScope``. Cancellation is checked
