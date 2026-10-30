@@ -77,7 +77,7 @@ final readonly class RunwireLazyBinding
         }
 
         if ($this->scope !== null && $this->scopeCheckKey !== null) {
-            // Runwire 2.1.1 guards this read without yielding or changing task-local state.
+            // Supported Runwire versions guard this read without yielding or changing task-local state.
             $this->scope->hasLocal($this->scopeCheckKey);
         }
     }
