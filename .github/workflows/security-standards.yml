@@ -34,6 +34,21 @@ jobs:
       actions: read
       contents: read
 
+  docs:
+    if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
+    name: "Sphinx documentation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install documentation dependencies
+        run: python -m pip install --requirement docs/requirements.txt
+      - name: Build documentation and reject warnings
+        run: sphinx-build -b html -W --keep-going docs build/sphinx
+
   runwire-compat:
     if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
     name: "Runwire 3.0 / PHP ${{ matrix.php }}"
