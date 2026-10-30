@@ -312,7 +312,7 @@ class ArraySingle
             }
 
             $hasNumeric = true;
-            if ($numeric >= 0) {
+            if (!($numeric < 0)) {
                 return false;
             }
         }
@@ -337,7 +337,7 @@ class ArraySingle
             }
 
             $hasNumeric = true;
-            if ($numeric <= 0) {
+            if (!($numeric > 0)) {
                 return false;
             }
         }
@@ -453,9 +453,15 @@ class ArraySingle
         $count = count($values);
         $mid = intdiv($count, 2);
 
-        return ($count % 2)
-            ? $values[$mid]
-            : ($values[$mid - 1] + $values[$mid]) / 2;
+        if (($count % 2) !== 0) {
+            return $values[$mid];
+        }
+
+        $left = $values[$mid - 1];
+        $right = $values[$mid];
+        $sum = $left + $right;
+
+        return is_finite((float) $sum) ? $sum / 2 : $left / 2 + $right / 2;
     }
 
     /**

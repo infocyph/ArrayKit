@@ -195,7 +195,7 @@ trait BaseConfigTrait
         }
 
         if (is_subclass_of($enumClass, \BackedEnum::class)) {
-            if (!is_string($value) && !is_int($value)) {
+            if (get_debug_type($value) !== (new \ReflectionEnum($enumClass))->getBackingType()?->getName()) {
                 return $default;
             }
 

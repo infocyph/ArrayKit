@@ -223,6 +223,10 @@ class BaseArrayHelper
     public static function random(array $array, ?int $number = null, bool $preserveKeys = false): mixed
     {
         $count = count($array);
+        if ($number !== null && $number > $count) {
+            throw new InvalidArgumentException("You requested $number items, but array only has $count.");
+        }
+
         if ($count === 0 || ($number !== null && $number <= 0)) {
             return ($number === null) ? null : [];
         }
@@ -231,10 +235,6 @@ class BaseArrayHelper
             $randKey = array_rand($array);
 
             return $array[$randKey];
-        }
-
-        if ($number > $count) {
-            throw new InvalidArgumentException("You requested $number items, but array only has $count.");
         }
 
         $keys = (array) array_rand($array, $number);

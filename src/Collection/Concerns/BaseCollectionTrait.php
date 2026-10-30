@@ -51,7 +51,7 @@ trait BaseCollectionTrait
     public function __call(string $method, array $arguments): mixed
     {
         $pipeline = $this->process();
-        if (method_exists($pipeline, $method)) {
+        if (is_callable([$pipeline, $method])) {
             return $pipeline->$method(...$arguments);
         }
 
