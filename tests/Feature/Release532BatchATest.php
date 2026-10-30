@@ -19,7 +19,7 @@ it('rejects cyclic object values before guarded sort delegates to PHP comparison
 
     expect(ArrayMulti::sortRecursiveGuarded($values, options: $options, maxNodes: 2))
         ->toBe($values)
-        ->and(fn() => ArrayMulti::sortRecursiveGuarded(
+        ->and(fn () => ArrayMulti::sortRecursiveGuarded(
             $values,
             options: $options,
             maxNodes: 2,
@@ -35,7 +35,7 @@ it('treats opaque and wide object values as an explicit bounded-sort boundary', 
 
     expect(ArrayMulti::sortRecursiveGuarded([3, $wide, 1], maxNodes: 3))
         ->toBe([3, $wide, 1])
-        ->and(fn() => ArrayMulti::sortRecursiveGuarded(
+        ->and(fn () => ArrayMulti::sortRecursiveGuarded(
             [$wide],
             maxNodes: 1,
             throwOnTooDeep: true,
@@ -56,7 +56,7 @@ it('keeps the original move source when a destination readonly property rejects 
 
     $items = ['source' => 42, 'target' => $target];
 
-    expect(fn() => DotNotation::rename($items, 'source', 'target.locked'))
+    expect(fn () => DotNotation::rename($items, 'source', 'target.locked'))
         ->toThrow(InvalidArgumentException::class)
         ->and($items['source'])->toBe(42)
         ->and($target->locked)->toBe(7);
@@ -72,7 +72,7 @@ it('retains the source after a rejecting magic setter and works through the faca
 
     $items = ['source' => 42, 'target' => $target];
 
-    expect(fn() => ArrayKit::dot()->move($items, 'source', 'target.locked'))
+    expect(fn () => ArrayKit::dot()->move($items, 'source', 'target.locked'))
         ->toThrow(RuntimeException::class, 'Rejected')
         ->and($items['source'])->toBe(42);
 });
