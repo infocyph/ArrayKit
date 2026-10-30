@@ -373,8 +373,13 @@ trait DotNotationPublicApiTrait
         }
 
         $value = self::get($array, $from);
-        self::forget($array, $from);
-        self::set($array, $to, $value, $overwrite);
+        // Stage array mutations so a rejected destination cannot remove the
+        // source. Remove first to preserve parent/child path semantics.
+        // User-defined object setters remain caller-owned side effects.
+        $staged = $array;
+        self::forget($staged, $from);
+        self::set($staged, $to, $value, $overwrite);
+        $array = $staged;
 
         return true;
     }
