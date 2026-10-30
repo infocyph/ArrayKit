@@ -4,11 +4,11 @@ Date: 2026-10-30 (Asia/Dhaka).
 
 Reviewed source: `e77bf72a40c64b94f62e69f3b2662ce2dc47efec`, the published `5.3.1` tag. The working tree was clean before this report. This document records an audit and proposed work; none of the corrections below has been implemented by this review.
 
-This plan follows the installed [PHPForge engineering principles](vendor/infocyph/phpforge/resources/engineering-principles.md) and [agent workflow](vendor/infocyph/phpforge/resources/AGENTS.md). Correctness, data integrity, bounded work, public contracts and host ownership take precedence over throughput. Performance claims require measurements with correct outputs.
+This plan follows the [PHPForge engineering principles](https://github.com/infocyph/PHPForge/blob/main/resources/engineering-principles.md) and [agent workflow](https://github.com/infocyph/PHPForge/blob/main/resources/AGENTS.md). Correctness, data integrity, bounded work, public contracts and host ownership take precedence over throughput. Performance claims require measurements with correct outputs.
 
 ## Release decision and scope
 
-Recommend **5.3.2**, a patch containing the nine confirmed corrections and explicit compatibility coverage for Runwire 3.0. The existing passed-instance API already works with the published Runwire 3.0 source in the tests run here. Supporting another compatible optional provider version does not require a new ArrayKit API or an ArrayKit major release.
+Recommend **5.3.2**, a patch containing the eleven identified corrections (R01–R09 from the original audit and R10–R11 from the supplemental review) and explicit compatibility coverage for Runwire 3.0. The existing passed-instance API already works with the published Runwire 3.0 source in the tests run here. Supporting another compatible optional provider version does not require a new ArrayKit API or an ArrayKit major release.
 
 Use **5.4.0** only if implementation introduces an intentional new public capability or API beyond these corrections. Do not remove Runwire 2.1.1 support, raise PHP 8.4, change named arguments, or turn Runwire into a mandatory runtime dependency as part of this patch.
 
@@ -29,7 +29,8 @@ Scope is ArrayKit's code, tests, docs, Composer constraints, benchmark fixtures 
 | Runwire 3.0 composition | All 401 tests / 8,797 assertions passed using the exact published source in an isolated `/tmp` autoloader. Reflection confirmed that runtime and coroutine classes came from that source, not installed 2.1.1. This is runtime/source compatibility evidence, not a clean Composer matrix or a native host certification. |
 | Runwire 3.0 worker soak | The existing persistent CLI harness passed with the published 3.0 source: 310.06 seconds including warm-up, 300 samples, initial/peak RSS 51.39 MiB and 0.00 MiB growth under the unchanged 16 MiB ceiling. It exercises a CLI worker with capability metadata; it does not launch a native RoadRunner host. |
 | Additional parity probes | 480 strict membership comparisons against native `in_array()` behavior passed across lookup thresholds, mixed scalars, ordinary arrays, object identity, NaN, infinities and signed zero. Escaped dot-path flatten/expand probes passed. |
-| Adversarial probes | Reproduced R01–R09 below outside the green suite. Their existence means green baseline tests are insufficient for release acceptance. |
+| Adversarial probes | The original audit reproduced R01–R09 outside the green suite. The supplemental branch review additionally identified R10/R11 in source, with independent native PHP probes for the overflow and method-visibility behavior. Repository regression tests must still reproduce both against the baseline. Green baseline tests are insufficient for release acceptance. |
+| Branch QA status (supplemental review, 2026-10-30) | `patch/runwire` was one commit ahead of `main`, changing only this plan. No Actions runs existed for the branch at review time. The successful workflow evidence above applies to the 5.3.1 baseline, not the new release candidate. |
 
 This audit did not establish an authentication bypass or arbitrary code execution. R01 is a conditional resource-safety failure when object graphs reach the guarded sorter; R02/R03 are data-integrity failures. PHP configuration/cache artifacts, callbacks and user-defined property methods remain trusted host code, not sandboxed input.
 
@@ -129,6 +130,26 @@ Correction: require the intended positive/negative predicate for every included 
 
 Acceptance: NaN alone and mixed with signed values, both infinities, positive/negative zero, finite values, numeric strings, empty/all-nonnumeric inputs and facade calls. Assert that NaN is neither sign.
 
+### R10 — P2: even-length median overflows on finite inputs
+
+Owner: `src/Array/ArraySingle.php:438`, including `Pipeline::median()` and facade forwarding.
+
+For even-length numeric input, `median()` calculates `($values[$mid - 1] + $values[$mid]) / 2`. Two finite values such as `[1e308, 1e308]` overflow during addition and produce `INF`, although the correct median is finite. An independent PHP 8.4 probe confirms this arithmetic boundary. This issue is separate from R07's `avg()` implementation and must not be considered closed just because averaging is repaired.
+
+Correction: use an overflow-safe two-value midpoint calculation for finite extremes without losing ordinary integer/float behavior. Address opposite-sign extremes, same-sign extremes, and integer-boundary precision deliberately; do not introduce an arbitrary-precision dependency or a generic aggregate rewrite. Keep sorting, median selection, and existing exclusion of nonnumeric values unchanged unless tests establish a conflicting existing contract.
+
+Acceptance: even/odd counts, `[1e308, 1e308]`, negative large finite pairs, near-`PHP_INT_MAX`/min pairs, opposite-sign extremes, fractions, numeric strings, empty/all-nonnumeric input, nonfinite values with documented semantics, facade and pipeline calls, and warning-free `E_ALL` on PHP 8.4/8.5. Add a regression demonstrating the baseline failure before changing production code.
+
+### R11 — P2: collection magic forwarding attempts private Pipeline methods
+
+Owners: `src/Collection/Concerns/BaseCollectionTrait.php:51` and private helpers in `src/Collection/Pipeline.php:791`, `:798` and `:809`.
+
+`Collection::__call()` checks `method_exists($pipeline, $method)` before forwarding. That check includes private methods, but the subsequent call from the collection trait cannot access them. For example, invoking `$collection->numericAggregate(null, true)` passes the check and raises a PHP `Error` about a private method instead of the documented `BadMethodCallException` for unavailable collection methods. Native PHP visibility behavior was independently probed.
+
+Correction: forward only callable public pipeline operations. Reject private/internal methods through the existing controlled missing-method exception, without exposing private implementation helpers, adding proxies, or introducing a new reflection-heavy dispatch layer.
+
+Acceptance: every publicly supported fluent operation remains callable through `Collection` and `HookedCollection`; private/internal helper names are rejected with `BadMethodCallException`; unknown method names preserve the same exception; argument forwarding and return/chain types remain unchanged. Add a regression demonstrating the baseline failure before changing production code.
+
 ## Runwire 3.0 support
 
 ### Compatibility and ownership decision
@@ -150,7 +171,7 @@ The relevant advantage is retaining cooperative fairness and cancellation while 
 | --- | --- | --- |
 | A | Add regressions for R01/R02, then fix guarded comparison and failed move handling. | Unsafe comparisons stop under the declared budget; rejected moves retain their source; ordinary APIs and facade contracts pass. |
 | B | Add regressions and correct R03–R05 in existing config owners. | Snapshot rollback and source/cache generation coherence hold across all config variants; numeric namespaces work consistently. |
-| C | Correct R06–R09 and expand optional Runwire development/docs/CI coverage. | Sampling, numeric and enum boundaries pass; 2.1.1/3.0 and absent/unbound compositions pass without host ownership changes. |
+| C | Correct R06–R11 and expand optional Runwire development/docs/CI coverage. | Sampling, numeric and enum boundaries, median overflow and dynamic-method visibility pass; 2.1.1/3.0 and absent/unbound compositions pass without host ownership changes. |
 | D | Run quality, performance, persistent-worker and final-revision CI acceptance. | Every applicable repository-owned gate below is satisfied and reported accurately. |
 
 Expected public API additions: **zero**. Expected new production classes/interfaces/enums: **zero**. Keep behavior in the current cohesive owners, prefer private helpers only where they reduce actual duplication or make a safety boundary clear, and do not split types just to evade complexity limits. Any necessary departure must identify its concrete contract/value and measured cost before being included. Public signatures, named arguments, synchronous defaults, supported PHP versions and normal return/key ordering remain compatibility constraints.
@@ -159,7 +180,7 @@ Do not bundle unrelated formatter churn, generic serialization infrastructure, f
 
 ## Release acceptance
 
-- [ ] Regressions reproduce each confirmed trigger on `5.3.1` and pass after its correction. Include native/facade/collection/intermediary paths where applicable; retain all existing regressions.
+- [ ] Regressions reproduce all R01–R11 triggers on `5.3.1` and pass after their corrections. Include native/facade/collection/intermediary paths where applicable; retain all existing regressions.
 - [ ] Run PHPForge doctor/config inspection, sequential processors, `composer ic:tests:details`, and final `composer ic:tests` or `composer ic:release:guard`. Retain max analysis, 80/12 complexity limits, Psalm security checks, architecture, syntax/reference/duplicate/comment/skip checks, Rector, Pint and PHPCS. Keep live audit and manifest/constraint checks current.
 - [ ] Verify real PHP 8.4/8.5 stable/lowest dependency CI on the same final candidate commit, plus clean optimized `--no-dev` installation without Runwire. Record unavailable next-PHP-target checks explicitly rather than using platform emulation as execution evidence.
 - [ ] Make the optional integration a reproducible Composer matrix for 2.1.1 and 3.0, rather than relying only on this audit's temporary source-autoloader experiment.
@@ -175,6 +196,8 @@ Do not bundle unrelated formatter churn, generic serialization infrastructure, f
 
 - Unguarded cyclic/reference-containing membership/fingerprint inputs remain outside the current documented contract. An isolated cyclic `diff()` probe succeeded below the lookup threshold and exhausted a 32 MiB process at the optimized threshold. This is not counted among R01–R06 because the contract excludes that input; consider deterministic rejection only as a separately scoped hardening change with compatibility/performance tests.
 - No compatible removal of the benchmark tool's abandoned development dependency was established here; track that upstream without removing benchmarks or weakening the audit.
+- `ArraySingle::mode()` currently coerces canonical numeric-string values into integer keys through `array_count_values()`; for example `['1', '1']` yields the integer `1` rather than the original string. Decide whether the public mode contract should distinguish or preserve numeric strings before changing the semantics. This is a follow-up contract decision, not a silent 5.3.2 behavior change.
+- Immutable cache generations have no built-in old-generation reclamation. The current documentation assigns retirement to deployment tooling after pinned workers have stopped; ensure the deployment process has a bounded retention/cleanup policy. Do not delete a generation while another worker may still have it pinned.
 - Broad class/file-count reduction, multibyte text matching, new async APIs and new host-driver adapters have no demonstrated requirement in this audit and should not be added to the patch.
 
-Temporary local audit artifacts use `/tmp/arraykit-audit-*`; they are supporting logs/probes, not committed acceptance tests. The implementation must turn the required reproductions into repository tests before closing R01–R09.
+Temporary local audit artifacts use `/tmp/arraykit-audit-*`; they are supporting logs/probes, not committed acceptance tests. The implementation must turn the required reproductions into repository tests before closing R01–R11.
