@@ -9,7 +9,7 @@ use Symfony\Component\Process\Process;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-const RELEASE_BASELINE_TAG = '5.2.0';
+const RELEASE_BASELINE_TAG = '5.3.1';
 const RELEASE_REPETITIONS = 3;
 const RELEASE_STABILITY_SPREAD_PERCENT = 10.0;
 
@@ -17,6 +17,7 @@ const RELEASE_STABILITY_SPREAD_PERCENT = 10.0;
 $workloadSpecs = [
     ['name' => 'array-query', 'operations' => 100, 'warmup' => 20],
     ['name' => 'dot-config', 'operations' => 100, 'warmup' => 20],
+    ['name' => 'config-snapshot', 'operations' => 100, 'warmup' => 20],
     ['name' => 'lazy-array', 'operations' => 100, 'warmup' => 20],
     ['name' => 'lazy-file-cold', 'operations' => 40, 'warmup' => 10],
     ['name' => 'lazy-file-generated', 'operations' => 60, 'warmup' => 10],
