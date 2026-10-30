@@ -7,18 +7,8 @@ use Infocyph\ArrayKit\Array\BaseArrayHelper;
 use Infocyph\ArrayKit\ArrayKit;
 use Infocyph\ArrayKit\Collection\Collection;
 use Infocyph\ArrayKit\Config\Config;
-
-enum Release532IntMode: int
-{
-    case One = 1;
-    case Two = 2;
-}
-
-enum Release532StringMode: string
-{
-    case One = '1';
-    case Two = '2';
-}
+use Infocyph\ArrayKit\Tests\Fixtures\Release532IntMode;
+use Infocyph\ArrayKit\Tests\Fixtures\Release532StringMode;
 
 it('validates positive random counts even for empty arrays', function () {
     expect(fn () => BaseArrayHelper::random([], 1))->toThrow(InvalidArgumentException::class)
