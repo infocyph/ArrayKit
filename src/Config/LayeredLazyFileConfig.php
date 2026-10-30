@@ -54,12 +54,7 @@ class LayeredLazyFileConfig extends Config
     {
         $this->materializeKnownNamespaces();
 
-        $items = [];
-        foreach (parent::all() as $key => $value) {
-            $items[$key] = $value;
-        }
-
-        return $items;
+        return parent::all();
     }
 
     #[\Override]

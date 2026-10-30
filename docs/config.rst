@@ -338,6 +338,26 @@ Merging, Snapshots, and Read-Only Mode
     $locked = $config->isReadonly();                       // true
     $config->readonly(false);                              // unlock
 
+Snapshots retain a by-value copy of scalar and nested array data. PHP references
+to external variables do not cause a later mutation to change an earlier
+snapshot. ``restore()`` makes a fresh copy, so repeated restores remain safe.
+Repeated internal array references are copied independently; cyclic array
+references raise ``UnexpectedValueException`` before a valid named snapshot
+can be overwritten. Object values remain shallow: the snapshot preserves
+their identity and cannot reverse changes to an object's internal state.
+
+.. code-block:: php
+
+    <?php
+    $value = 1;
+    $config = new \Infocyph\ArrayKit\Config\Config();
+    $config->loadArray(['app' => ['value' => &$value]]);
+    $config->snapshot('start');
+
+    $value = 9;
+    $config->restore('start');
+    assert($config->get('app.value') === 1);
+
 Array-Value Helpers
 -------------------
 

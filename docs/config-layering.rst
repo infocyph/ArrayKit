@@ -66,7 +66,10 @@ values from lower-precedence layers.
 
 ``all()`` materializes the configured namespace set. ``warmNamespaceCache()``
 and ``clearNamespaceCache()`` delegate generated source-cache lifecycle to the
-underlying lazy source.
+underlying lazy source. Canonical numeric namespace names such as ``0`` and
+``-1`` are supported as filenames and paths. PHP converts those array keys
+to integers in the result from ``all()``; ``loadedNamespaces()`` always
+returns namespace names as strings.
 
 Resilient Lazy Source Cache
 ---------------------------

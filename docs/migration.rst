@@ -36,6 +36,23 @@ generation selected by ``.arraykit-generation``. The caller namespace
 ``__flat`` is therefore no longer ambiguous with ArrayKit's internal flat
 index.
 
+5.3.2 Patch Notes
+-----------------
+
+The patch fixes failed dot-path moves (the source is preserved if a destination
+write fails), guarded sort boundaries for arbitrary object values, snapshot
+reference aliasing, and lazy config refresh against newly published source
+generations. It also fixes numeric namespace discovery, numeric and enum edge
+cases, median overflow and private pipeline method dispatch.
+
+Optional Runwire integration is qualified for Runwire 3.0 only. Production
+installation does not require Runwire; applications that explicitly bind a
+Runwire runtime must use a compatible 3.0 host instance.
+
+Normal array/snapshot APIs retain their signatures. Snapshotting now visits
+nested arrays to detach external references; object values remain shallow.
+A cyclic array reference is rejected at snapshot creation rather than saved.
+
 Recent Additions
 ----------------
 
