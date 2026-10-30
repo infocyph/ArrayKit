@@ -56,9 +56,7 @@ class LayeredLazyFileConfig extends Config
 
         $items = [];
         foreach (parent::all() as $key => $value) {
-            if (is_string($key)) {
-                $items[$key] = $value;
-            }
+            $items[$key] = $value;
         }
 
         return $items;
@@ -216,7 +214,8 @@ class LayeredLazyFileConfig extends Config
      */
     public function warmNamespaceCache(string|array|null $namespaces = null): static
     {
-        $this->source->warmNamespaceCache($namespaces ?? array_keys($this->knownNamespaces));
+        $known = array_map(static fn(int|string $name): string => (string) $name, array_keys($this->knownNamespaces));
+        $this->source->warmNamespaceCache($namespaces ?? $known);
 
         return $this;
     }
@@ -244,7 +243,7 @@ class LayeredLazyFileConfig extends Config
     private function materializeKnownNamespaces(): void
     {
         foreach (array_keys($this->knownNamespaces) as $namespace) {
-            $this->materializeNamespace($namespace);
+            $this->materializeNamespace((string) $namespace);
         }
     }
 
@@ -316,7 +315,7 @@ class LayeredLazyFileConfig extends Config
     private function registerNamespaces(array $items): void
     {
         foreach ($items as $namespace => $_value) {
-            if (is_string($namespace) && $namespace !== '') {
+            if ((string) $namespace !== '') {
                 $this->knownNamespaces[$namespace] = true;
                 $this->materializedNamespaces[$namespace] = true;
             }

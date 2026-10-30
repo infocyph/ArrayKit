@@ -185,7 +185,7 @@ This is a rolling implementation tracker, not a release sign-off. The 5.3.1 base
 | Batch | Status at review update | Remaining work |
 | --- | --- | --- |
 | A — R01–R02 | Production corrections and regression tests committed. PHP 8.4/8.5 QA and static checks passed on the intermediate `d22359b` revision; final-revision acceptance remains outstanding. | Final SHA acceptance, edge-case follow-up if needed. |
-| B — R03–R05 | Not implemented. | Snapshot alias isolation; cache-generation refresh; numeric namespace normalization and regressions. |
+| B — R03–R05 | Code corrections and regressions staged for QA. | Validate snapshot copy/cycle contract, explicit refresh and numeric namespaces on PHP 8.4/8.5; close only with green final-head CI. |
 | C — R06–R11 | R06–R11 implementation and regressions committed. Optional Runwire 3.0 Composer CI checks on PHP 8.4/8.5 configured. | Final-version matrix results, additional lifecycle/absent-install verification, green final-revision QA. |
 | D — release acceptance | Not complete. | 5.3.1 comparison baseline; documentation verification; persistent-worker soak; final candidate test matrix and release decision. |
 

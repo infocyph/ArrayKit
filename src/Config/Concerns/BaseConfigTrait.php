@@ -6,6 +6,7 @@ namespace Infocyph\ArrayKit\Config\Concerns;
 
 use Infocyph\ArrayKit\Array\DotNotation;
 use Infocyph\ArrayKit\Config\EnvParser;
+use Infocyph\ArrayKit\Config\Support\ConfigSnapshot;
 use Infocyph\ArrayKit\Config\Support\EnvReference;
 use InvalidArgumentException;
 use OutOfBoundsException;
@@ -507,7 +508,7 @@ trait BaseConfigTrait
         }
 
         $this->flushReadCache();
-        $this->items = $this->snapshots[$name];
+        $this->items = ConfigSnapshot::detach($this->snapshots[$name]);
 
         return true;
     }
@@ -537,7 +538,8 @@ trait BaseConfigTrait
      */
     public function snapshot(string $name = 'default'): bool
     {
-        $this->snapshots[$name] = $this->items;
+        $copy = ConfigSnapshot::detach($this->items);
+        $this->snapshots[$name] = $copy;
 
         return true;
     }
