@@ -1,0 +1,180 @@
+# ArrayKit 5.3.2 review and release plan
+
+Date: 2026-10-30 (Asia/Dhaka).
+
+Reviewed source: `e77bf72a40c64b94f62e69f3b2662ce2dc47efec`, the published `5.3.1` tag. The working tree was clean before this report. This document records an audit and proposed work; none of the corrections below has been implemented by this review.
+
+This plan follows the installed [PHPForge engineering principles](vendor/infocyph/phpforge/resources/engineering-principles.md) and [agent workflow](vendor/infocyph/phpforge/resources/AGENTS.md). Correctness, data integrity, bounded work, public contracts and host ownership take precedence over throughput. Performance claims require measurements with correct outputs.
+
+## Release decision and scope
+
+Recommend **5.3.2**, a patch containing the nine confirmed corrections and explicit compatibility coverage for Runwire 3.0. The existing passed-instance API already works with the published Runwire 3.0 source in the tests run here. Supporting another compatible optional provider version does not require a new ArrayKit API or an ArrayKit major release.
+
+Use **5.4.0** only if implementation introduces an intentional new public capability or API beyond these corrections. Do not remove Runwire 2.1.1 support, raise PHP 8.4, change named arguments, or turn Runwire into a mandatory runtime dependency as part of this patch.
+
+Scope is ArrayKit's code, tests, docs, Composer constraints, benchmark fixtures and CI. Foundation adapters and qualification of Runwire's HTTP protocols, native workers, transports or host drivers are separate projects and are not ArrayKit release blockers for this work.
+
+## Audit evidence
+
+| Check | Result and limitation |
+| --- | --- |
+| Source review | All 37 production PHP files: array/set/query/sort operations, dot paths, collections/pipeline/replay, config/layering/generated caches, dotenv/environment, DTOs, hooks, facade and helpers; associated tests, benchmarks and workflow. Graphify was used for navigation; claims were checked in source and independent probes. |
+| Installed PHPForge setup | Doctor healthy; bundled configs active; PHPStan max, class complexity 80 and function complexity 12. No detector, scope or threshold was weakened. |
+| Local detailed suite | `composer ic:tests:details` passed: 401 tests, 8,797 assertions on PHP 8.5.4, plus formatting, architecture, static/security analysis and refactoring checks. |
+| Local final full suite | `composer ic:tests` passed all 13 tasks. |
+| Composer | `composer validate --strict` and `composer ic:release:constraints` passed. |
+| Live locked dependency audit | Zero published advisories; development-only `doctrine/annotations` remains abandoned through benchmark tooling. Raw Composer exits nonzero for abandonment; this is distinct from an advisory and is non-blocking under existing PHPForge policy. ArrayKit has no third-party runtime package requirements. |
+| Exact-source CI | [Security & Standards run 40161657499](https://github.com/infocyph/ArrayKit/actions/runs/40161657499) succeeded for `e77bf72…`: PHP 8.4/8.5 analysis, stable/lowest QA, clean installation, benchmarks, security report and Release Acceptance. Recent Dependabot-only runs were not counted as QA evidence. |
+| Runwire 3.0 publication | Live [Composer metadata](https://repo.packagist.org/p2/infocyph/runwire.json) and the [3.0 source tag](https://github.com/infocyph/Runwire/tree/3.0) identify `054737bc6a8d4025a8d05fabb8ad390f66ee47ae`, published 2026-10-29. PHP and 64-bit PHP remain `^8.4`. |
+| Runwire 3.0 composition | All 401 tests / 8,797 assertions passed using the exact published source in an isolated `/tmp` autoloader. Reflection confirmed that runtime and coroutine classes came from that source, not installed 2.1.1. This is runtime/source compatibility evidence, not a clean Composer matrix or a native host certification. |
+| Runwire 3.0 worker soak | The existing persistent CLI harness passed with the published 3.0 source: 310.06 seconds including warm-up, 300 samples, initial/peak RSS 51.39 MiB and 0.00 MiB growth under the unchanged 16 MiB ceiling. It exercises a CLI worker with capability metadata; it does not launch a native RoadRunner host. |
+| Additional parity probes | 480 strict membership comparisons against native `in_array()` behavior passed across lookup thresholds, mixed scalars, ordinary arrays, object identity, NaN, infinities and signed zero. Escaped dot-path flatten/expand probes passed. |
+| Adversarial probes | Reproduced R01–R09 below outside the green suite. Their existence means green baseline tests are insufficient for release acceptance. |
+
+This audit did not establish an authentication bypass or arbitrary code execution. R01 is a conditional resource-safety failure when object graphs reach the guarded sorter; R02/R03 are data-integrity failures. PHP configuration/cache artifacts, callbacks and user-defined property methods remain trusted host code, not sandboxed input.
+
+## Required corrections
+
+Priorities are engineering priorities, not CVSS scores. P1 means correct before publication; P2 is a narrower confirmed defect included in this patch.
+
+### R01 — P1: guarded sort compares uncounted object graphs
+
+Owners: `src/Array/Concerns/ArrayMultiQuerySortTrait.php:909` and `:1234`.
+
+`sortRecursiveWithGuards()` counts array entries and descends only into arrays. `compareSortValues()` subsequently uses PHP's regular comparison on object values, which can descend through arbitrarily large public object graphs outside the advertised budget.
+
+Reproduction: two distinct `stdClass` values, each with `self` pointing to itself and different `tail` values, passed to `sortRecursiveGuarded([$left, $right], maxNodes: 2, throwOnTooDeep: true)` produce `Error: Nesting level too deep - recursive dependency?` from the comparator instead of controlled guard handling. Wide acyclic object graphs cross the same boundary without requiring cyclic PHP references. The documentation recommends this guarded entry point for untrusted/deep input and does not exclude object values there.
+
+Correction: define and enforce a supported bounded-comparison domain before sorting. Charge supported object-data traversal to the same depth/node budget and detect active-path cycles, or reject object/comparison cases that cannot be bounded before invoking PHP comparison. Custom object/string conversion work must remain an explicit trusted-code boundary. Preserve normal `sortRecursive()` semantics. In non-throwing mode, propagate incompleteness to ancestors so no unsafe comparison runs; throwing mode must produce a controlled documented exception.
+
+Acceptance: cyclic/distinct/shared objects, wide public object graphs, arrays containing such objects, opaque internal objects, all sort flags, exact boundaries, throw/non-throw behavior, scalar/array equivalence below limits, and fixed-budget work as object width grows. Do not claim arbitrary user callbacks can be sandboxed.
+
+### R02 — P1: failed rename/move deletes the source
+
+Owner: `src/Array/Concerns/DotNotationPublicApiTrait.php:361`.
+
+`rename()` reads and removes the source before attempting the destination write. With `['source' => 42, 'target' => $object]` and a readonly `target.locked`, `rename($data, 'source', 'target.locked')` throws for the readonly property after `source` has already disappeared. `move()` and facade forwarding inherit the failure.
+
+Correction: preflight/stage ordinary destination changes and commit source removal only when the move can succeed. Preserve source data on rejected writes and preserve established parent/child path behavior. Avoid a blanket swap of the two existing calls: overlapping source/destination paths require deliberate handling. Do not promise rollback of arbitrary external side effects inside application magic setters.
+
+Acceptance: readonly/inaccessible/typed property failures, throwing setters, missing sources, same path, parent-to-child and child-to-parent moves, escaped paths, overwrite/fill flags, existing destination values, and native/facade named reference arguments. Failed supported moves must retain the source.
+
+### R03 — P2: snapshots alias externally referenced scalar/array state
+
+Owner: `src/Config/Concerns/BaseConfigTrait.php:498` and `:534`.
+
+Reproduction: load `['app' => ['v' => &$value]]` with `$value = 1`; call `snapshot()`, `set('app.v', 2)`, `changed()`, `restore()`. `changed()` returns false and the restored value remains 2. Assignment into the snapshot retains the PHP reference cell, so the live mutation changes the saved state as well. Config supports referenced reads and documents restore as rollback.
+
+Correction: make saved scalar/array state independent of live external reference cells, including repeated restores. Retain the established shallow identity contract for arbitrary objects; this is not a generic deep-clone feature. Handle internal aliases and cyclic arrays deliberately, with deterministic failure before replacing a valid snapshot if a graph cannot be represented under the chosen contract. Do not use `serialize()`/`unserialize()` as a generic copying mechanism or silently change ordinary live-reference reads/writes.
+
+Acceptance: top-level/nested references, external mutation after snapshot, internal aliases, multiple named snapshots, repeated restore/mutate/restore, changed/read-cache parity, readonly restore, and Config/LazyFileConfig/LayeredLazyFileConfig use. Document exactly what remains shallow for object values.
+
+### R04 — P2: explicit cache refresh retains old source-origin data
+
+Owner: `src/Config/Concerns/LazyFileConfigCacheTrait.php:189`.
+
+Reproduction: start with no cached `app` namespace, read source version 1, publish a generation containing source version 2 with a separate writer, then call `namespaceCache($sameRoot)` on the original reader. It still returns 1 while a fresh reader returns 2. Invalidation removes only cache-origin items and clears cache/missing flags; source-origin items survive and shadow the newly selected generation. Same-instance warm-up also needs coverage.
+
+Correction: explicit refresh/rebuild must invalidate affected source-derived state as well as cached/flat/memo state, while retaining deliberate constructor/runtime overrides. Keep generation pinning coherent across exact and structural reads. Ordinary pinned readers must remain stable until an explicit refresh; do not add pointer polling to each hot read.
+
+Acceptance: source-only reader before first publication; empty-cache generation; exact versus structural reads; same-root refresh, source/cache switching, warm-up and flush; multiple namespaces; ResilientLazyFileConfig; and preserved intentional runtime mutations. Do not infer a new public LayeredLazyFileConfig refresh API from this correction.
+
+### R05 — P2: canonical numeric namespace names become integer map keys
+
+Owners: `src/Config/LayeredLazyFileConfig.php:244`, `src/Config/Concerns/LazyFileConfigCacheTrait.php:167`, and namespace metadata in `src/Config/LazyFileConfig.php`.
+
+`0` is accepted by the namespace grammar, but PHP coerces associative key `'0'` to integer `0`. A layered config with `namespaces: ['0']` fails during `all()` because `materializeNamespace(string)` receives an integer. Discovery of `0.php` similarly makes no-argument `warmNamespaceCache()` call `namespaceCacheWarmValue(string)` with an integer. Numeric names can also violate the documented string list returned by `loadedNamespaces()`.
+
+Correction: normalize namespace identifiers to strings when crossing map-key/list boundaries, and consistently register numeric-looking constructor/runtime/source names. Preserve the current allowed namespace grammar and filename meaning; do not solve this by rejecting previously accepted names.
+
+Acceptance: `'0'`, positive and negative canonical integers, noncanonical numeric-looking strings such as `'01'`, ordinary names, discovery, explicit warm-up, full retrieval, snapshots/exports, loaded-name lists, and lazy/layered/resilient behavior. Invalid names still fail at the existing validation boundary.
+
+### R06 — P2: positive random sampling from an empty array misses validation
+
+Owner: `src/Array/BaseArrayHelper.php:223`.
+
+`random([], 1)` and `random([], 2)` return `[]`. Both requests exceed the available size, which the PHPDoc and user guide say must raise `InvalidArgumentException`. The empty-array early return bypasses that validation.
+
+Correction: validate positive requested counts before the empty-result shortcut. Preserve empty single-pick behavior (`null`) and the established zero/nonpositive-count behavior unless a separate contract change is approved.
+
+Acceptance: empty/nonempty arrays; omitted, zero, negative, exact-size and oversized counts; preserved keys; facade calls; no process-global randomness changes.
+
+### R07 — P2: averaging can overflow or cast a valid float outside integer range
+
+Owner: `src/Array/ArraySingle.php:21`, also exposed through the single-array facade. No new pipeline API is proposed.
+
+`avg([1e20])` returns integer `7766279631452241920` on the reviewed 64-bit runtime instead of `1e20`. `avg([PHP_INT_MAX, PHP_INT_MAX])` returns `PHP_INT_MIN`, flipping the sign. The result is blindly cast to integer whenever `fmod($avg, 1.0)` is zero, without proving integer representability. PHP 8.5 also emits a warning. Separately, adding two finite `1e308` values overflows the intermediate total and returns infinity even though their mean is finite.
+
+Correction: retain the ordinary fast path and established integer/float return behavior for representable results, but cast only after a range-safe check and use a numerically safe path when intermediate accumulation would overflow. Do not assume a float comparison with `PHP_INT_MAX` proves representability: converting the integer bound to float can round it upward. No arbitrary-precision dependency or broad aggregate rewrite is required.
+
+Acceptance: positive/negative values outside integer range, both integer bounds and nearby floats, repeated `PHP_INT_MAX`, finite large floats whose sum overflows, mixed signs, infinities/NaN, numeric strings, fractional results, empty/non-numeric input, facade calls and `E_ALL` on both supported PHP versions. Preserve existing finite ordinary cases and define special-value behavior explicitly.
+
+### R08 — P2: enum getters do not consistently use the supplied fallback
+
+Owner: `src/Config/Concerns/BaseConfigTrait.php:186`.
+
+The backed-enum branch accepts either integer or string values and calls `tryFrom()` in strict mode. An integer-backed enum with stored string `'1'`, or a string-backed enum with stored integer `1`, raises `TypeError`. The getter otherwise returns its supplied default for missing, unsupported and unmatched values, so a wrong backing scalar unexpectedly escapes that typed-getter boundary.
+
+Correction: validate the enum's backing scalar type before calling `tryFrom()` and return the default on mismatch, without introducing implicit scalar coercion. Preserve the error for a nonexistent enum class and preserve unit-enum lookup by case name. Avoid repeated discovery/reflection on a hot lookup path when a simple bounded metadata reuse strategy is warranted.
+
+Acceptance: integer-backed, string-backed and unit enums; correct values, unmatched values, numeric-looking strings, wrong backing scalar, null, boolean/array/object input, explicit defaults, missing config, and all config variants. A valid lookup continues to return the exact enum singleton.
+
+### R09 — P2: NaN is classified as both positive and negative
+
+Owner: `src/Array/ArraySingle.php:304` and `:329`.
+
+`isPositive([NAN])` and `isNegative([NAN])` both return true, while native `NAN > 0` and `NAN < 0` are false. These functions reject only the opposite comparison; NaN is unordered, so it escapes both checks.
+
+Correction: require the intended positive/negative predicate for every included numeric value. NaN must not establish either sign. Preserve ignored non-numeric values, the all-nonnumeric/empty result, zero handling and infinity signs; do not globally change `numericValue()` or unrelated arithmetic contracts merely to fix these predicates.
+
+Acceptance: NaN alone and mixed with signed values, both infinities, positive/negative zero, finite values, numeric strings, empty/all-nonnumeric inputs and facade calls. Assert that NaN is neither sign.
+
+## Runwire 3.0 support
+
+### Compatibility and ownership decision
+
+The current production binding consumes `RuntimeContext`, `RequestContext`, `CancellationToken`, `CoroutineScope`, `TaskLocal`, runtime coroutine capability, and their lifecycle/checkpoint methods. Those APIs remain available in the exact 3.0 source and all existing tests pass against them.
+
+1. Expand development compatibility to `^2.1.1 || ^3.0`, with separate matrix jobs forcing exact 2.1.1 and the published 3.0 version. Cover newest supported compatible releases as appropriate without presenting untested versions as certified.
+2. Update the optional Composer suggestion and integration docs to describe the tested versions. Keep the production dependency set unchanged.
+3. Keep `withRunwire($runtime, $request, $scope, $checkpointEvery)` and explicit intermediary forwarding unchanged. No ambient/global runtime discovery, implicit binding, worker startup or event-loop creation.
+4. Continue capability-gated yielding and request/scope cancellation/completion checks before source consumption and after resumption. Keep closed/invalid supplied lifecycle errors distinct from the normal missing-capability fallback. Preserve `take(0)` laziness.
+5. Exercise genuine host-owned `CoroutineRuntime`/scope tasks, interleaved requests, cancellation/deadlines, fail-fast groups, source/callback errors, early abandonment, rebinding and reference release under both supported Runwire versions. The host completes requests and closes scopes.
+6. Verify installed/unbound and clean Runwire-absent production installs. Avoid reflection of private scheduler state or version checks on each item.
+
+The relevant advantage is retaining cooperative fairness and cancellation while hosts adopt Runwire 3.0's runtime improvements. Array/DTO/config algorithms remain ArrayKit's responsibility. Runwire's outbound HTTP, WebSocket, transport, TLS and worker-pool features do not justify new integration in a pure-data path. Async file APIs do not make executable PHP config `include` asynchronous. Do not add an async config adapter, background worker or offload layer without a concrete caller need and representative throughput evidence.
+
+## Execution sequence and structural constraints
+
+| Batch | Work | Exit condition |
+| --- | --- | --- |
+| A | Add regressions for R01/R02, then fix guarded comparison and failed move handling. | Unsafe comparisons stop under the declared budget; rejected moves retain their source; ordinary APIs and facade contracts pass. |
+| B | Add regressions and correct R03–R05 in existing config owners. | Snapshot rollback and source/cache generation coherence hold across all config variants; numeric namespaces work consistently. |
+| C | Correct R06–R09 and expand optional Runwire development/docs/CI coverage. | Sampling, numeric and enum boundaries pass; 2.1.1/3.0 and absent/unbound compositions pass without host ownership changes. |
+| D | Run quality, performance, persistent-worker and final-revision CI acceptance. | Every applicable repository-owned gate below is satisfied and reported accurately. |
+
+Expected public API additions: **zero**. Expected new production classes/interfaces/enums: **zero**. Keep behavior in the current cohesive owners, prefer private helpers only where they reduce actual duplication or make a safety boundary clear, and do not split types just to evade complexity limits. Any necessary departure must identify its concrete contract/value and measured cost before being included. Public signatures, named arguments, synchronous defaults, supported PHP versions and normal return/key ordering remain compatibility constraints.
+
+Do not bundle unrelated formatter churn, generic serialization infrastructure, framework adapters or a runtime rewrite into these fixes. Review processor output and retain every active detector; no suppressions, baselines, exclusions or threshold increases.
+
+## Release acceptance
+
+- [ ] Regressions reproduce each confirmed trigger on `5.3.1` and pass after its correction. Include native/facade/collection/intermediary paths where applicable; retain all existing regressions.
+- [ ] Run PHPForge doctor/config inspection, sequential processors, `composer ic:tests:details`, and final `composer ic:tests` or `composer ic:release:guard`. Retain max analysis, 80/12 complexity limits, Psalm security checks, architecture, syntax/reference/duplicate/comment/skip checks, Rector, Pint and PHPCS. Keep live audit and manifest/constraint checks current.
+- [ ] Verify real PHP 8.4/8.5 stable/lowest dependency CI on the same final candidate commit, plus clean optimized `--no-dev` installation without Runwire. Record unavailable next-PHP-target checks explicitly rather than using platform emulation as execution evidence.
+- [ ] Make the optional integration a reproducible Composer matrix for 2.1.1 and 3.0, rather than relying only on this audit's temporary source-autoloader experiment.
+- [ ] Preserve the existing 300-second worker soak, 10-second warm-up, one-second sampling and 16 MiB RSS-growth ceiling; run repeated config/replay/request lifecycle work with both supported Runwire versions and correct host cleanup. Do not weaken the ceiling to pass a test.
+- [ ] Use **5.3.1** as the before/after performance baseline for this patch. The current representative harness hardcodes 5.2.0; update the benchmark input/baseline selection as part of release evidence, not production behavior. Validate equivalent correct outputs before comparing throughput.
+- [ ] Measure changed hot paths, config cold/warm/generated reads and snapshot cost, bounded failures, array/reference/one-shot replay, and bound/unbound Runwire pipelines. Include input-size scaling and a host-owned yielding workload so fairness/cancellation are measured, not merely synchronous materialization.
+- [ ] Keep component evidence labelled component evidence. For an application-RPM claim, use an ArrayKit-owned minimal request/task consumer with warmed OPcache and optimized production loading, sustained synchronized measurement windows, several concurrency levels, at least three trials, validated successful RPM, p50/p95/p99, errors/timeouts, CPU and peak/steady RSS. Exclude setup/warm-up/cleanup from the steady-state denominator. Record exact source IDs, PHP/extensions/INI, OS/hardware, datasets, variance, queue/task state and runner stability.
+- [ ] Preserve the configured 2% throughput budget wherever a controlled matching stable environment is available. Predeclare workload latency/memory limits from baseline/host capacity. On a noisy/shared runner, report the comparator as skipped/unverified; never switch the stable flag on just to obtain a green badge. A host harness owned by ArrayKit can qualify library impact without making Foundation or other runtimes part of this task.
+- [ ] Keep user docs focused on behavior and migration. Put transient verification logs/results in CI or review artifacts, not in release documentation. Record limitations in the release decision without claiming unavailable external certification.
+- [ ] Confirm every required workflow job against the final committed candidate; a green baseline or a newer Dependabot-only run is insufficient. Create/tag/publish the patch only as a separate authorized release action.
+
+## Optional follow-ups, not patch requirements
+
+- Unguarded cyclic/reference-containing membership/fingerprint inputs remain outside the current documented contract. An isolated cyclic `diff()` probe succeeded below the lookup threshold and exhausted a 32 MiB process at the optimized threshold. This is not counted among R01–R06 because the contract excludes that input; consider deterministic rejection only as a separately scoped hardening change with compatibility/performance tests.
+- No compatible removal of the benchmark tool's abandoned development dependency was established here; track that upstream without removing benchmarks or weakening the audit.
+- Broad class/file-count reduction, multibyte text matching, new async APIs and new host-driver adapters have no demonstrated requirement in this audit and should not be added to the patch.
+
+Temporary local audit artifacts use `/tmp/arraykit-audit-*`; they are supporting logs/probes, not committed acceptance tests. The implementation must turn the required reproductions into repository tests before closing R01–R09.
