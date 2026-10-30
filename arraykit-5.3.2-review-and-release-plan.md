@@ -178,6 +178,17 @@ Expected public API additions: **zero**. Expected new production classes/interfa
 
 Do not bundle unrelated formatter churn, generic serialization infrastructure, framework adapters or a runtime rewrite into these fixes. Review processor output and retain every active detector; no suppressions, baselines, exclusions or threshold increases.
 
+## Branch implementation status
+
+This is a rolling implementation tracker, not a release sign-off. The 5.3.1 baseline evidence earlier in this plan does not certify the current PR revision. Run the full final-revision matrix, release acceptance, and performance/worker checks before marking any batch release-complete.
+
+| Batch | Status at review update | Remaining work |
+| --- | --- | --- |
+| A — R01–R02 | Production corrections and regression tests committed. PHP 8.4/8.5 QA and static checks passed on the intermediate `d22359b` revision; final-revision acceptance remains outstanding. | Final SHA acceptance, edge-case follow-up if needed. |
+| B — R03–R05 | Not implemented. | Snapshot alias isolation; cache-generation refresh; numeric namespace normalization and regressions. |
+| C — R06–R11 | R06, R08, R09, R10, R11 implementation and regressions committed. | R07 overflow-safe averaging, optional Runwire 2.1.1/3.0 Composer matrix, additional lifecycle tests, green final-revision QA. |
+| D — release acceptance | Not complete. | 5.3.1 comparison baseline; documentation verification; persistent-worker soak; final candidate test matrix and release decision. |
+
 ## Release acceptance
 
 - [ ] Regressions reproduce all R01–R11 triggers on `5.3.1` and pass after their corrections. Include native/facade/collection/intermediary paths where applicable; retain all existing regressions.
