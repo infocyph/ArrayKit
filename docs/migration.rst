@@ -52,6 +52,9 @@ Runwire runtime must use a compatible 3.0 host instance.
 Normal array/snapshot APIs retain their signatures. Snapshotting now visits
 nested arrays to detach external references; object values remain shallow.
 A cyclic array reference is rejected at snapshot creation rather than saved.
+Snapshot creation also rejects depth beyond 256 or more than 100,000 visited
+entries before replacing an existing snapshot. Reused referenced subgraphs are
+detached once per snapshot and shared through PHP copy-on-write storage.
 
 Recent Additions
 ----------------

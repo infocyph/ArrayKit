@@ -340,10 +340,14 @@ Merging, Snapshots, and Read-Only Mode
 
 Snapshots retain a by-value copy of scalar and nested array data. PHP references
 to external variables do not cause a later mutation to change an earlier
-snapshot. ``restore()`` makes a fresh copy, so repeated restores remain safe.
+snapshot. ``restore()`` uses PHP's copy-on-write isolation of these reference-free
+arrays, so repeated restores remain safe without expanding shared storage.
 Repeated internal array references are copied independently; cyclic array
 references raise ``UnexpectedValueException`` before a valid named snapshot
-can be overwritten. Object values remain shallow: the snapshot preserves
+can be overwritten. Creation is bounded to depth 256 and 100,000 visited entries;
+exceeding either limit raises ``UnexpectedValueException`` and leaves existing
+snapshots intact. Completed shared references reuse detached array storage
+without retaining writable aliases. Object values remain shallow: the snapshot preserves
 their identity and cannot reverse changes to an object's internal state.
 
 .. code-block:: php

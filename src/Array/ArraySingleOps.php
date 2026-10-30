@@ -222,6 +222,8 @@ final class ArraySingleOps
     private static function overflowSafeAverage(array $array, int $count, float $fallback): float
     {
         $average = 0.0;
+        $correction = 0.0;
+        $scale = 2.0 ** (ceil(log($count, 2)) + 1);
         foreach ($array as $value) {
             $numeric = self::numericValue($value);
             if ($numeric === null) {
@@ -232,10 +234,19 @@ final class ArraySingleOps
                 return $fallback;
             }
 
-            $average += $numeric / $count;
+            // Power-of-two scaling leaves overflow headroom while preserving
+            // small terms that may remain after large values cancel.
+            $term = $numeric / $scale;
+            $next = $average + $term;
+            $correction += abs($average) >= abs($term)
+                ? ($average - $next) + $term
+                : ($term - $next) + $average;
+            $average = $next;
         }
 
-        return $average;
+        $limit = PHP_FLOAT_MAX / $scale;
+
+        return max(-$limit, min($limit, $average / $count + $correction / $count)) * $scale;
     }
 
     /**

@@ -508,7 +508,9 @@ trait BaseConfigTrait
         }
 
         $this->flushReadCache();
-        $this->items = ConfigSnapshot::detach($this->snapshots[$name]);
+        // Saved arrays have no reference cells; PHP copy-on-write isolates
+        // later mutations without expanding shared array storage again.
+        $this->items = $this->snapshots[$name];
 
         return true;
     }

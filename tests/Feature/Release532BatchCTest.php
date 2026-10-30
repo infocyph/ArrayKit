@@ -68,3 +68,14 @@ it('forwards only callable public pipeline methods through collections', functio
         ->toThrow(BadMethodCallException::class)
         ->and($collection->values()->all())->toBe([3, 1, 2]);
 });
+
+it('keeps finite extreme averages inside the input range', function (int $count) {
+    expect(ArraySingle::avg(array_fill(0, $count, PHP_FLOAT_MAX)))->toBe(PHP_FLOAT_MAX)
+        ->and(ArraySingle::avg(array_fill(0, $count, -PHP_FLOAT_MAX)))->toBe(-PHP_FLOAT_MAX);
+})->with([3, 7, 11, 21, 100, 1000]);
+
+it('retains small remainders when extreme finite values cancel during averaging', function (float $remainder) {
+    $extremes = [PHP_FLOAT_MAX, PHP_FLOAT_MAX, -PHP_FLOAT_MAX, -PHP_FLOAT_MAX];
+    expect(ArraySingle::avg([...$extremes, $remainder]))->toBe($remainder / 5)
+        ->and(ArraySingle::avg([$remainder, ...$extremes]))->toBe($remainder / 5);
+})->with([1.0, 1e-100, 1e-300, -1.0, -1e-100, -1e-300]);

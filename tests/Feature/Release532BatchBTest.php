@@ -77,6 +77,62 @@ it('rejects cyclic snapshots without replacing a valid snapshot', function () {
         ->and($config->get('safe.v'))->toBe(1);
 });
 
+it('snapshots shared acyclic graphs without expanding their storage', function () {
+    $script = <<<'PHP'
+require $argv[1];
+    $graph = ['value' => 1];
+    for ($depth = 0; $depth < 20; $depth++) {
+        $child = $graph;
+        $graph = ['left' => &$child, 'right' => &$child];
+        unset($child);
+    }
+    $config = new \Infocyph\ArrayKit\Config\Config();
+    $config->loadArray(['app' => $graph]);
+    $before = memory_get_usage();
+    $config->snapshot();
+    $growth = memory_get_usage() - $before;
+    $path = 'app.' . str_repeat('left.', 20) . 'value';
+    $other = 'app.' . str_repeat('right.', 20) . 'value';
+    $config->restore();
+    $config->set($path, 9);
+    $independent = $config->get($other) === 1;
+    $config->restore();
+    echo json_encode(['growth' => $growth, 'independent' => $independent, 'restored' => $config->get($path)]);
+PHP;
+    $process = new \Symfony\Component\Process\Process([
+        PHP_BINARY, '-d', 'memory_limit=32M', '-r', $script, '--', dirname(__DIR__, 2) . '/vendor/autoload.php',
+    ]);
+    $process->setTimeout(10);
+    $process->run();
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput());
+    $result = json_decode($process->getOutput(), true, 512, JSON_THROW_ON_ERROR);
+    expect($result['growth'])->toBeLessThan(4 * 1024 * 1024)
+        ->and($result['independent'])->toBeTrue()
+        ->and($result['restored'])->toBe(1);
+});
+
+it('rejects excessive snapshot depth without overwriting a valid snapshot', function () {
+    $config = new Config();
+    $config->loadArray(['value' => 1]);
+    $config->snapshot();
+    $deep = [];
+    for ($depth = 0; $depth < 260; $depth++) { $deep = ['next' => $deep]; }
+    $config->replace($deep);
+    expect(fn () => $config->snapshot())->toThrow(UnexpectedValueException::class, 'max depth');
+    $config->restore();
+    expect($config->get('value'))->toBe(1);
+});
+
+it('enforces the snapshot node budget without replacing a valid snapshot', function () {
+    $config = new Config();
+    $config->loadArray(['value' => 1]);
+    $config->snapshot();
+    $config->replace(['wide' => array_fill(0, 100000, 1)]);
+    expect(fn () => $config->snapshot())->toThrow(UnexpectedValueException::class, 'max node count');
+    $config->restore();
+    expect($config->get('value'))->toBe(1);
+});
+
 it('refreshes source-origin namespace state after a new generation is published', function () {
     $root = sys_get_temp_dir() . '/arraykit-532-' . bin2hex(random_bytes(6));
     $source = $root . '/source';

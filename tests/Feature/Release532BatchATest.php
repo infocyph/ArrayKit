@@ -89,3 +89,38 @@ it('preserves successful parent-child moves and rejects non-overwriting moves wi
         ->and(DotNotation::rename($unchanged, 'from', 'to', overwrite: false))->toBeFalse()
         ->and($unchanged)->toBe(['from' => 1, 'to' => 2]);
 });
+
+it('rolls back existing array reference cells after rejected moves', function () {
+    $shared = ['source' => 42, 'keep' => 7];
+    $target = new class {
+        public readonly int $locked;
+        public function __construct() { $this->locked = 1; }
+    };
+    $items = ['nested' => &$shared, 'target' => $target];
+    expect(fn () => DotNotation::rename($items, 'nested.source', 'target.locked'))
+        ->toThrow(InvalidArgumentException::class)
+        ->and($shared)->toBe(['source' => 42, 'keep' => 7])
+        ->and($items['nested'])->toBe($shared);
+});
+
+it('preserves successful moves through aliased array parents', function () {
+    $shared = ['source' => 42];
+    $items = ['left' => &$shared, 'right' => &$shared];
+    expect(DotNotation::move($items, 'left.source', 'right.source.child'))->toBeTrue()
+        ->and($shared)->toBe(['source' => ['child' => 42]])
+        ->and($items['left'])->toBe($items['right']);
+});
+
+it('rolls back referenced wildcard destinations as well as the source', function () {
+    $value = 5;
+    $source = ['value' => 42];
+    $target = new class {
+        public readonly int $value;
+        public function __construct() { $this->value = 1; }
+    };
+    $items = ['source' => &$source, 'rows' => [['value' => &$value], $target]];
+    expect(fn () => ArrayKit::dot()->move($items, 'source.value', 'rows.*.value'))
+        ->toThrow(InvalidArgumentException::class)
+        ->and($source)->toBe(['value' => 42])
+        ->and($value)->toBe(5);
+});
