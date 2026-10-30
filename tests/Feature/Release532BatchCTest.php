@@ -49,6 +49,16 @@ it('uses the default for wrong enum backing scalar types without coercion', func
         ->toBe(Release532StringMode::Two);
 });
 
+it('preserves finite averages across intermediate overflow and float-to-int boundaries', function () {
+    expect(ArraySingle::avg([1e308, 1e308]))->toBe(1e308)
+        ->and(ArraySingle::avg([-1e308, -1e308]))->toBe(-1e308)
+        ->and(ArrayKit::single()->avg([PHP_INT_MAX, PHP_INT_MAX]))->toBeFloat()
+        ->and(ArraySingle::avg([PHP_INT_MAX, PHP_INT_MAX]) > 0)->toBeTrue()
+        ->and(ArraySingle::avg([1e20]))->toBe(1e20)
+        ->and(ArraySingle::avg([10, 20, 'ignored']))->toBe(15)
+        ->and(is_nan(ArraySingle::avg([INF, -INF])))->toBeTrue();
+});
+
 it('forwards only callable public pipeline methods through collections', function () {
     $collection = Collection::make([3, 1, 2]);
 

@@ -38,8 +38,22 @@ class ArraySingle
         }
 
         $avg = $total / $count;
+        if (!is_finite($avg)) {
+            $avg = self::overflowSafeAverage($array, $count, $avg);
+        }
 
-        return fmod($avg, 1.0) === 0.0 ? (int) $avg : $avg;
+        // PHP_INT_MAX rounds up when converted to float. Use the exact,
+        // representable lower bound and its positive exclusive counterpart.
+        if (
+            !is_finite($avg)
+            || $avg < (float) PHP_INT_MIN
+            || $avg >= -(float) PHP_INT_MIN
+            || fmod($avg, 1.0) !== 0.0
+        ) {
+            return $avg;
+        }
+
+        return (int) $avg;
     }
 
     /**
@@ -1021,6 +1035,30 @@ class ArraySingle
     private static function normalizeArrayKey(mixed $value): int|string
     {
         return ArraySharedOps::normalizeArrayKey($value);
+    }
+
+    /**
+     * Recompute only on overflow; normal finite inputs retain the fast path.
+     *
+     * @param array<array-key, mixed> $array
+     */
+    private static function overflowSafeAverage(array $array, int $count, float $fallback): float
+    {
+        $average = 0.0;
+        foreach ($array as $value) {
+            $numeric = self::toNumericOrNull($value);
+            if ($numeric === null) {
+                continue;
+            }
+
+            if (!is_finite((float) $numeric)) {
+                return $fallback;
+            }
+
+            $average += $numeric / $count;
+        }
+
+        return $average;
     }
 
     private static function requireArrayKey(mixed $value, string $operation): int|string
