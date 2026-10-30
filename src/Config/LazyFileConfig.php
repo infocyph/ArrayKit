@@ -15,12 +15,12 @@ class LazyFileConfig extends Config
     use LazyFileConfigCacheTrait;
 
     /**
-     * @var array<string, 'cache'|'missing'|'runtime'|'source'>
+     * @var array<array-key, 'cache'|'missing'|'runtime'|'source'>
      */
     protected array $loadedNamespaceOrigins = [];
 
     /**
-     * @var array<string, bool>
+     * @var array<array-key, bool>
      */
     protected array $loadedNamespaces;
 

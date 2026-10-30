@@ -16,10 +16,10 @@ class LayeredLazyFileConfig extends Config
 {
     private readonly ResilientLazyFileConfig $source;
 
-    /** @var array<string, true> */
+    /** @var array<array-key, true> */
     private array $knownNamespaces = [];
 
-    /** @var array<string, true> */
+    /** @var array<array-key, true> */
     private array $materializedNamespaces = [];
 
     /**
@@ -48,7 +48,7 @@ class LayeredLazyFileConfig extends Config
         }
     }
 
-    /** @return array<string, mixed> */
+    /** @return array<array-key, mixed> */
     #[\Override]
     public function all(): array
     {

@@ -410,7 +410,7 @@ trait LazyFileConfigCacheTrait
     }
 
     /**
-     * @param array<string, true> $namespaces
+     * @param array<array-key, true> $namespaces
      */
     private function discoverNamespacesInDirectory(string $directory, array &$namespaces, bool $legacy): void
     {
