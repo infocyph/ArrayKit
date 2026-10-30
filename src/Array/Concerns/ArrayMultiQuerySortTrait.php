@@ -1228,6 +1228,23 @@ trait ArrayMultiQuerySortTrait
     }
 
     /**
+     * PHP comparisons may recursively walk unbounded object graphs. Object
+     * values therefore fall outside the guarded sort's supported domain.
+     */
+    private static function hasUnsafeSortObject(mixed $value, bool $throwOnTooDeep): bool
+    {
+        if (!is_object($value)) {
+            return false;
+        }
+
+        if ($throwOnTooDeep) {
+            throw new \RuntimeException('Recursive sort cannot safely compare object values.');
+        }
+
+        return true;
+    }
+
+    /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
      */
@@ -1256,13 +1273,7 @@ trait ArrayMultiQuerySortTrait
         }
 
         foreach ($array as &$value) {
-            // Object comparison may traverse unbounded public object graphs inside
-            // PHP's sort implementation. The guarded API deliberately excludes it.
-            if (is_object($value)) {
-                if ($throwOnTooDeep) {
-                    throw new \RuntimeException('Recursive sort cannot safely compare object values.');
-                }
-
+            if (self::hasUnsafeSortObject($value, $throwOnTooDeep)) {
                 $complete = false;
                 unset($value);
 
