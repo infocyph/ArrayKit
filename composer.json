@@ -24,10 +24,10 @@
     },
     "require-dev": {
         "infocyph/phpforge": "dev-main@dev",
-        "infocyph/runwire": "2.1.1"
+        "infocyph/runwire": "^3.0"
     },
     "suggest": {
-        "infocyph/runwire": "Optional LazyCollection cancellation and cooperative-yield integration; ArrayKit 5.3 is tested against Runwire 2.1.1."
+        "infocyph/runwire": "Optional LazyCollection cancellation and cooperative-yield integration; integration tested against Runwire 3.0."
     },
     "minimum-stability": "stable",
     "prefer-stable": true,

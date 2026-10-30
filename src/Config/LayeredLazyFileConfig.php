@@ -16,10 +16,10 @@ class LayeredLazyFileConfig extends Config
 {
     private readonly ResilientLazyFileConfig $source;
 
-    /** @var array<string, true> */
+    /** @var array<array-key, true> */
     private array $knownNamespaces = [];
 
-    /** @var array<string, true> */
+    /** @var array<array-key, true> */
     private array $materializedNamespaces = [];
 
     /**
@@ -48,20 +48,13 @@ class LayeredLazyFileConfig extends Config
         }
     }
 
-    /** @return array<string, mixed> */
+    /** @return array<array-key, mixed> */
     #[\Override]
     public function all(): array
     {
         $this->materializeKnownNamespaces();
 
-        $items = [];
-        foreach (parent::all() as $key => $value) {
-            if (is_string($key)) {
-                $items[$key] = $value;
-            }
-        }
-
-        return $items;
+        return parent::all();
     }
 
     #[\Override]
@@ -216,7 +209,8 @@ class LayeredLazyFileConfig extends Config
      */
     public function warmNamespaceCache(string|array|null $namespaces = null): static
     {
-        $this->source->warmNamespaceCache($namespaces ?? array_keys($this->knownNamespaces));
+        $known = array_map(static fn(int|string $name): string => (string) $name, array_keys($this->knownNamespaces));
+        $this->source->warmNamespaceCache($namespaces ?? $known);
 
         return $this;
     }
@@ -244,7 +238,7 @@ class LayeredLazyFileConfig extends Config
     private function materializeKnownNamespaces(): void
     {
         foreach (array_keys($this->knownNamespaces) as $namespace) {
-            $this->materializeNamespace($namespace);
+            $this->materializeNamespace((string) $namespace);
         }
     }
 
@@ -316,7 +310,7 @@ class LayeredLazyFileConfig extends Config
     private function registerNamespaces(array $items): void
     {
         foreach ($items as $namespace => $_value) {
-            if (is_string($namespace) && $namespace !== '') {
+            if ((string) $namespace !== '') {
                 $this->knownNamespaces[$namespace] = true;
                 $this->materializedNamespaces[$namespace] = true;
             }

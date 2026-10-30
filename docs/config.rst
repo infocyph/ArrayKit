@@ -145,7 +145,7 @@ This example shows a typical bootstrap flow:
 
 Example ``.env`` file:
 
-.. code-block:: dotenv
+.. code-block:: text
 
     APP_NAME=ArrayKit Demo
     APP_ENV=local
@@ -337,6 +337,30 @@ Merging, Snapshots, and Read-Only Mode
     $config->readonly();                                   // lock writes
     $locked = $config->isReadonly();                       // true
     $config->readonly(false);                              // unlock
+
+Snapshots retain a by-value copy of scalar and nested array data. PHP references
+to external variables do not cause a later mutation to change an earlier
+snapshot. ``restore()`` uses PHP's copy-on-write isolation of these reference-free
+arrays, so repeated restores remain safe without expanding shared storage.
+Repeated internal array references are copied independently; cyclic array
+references raise ``UnexpectedValueException`` before a valid named snapshot
+can be overwritten. Creation is bounded to depth 256 and 100,000 visited entries;
+exceeding either limit raises ``UnexpectedValueException`` and leaves existing
+snapshots intact. Completed shared references reuse detached array storage
+without retaining writable aliases. Object values remain shallow: the snapshot preserves
+their identity and cannot reverse changes to an object's internal state.
+
+.. code-block:: php
+
+    <?php
+    $value = 1;
+    $config = new \Infocyph\ArrayKit\Config\Config();
+    $config->loadArray(['app' => ['value' => &$value]]);
+    $config->snapshot('start');
+
+    $value = 9;
+    $config->restore('start');
+    assert($config->get('app.value') === 1);
 
 Array-Value Helpers
 -------------------

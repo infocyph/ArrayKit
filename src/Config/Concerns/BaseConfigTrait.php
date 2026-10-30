@@ -6,6 +6,7 @@ namespace Infocyph\ArrayKit\Config\Concerns;
 
 use Infocyph\ArrayKit\Array\DotNotation;
 use Infocyph\ArrayKit\Config\EnvParser;
+use Infocyph\ArrayKit\Config\Support\ConfigSnapshot;
 use Infocyph\ArrayKit\Config\Support\EnvReference;
 use InvalidArgumentException;
 use OutOfBoundsException;
@@ -196,6 +197,10 @@ trait BaseConfigTrait
 
         if (is_subclass_of($enumClass, \BackedEnum::class)) {
             if (!is_string($value) && !is_int($value)) {
+                return $default;
+            }
+
+            if (get_debug_type($value) !== new \ReflectionEnum($enumClass)->getBackingType()?->getName()) {
                 return $default;
             }
 
@@ -503,6 +508,8 @@ trait BaseConfigTrait
         }
 
         $this->flushReadCache();
+        // Saved arrays have no reference cells; PHP copy-on-write isolates
+        // later mutations without expanding shared array storage again.
         $this->items = $this->snapshots[$name];
 
         return true;
@@ -533,7 +540,8 @@ trait BaseConfigTrait
      */
     public function snapshot(string $name = 'default'): bool
     {
-        $this->snapshots[$name] = $this->items;
+        $copy = ConfigSnapshot::detach($this->items);
+        $this->snapshots[$name] = $copy;
 
         return true;
     }

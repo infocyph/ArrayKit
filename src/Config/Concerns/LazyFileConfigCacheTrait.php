@@ -148,7 +148,7 @@ trait LazyFileConfigCacheTrait
         $namespaces = [];
 
         foreach ($this->items as $namespace => $_) {
-            if (is_string($namespace) && preg_match('/^[A-Za-z0-9_-]+$/', $namespace) === 1) {
+            if (preg_match('/^[A-Za-z0-9_-]+$/', (string) $namespace) === 1) {
                 $namespaces[$namespace] = true;
             }
         }
@@ -164,7 +164,7 @@ trait LazyFileConfigCacheTrait
             );
         }
 
-        return array_keys($namespaces);
+        return array_map(static fn(int|string $name): string => (string) $name, array_keys($namespaces));
     }
 
     protected function flatLeafIndexPath(): ?string
@@ -191,11 +191,11 @@ trait LazyFileConfigCacheTrait
         $this->namespaceCachePinned = false;
         $this->pinnedNamespaceCacheDirectory = null;
         foreach ($this->loadedNamespaceOrigins as $namespace => $origin) {
-            if ($origin === 'cache') {
+            if ($origin === 'cache' || $origin === 'source') {
                 unset($this->items[$namespace]);
             }
 
-            if ($origin === 'cache' || $origin === 'missing') {
+            if ($origin !== 'runtime') {
                 unset($this->loadedNamespaces[$namespace], $this->loadedNamespaceOrigins[$namespace]);
             }
         }
@@ -410,7 +410,7 @@ trait LazyFileConfigCacheTrait
     }
 
     /**
-     * @param array<string, true> $namespaces
+     * @param array<array-key, true> $namespaces
      */
     private function discoverNamespacesInDirectory(string $directory, array &$namespaces, bool $legacy): void
     {

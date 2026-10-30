@@ -15,12 +15,12 @@ class LazyFileConfig extends Config
     use LazyFileConfigCacheTrait;
 
     /**
-     * @var array<string, 'cache'|'missing'|'runtime'|'source'>
+     * @var array<array-key, 'cache'|'missing'|'runtime'|'source'>
      */
     protected array $loadedNamespaceOrigins = [];
 
     /**
-     * @var array<string, bool>
+     * @var array<array-key, bool>
      */
     protected array $loadedNamespaces;
 
@@ -173,7 +173,7 @@ class LazyFileConfig extends Config
      */
     public function loadedNamespaces(): array
     {
-        return array_keys($this->loadedNamespaces);
+        return array_map(static fn(int|string $name): string => (string) $name, array_keys($this->loadedNamespaces));
     }
 
     #[\Override]
@@ -191,7 +191,7 @@ class LazyFileConfig extends Config
         $changed = parent::merge($items);
         if ($changed) {
             foreach (array_keys($items) as $namespace) {
-                if (is_string($namespace) && preg_match('/^[A-Za-z0-9_-]+$/', $namespace) === 1) {
+                if (preg_match('/^[A-Za-z0-9_-]+$/', (string) $namespace) === 1) {
                     $this->markNamespaceRuntime($namespace);
                 }
             }
@@ -481,7 +481,7 @@ class LazyFileConfig extends Config
         $this->loadedNamespaceOrigins = [];
 
         foreach ($this->items as $namespace => $_) {
-            if (!is_string($namespace) || !preg_match('/^[A-Za-z0-9_-]+$/', $namespace)) {
+            if (!preg_match('/^[A-Za-z0-9_-]+$/', (string) $namespace)) {
                 continue;
             }
 

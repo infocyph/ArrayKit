@@ -30,6 +30,7 @@ $temporaryDirectories = [];
 $operation = match ($workload) {
     'array-query' => releaseArrayQueryWorkload(),
     'dot-config' => releaseDotConfigWorkload(),
+    'config-snapshot' => releaseConfigSnapshotWorkload(),
     'lazy-array' => releaseLazyArrayWorkload(),
     'lazy-file-cold' => releaseLazyFileColdWorkload($temporaryDirectories),
     'lazy-file-generated' => releaseLazyFileGeneratedWorkload($temporaryDirectories),
@@ -117,6 +118,33 @@ function releaseCpuSeconds(array $usage): float
         + (((int) ($usage['ru_stime.tv_usec'] ?? 0)) / 1_000_000);
 
     return $user + $system;
+}
+
+/**
+ * @return \Closure(): void
+ */
+function releaseConfigSnapshotWorkload(): \Closure
+{
+    $data = [
+        'app' => [
+            'service' => ['enabled' => true, 'limits' => range(1, 32)],
+            'version' => 1,
+        ],
+    ];
+    $config = new Config();
+    $config->loadArray($data);
+
+    return static function () use ($config): void {
+        $config->snapshot('benchmark');
+        $config->set('app.version', 2);
+        if (!$config->changed('benchmark') || !$config->restore('benchmark')) {
+            throw new RuntimeException('Snapshot release workload failed to restore configuration.');
+        }
+
+        if ($config->get('app.version') !== 1 || $config->changed('benchmark')) {
+            throw new RuntimeException('Snapshot release workload returned invalid configuration.');
+        }
+    };
 }
 
 /**

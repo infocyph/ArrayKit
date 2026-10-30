@@ -1042,6 +1042,23 @@ trait ArrayMultiQuerySortTrait
         return $value;
     }
 
+    /**
+     * PHP comparisons may recursively walk unbounded object graphs. Object
+     * values therefore fall outside the guarded sort's supported domain.
+     */
+    private static function hasUnsafeSortObject(mixed $value, bool $throwOnTooDeep): bool
+    {
+        if (!is_object($value)) {
+            return false;
+        }
+
+        if ($throwOnTooDeep) {
+            throw new \RuntimeException('Recursive sort cannot safely compare object values.');
+        }
+
+        return true;
+    }
+
     private static function invokeRowCallback(callable $callback, mixed $row, int|string $key): mixed
     {
         return $callback($row, $key);
@@ -1256,6 +1273,13 @@ trait ArrayMultiQuerySortTrait
         }
 
         foreach ($array as &$value) {
+            if (self::hasUnsafeSortObject($value, $throwOnTooDeep)) {
+                $complete = false;
+                unset($value);
+
+                return $array;
+            }
+
             if (!is_array($value)) {
                 continue;
             }

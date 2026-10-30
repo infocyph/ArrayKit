@@ -34,6 +34,73 @@ jobs:
       actions: read
       contents: read
 
+  docs:
+    if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
+    name: "Sphinx documentation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install documentation dependencies
+        run: python -m pip install --requirement docs/requirements.txt
+      - name: Build documentation and reject warnings
+        run: sphinx-build -b html -W --keep-going docs build/sphinx
+
+  runwire-compat:
+    if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
+    name: "Runwire 3.0 / PHP ${{ matrix.php }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.4", "8.5"]
+    env:
+      XDEBUG_MODE: off
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          extensions: opcache
+          ini-values: opcache.enable_cli=1
+          coverage: none
+      - name: Install exact Runwire 3.0
+        run: composer require --dev "infocyph/runwire:3.0.0" --no-interaction --prefer-dist --no-progress
+      - name: Exercise lazy pipeline and host-owned coroutine lifecycle
+        run: >-
+          php vendor/bin/pest
+          --configuration vendor/infocyph/phpforge/resources/pest.xml
+          --bootstrap vendor/autoload.php
+          tests/Feature/LazyCollectionTest.php
+          tests/Feature/Release530BatchETest.php
+          tests/Feature/Release530ReviewRegressionTest.php
+          tests/Feature/Release530BatchFTest.php
+      - name: Exercise persistent worker with Runwire 3.0
+        if: matrix.php == '8.5'
+        run: |
+          mkdir -p build
+          composer ic:soak:worker \
+            --duration=300 \
+            --warmup=10 \
+            --sample-interval=1 \
+            --max-growth-mb=16 \
+            --report=build/runwire-worker-soak.json \
+            -- php -d opcache.enable_cli=1 tests/Support/release530-persistent-worker.php
+      - name: Upload Runwire 3.0 worker-soak report
+        if: always() && matrix.php == '8.5' && hashFiles('build/runwire-worker-soak.json') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: runwire-3.0-php-${{ matrix.php }}-worker-soak
+          path: build/runwire-worker-soak.json
+          if-no-files-found: error
+          retention-days: 61
+
   release-acceptance:
     if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
     name: "Release Acceptance"

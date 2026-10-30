@@ -20,26 +20,7 @@ class ArraySingle
      */
     public static function avg(array $array): float|int
     {
-        $total = 0;
-        $count = 0;
-
-        foreach ($array as $value) {
-            $numeric = self::toNumericOrNull($value);
-            if ($numeric === null) {
-                continue;
-            }
-
-            $total += $numeric;
-            $count++;
-        }
-
-        if ($count === 0) {
-            return 0.0;
-        }
-
-        $avg = $total / $count;
-
-        return fmod($avg, 1.0) === 0.0 ? (int) $avg : $avg;
+        return ArraySingleOps::avg($array);
     }
 
     /**
@@ -312,7 +293,7 @@ class ArraySingle
             }
 
             $hasNumeric = true;
-            if ($numeric >= 0) {
+            if (!($numeric < 0)) {
                 return false;
             }
         }
@@ -337,7 +318,7 @@ class ArraySingle
             }
 
             $hasNumeric = true;
-            if ($numeric <= 0) {
+            if (!($numeric > 0)) {
                 return false;
             }
         }
@@ -453,9 +434,15 @@ class ArraySingle
         $count = count($values);
         $mid = intdiv($count, 2);
 
-        return ($count % 2)
-            ? $values[$mid]
-            : ($values[$mid - 1] + $values[$mid]) / 2;
+        if (($count % 2) !== 0) {
+            return $values[$mid];
+        }
+
+        $left = $values[$mid - 1];
+        $right = $values[$mid];
+        $sum = $left + $right;
+
+        return is_finite((float) $sum) ? $sum / 2 : $left / 2 + $right / 2;
     }
 
     /**

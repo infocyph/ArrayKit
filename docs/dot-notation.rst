@@ -281,6 +281,10 @@ Behavior Notes
 - Object writes support ``stdClass`` additions, existing public writable
   properties, and magic ``__set`` handlers. Missing ordinary properties and
   inaccessible or readonly properties fail with ``InvalidArgumentException``.
+- ``rename()`` and ``move()`` stage array changes before committing source
+  removal. A destination-write failure retains the original array source.
+  Magic setters and other application-owned object methods can have external
+  side effects and are not transactionally rolled back.
 - Defaults may be plain values or ``Closure`` instances. Closures are evaluated
   only when path resolution fails; other callable values are returned unchanged.
 - Wildcard traversal in ``get`` returns arrays of matched results.

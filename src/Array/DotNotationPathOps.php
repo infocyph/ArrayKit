@@ -74,6 +74,25 @@ final class DotNotationPathOps
     }
 
     /**
+     * Capture only existing reference cells along mutation paths. Array copies
+     * protect ordinary slots; these backups protect aliases during rollback.
+     *
+     * @param array<array-key, mixed> $array
+     * @param list<string> $paths
+     * @return array{array<string, mixed>, array<string, mixed>}
+     */
+    public static function mutationReferences(array $array, array $paths): array
+    {
+        $references = [];
+        $originals = [];
+        foreach ($paths as $path) {
+            self::captureMutationPath($array, self::splitPath($path), 0, $references, $originals);
+        }
+
+        return [$references, $originals];
+    }
+
+    /**
      * Normalize a dot-notation segment by replacing escaped values and resolving
      * special values such as '{first}' and '{last}'.
      */
@@ -242,6 +261,51 @@ final class DotNotationPathOps
             ['*', '{first}', '{last}'],
             $unescaped,
         );
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     * @param array<string, mixed> $references
+     * @param array<string, mixed> $originals
+     */
+    private static function captureMutationCell(array $array, int|string $key, array &$references, array &$originals): void
+    {
+        $reference = \ReflectionReference::fromArrayElement($array, $key);
+        if ($reference === null) {
+            return;
+        }
+
+        $id = bin2hex($reference->getId());
+        $originals[$id] = $array[$key];
+        $references[$id] = &$array[$key];
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
+     * @param array<int, string> $segments
+     * @param array<string, mixed> $references
+     * @param array<string, mixed> $originals
+     */
+    private static function captureMutationPath(
+        array $array,
+        array $segments,
+        int $position,
+        array &$references,
+        array &$originals,
+    ): void {
+        $segment = $segments[$position];
+        // Let PHP normalize canonical numeric strings to their real key type.
+        $keys = $segment === '*' ? array_keys($array) : array_keys([self::unescapeSegment($segment) => null]);
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $array)) {
+                continue;
+            }
+
+            self::captureMutationCell($array, $key, $references, $originals);
+            if ($position + 1 < count($segments) && is_array($array[$key])) {
+                self::captureMutationPath($array[$key], $segments, $position + 1, $references, $originals);
+            }
+        }
     }
 
     /**
