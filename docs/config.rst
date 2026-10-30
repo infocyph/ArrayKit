@@ -145,7 +145,7 @@ This example shows a typical bootstrap flow:
 
 Example ``.env`` file:
 
-.. code-block:: dotenv
+.. code-block:: text
 
     APP_NAME=ArrayKit Demo
     APP_ENV=local

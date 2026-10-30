@@ -6,7 +6,7 @@ keeps its data-focused features together: shape and access arrays, transform
 collections, hydrate configuration, and map values into DTOs.
 
 ArrayKit Facade Example
-----------------------
+-----------------------
 
 .. code-block:: php
 

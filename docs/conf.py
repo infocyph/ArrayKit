@@ -57,6 +57,7 @@ myst_enable_extensions = [
     "linkify",
 ]
 myst_heading_anchors = 3
+autosectionlabel_prefix_document = True
 
 # Autodoc/Napoleon
 autodoc_default_options = {
