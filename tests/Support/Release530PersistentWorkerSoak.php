@@ -54,6 +54,8 @@ final class Release530PersistentWorkerSoak
      * @throws \RuntimeException
      * @throws \InvalidArgumentException
      * @throws \LogicException
+     * @throws \Throwable
+     * @throws \Infocyph\Runwire\Exception\CancelledException
      */
     public function run(): void
     {
@@ -128,6 +130,8 @@ final class Release530PersistentWorkerSoak
      * @throws \RuntimeException
      * @throws \InvalidArgumentException
      * @throws \LogicException
+     * @throws \Throwable
+     * @throws \Infocyph\Runwire\Exception\CancelledException
      */
     private function runCycle(int $cycle): void
     {
@@ -188,6 +192,8 @@ final class Release530PersistentWorkerSoak
      * @template TRow of array{tenant: string, value: int}
      * @param LazyCollection<TKey, TRow> $collection
      * @throws RuntimeException
+     * @throws \LogicException
+     * @throws \Throwable
      */
     private function assertCancelledTraversal(LazyCollection $collection, RequestContext $request): void
     {

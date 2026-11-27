@@ -138,6 +138,7 @@ function releaseCpuSeconds(array|false $usage): float
 /**
  * @return \Closure(): void
  * @throws \RuntimeException
+ * @throws \InvalidArgumentException
  */
 function releaseConfigSnapshotWorkload(): \Closure
 {

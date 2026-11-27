@@ -50,7 +50,11 @@ class LayeredLazyFileConfig extends Config
         }
     }
 
-    /** @return array<array-key, mixed> */
+    /**
+     * @return array<array-key, mixed>
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function all(): array
     {
@@ -59,6 +63,10 @@ class LayeredLazyFileConfig extends Config
         return parent::all();
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function changed(string $snapshot = 'default'): bool
     {
@@ -77,6 +85,10 @@ class LayeredLazyFileConfig extends Config
         return $this;
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function exportCache(string $path): bool
     {
@@ -85,6 +97,10 @@ class LayeredLazyFileConfig extends Config
         return parent::exportCache($path);
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function fill(string|array $key, mixed $value = null): bool
     {
@@ -93,6 +109,10 @@ class LayeredLazyFileConfig extends Config
         return parent::fill($key, $value);
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function forget(string|int|array $key): bool
     {
@@ -101,6 +121,10 @@ class LayeredLazyFileConfig extends Config
         return parent::forget($key);
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function get(string|int|array|null $key = null, mixed $default = null): mixed
     {
@@ -111,6 +135,10 @@ class LayeredLazyFileConfig extends Config
         return parent::get($key, $default);
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function loadArray(array $resource): bool
     {
@@ -119,6 +147,10 @@ class LayeredLazyFileConfig extends Config
         return parent::loadArray($resource);
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function loadFile(string $path): bool
     {
@@ -127,6 +159,10 @@ class LayeredLazyFileConfig extends Config
         return parent::loadFile($path);
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function merge(array $items): bool
     {
@@ -142,6 +178,7 @@ class LayeredLazyFileConfig extends Config
 
     /**
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     #[\Override]
     public function overlay(array $overlay): bool
@@ -185,6 +222,10 @@ class LayeredLazyFileConfig extends Config
         return $restored;
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
@@ -204,6 +245,10 @@ class LayeredLazyFileConfig extends Config
         return parent::set($key, $value, $overwrite);
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     public function snapshot(string $name = 'default'): bool
     {
@@ -225,6 +270,10 @@ class LayeredLazyFileConfig extends Config
         return $this;
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     #[\Override]
     protected function resolveRawValue(int|string $key): mixed
     {
@@ -245,6 +294,10 @@ class LayeredLazyFileConfig extends Config
         }
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     private function materializeKnownNamespaces(): void
     {
         foreach (array_keys($this->knownNamespaces) as $namespace) {
@@ -254,6 +307,8 @@ class LayeredLazyFileConfig extends Config
 
     /**
      * @param string|int|array<array-key, mixed> $targets
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     private function materializeMutationTargets(string|int|array $targets): void
     {

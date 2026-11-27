@@ -49,6 +49,9 @@ final class DotNotationBench
         DotNotation::get($this->target, 'cold.' . $this->coldPath++ . '.missing');
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchFill(): void
     {
         $target = $this->target;
@@ -66,6 +69,9 @@ final class DotNotationBench
         return $this->target['one']['two']['three']['four']['five'] ?? null;
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchSet(): void
     {
         $target = $this->target;

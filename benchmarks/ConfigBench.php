@@ -74,6 +74,7 @@ final class ConfigBench
 
     /**
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function benchFill(): void
     {
@@ -90,6 +91,7 @@ final class ConfigBench
 
     /**
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function benchSet(): void
     {

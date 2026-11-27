@@ -44,6 +44,8 @@ final class RunwireLazyCollectionBench
     /**
      * @throws \InvalidArgumentException
      * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
     public function benchBoundRequestMapFilter(): void
     {
@@ -61,6 +63,8 @@ final class RunwireLazyCollectionBench
     /**
      * @throws \InvalidArgumentException
      * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
     public function benchBoundRequestMaterialization(): void
     {
@@ -73,6 +77,11 @@ final class RunwireLazyCollectionBench
             ->all();
     }
 
+    /**
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
+     */
     public function benchUnboundMapFilter(): void
     {
         LazyCollection::from($this->data)
@@ -81,6 +90,11 @@ final class RunwireLazyCollectionBench
             ->all();
     }
 
+    /**
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
+     */
     public function benchUnboundMaterialization(): void
     {
         LazyCollection::from($this->data)->all();

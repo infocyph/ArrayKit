@@ -52,6 +52,7 @@ trait DotNotationPublicApiTrait
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function expand(array $array): array
     {
@@ -66,6 +67,7 @@ trait DotNotationPublicApiTrait
     /**
      * @param array<array-key, mixed> $array
      * @param array<array-key, mixed>|string $keys
+     * @throws \InvalidArgumentException
      */
     public static function fill(array &$array, array|string $keys, mixed $value = null): void
     {
@@ -293,6 +295,7 @@ trait DotNotationPublicApiTrait
      *
      * @param array<array-key, mixed> $array
      * @throws \Throwable
+     * @throws \InvalidArgumentException
      */
     public static function move(array &$array, string $from, string $to, bool $overwrite = true): bool
     {
@@ -317,6 +320,7 @@ trait DotNotationPublicApiTrait
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \InvalidArgumentException
      */
     public static function offsetSet(array &$array, string $key, mixed $value): void
     {
@@ -364,6 +368,7 @@ trait DotNotationPublicApiTrait
      *
      * @param array<array-key, mixed> $array
      * @throws \Throwable
+     * @throws \InvalidArgumentException
      */
     public static function rename(array &$array, string $from, string $to, bool $overwrite = true): bool
     {
@@ -402,6 +407,7 @@ trait DotNotationPublicApiTrait
     /**
      * @param array<array-key, mixed> $array
      * @param array<array-key, mixed>|string|null $keys
+     * @throws \InvalidArgumentException
      */
     public static function set(array &$array, array|string|null $keys = null, mixed $value = null, bool $overwrite = true): bool
     {

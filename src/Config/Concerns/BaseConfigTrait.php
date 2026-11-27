@@ -100,6 +100,7 @@ trait BaseConfigTrait
      * @param string|array<array-key, mixed> $key Dot-notation key or multiple [key => value]
      * @param mixed|null $value The value to set if missing
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function fill(string|array $key, mixed $value = null): bool
     {
@@ -548,6 +549,7 @@ trait BaseConfigTrait
      * @param bool $overwrite Overwrite existing? Default true.
      * @return bool True on success
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
