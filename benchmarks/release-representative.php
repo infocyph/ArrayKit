@@ -213,6 +213,7 @@ function releaseBenchmarkWorkload(
  *     memory_peak_mb:float,
  *     memory_growth_mb:float
  * }
+ * @throws RuntimeException
  */
 function releaseBenchmarkTrial(
     string $root,
@@ -291,9 +292,9 @@ function releaseBenchmarkTrial(
         'attempted' => $attempted,
         'successful' => $successful,
         'failed' => $failed,
-        'successful_rpm' => ((float) $successful / $elapsedSeconds) * 60.0,
+        'successful_rpm' => (float) ((float) $successful / (float) $elapsedSeconds) * 60.0,
         'latencies_ms' => $latencies,
-        'cpu_average_percent' => ($cpuSeconds / $elapsedSeconds) * 100.0,
+        'cpu_average_percent' => (float) ($cpuSeconds / (float) $elapsedSeconds) * 100.0,
         'cpu_peak_percent' => $cpuPeaks === [] ? 0.0 : max($cpuPeaks),
         'memory_average_mb' => $averageFinal,
         'memory_peak_mb' => $memoryPeak === [] ? 0.0 : max($memoryPeak),
@@ -320,10 +321,7 @@ function releaseValidateWorkerResult(array $result): array
     ) {
         throw new RuntimeException('Release benchmark worker returned invalid operation counts or latency samples.');
     }
-    $latencies = [];
-    foreach ($rawLatencies as $latency) {
-        $latencies[] = releaseMetric($latency);
-    }
+    $latencies = array_map(releaseMetric(...), $rawLatencies);
 
     return [
         'attempted' => $attempted,

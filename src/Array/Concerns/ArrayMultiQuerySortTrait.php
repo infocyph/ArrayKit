@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\Array\Concerns;
 
+use Collator;
 use Infocyph\ArrayKit\Array\ArraySharedOps;
 use Infocyph\ArrayKit\Array\ArraySingle;
 use Infocyph\ArrayKit\Array\ArraySingleOps;
 use Infocyph\ArrayKit\Array\ArrayValueSetOps;
-use Collator;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -1413,5 +1413,4 @@ trait ArrayMultiQuerySortTrait
 
         return $results;
     }
-
 }

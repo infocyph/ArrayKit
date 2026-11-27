@@ -7,6 +7,7 @@ use Infocyph\ArrayKit\Array\ArraySingle;
 use Infocyph\ArrayKit\Array\DotNotation;
 use Infocyph\ArrayKit\Collection\Collection;
 
+/** @throws RuntimeException */
 function batchCClosedResource(): mixed
 {
     $resource = fopen('php://temp', 'r+');

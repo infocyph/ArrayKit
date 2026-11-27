@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Infocyph\ArrayKit\Tests\Feature;
+
 use Infocyph\ArrayKit\Collection\LazyCollection;
 use Infocyph\ArrayKit\Tests\Fixtures\Release530BatchDAddress;
 use Infocyph\ArrayKit\Tests\Fixtures\Release530BatchDInherited;

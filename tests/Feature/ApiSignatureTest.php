@@ -119,10 +119,10 @@ it('keeps documented public signatures aligned with reflection', function () {
     $document = file_get_contents(__DIR__ . '/../../docs/rule-reference.rst');
     expect($document)->not->toBeFalse();
     $lines = preg_split('/\R/', (string) $document);
-    expect($lines)->toBeArray();
     if ($lines === false) {
         throw new RuntimeException('Unable to split API reference into lines.');
     }
+    expect($lines)->toBeArray();
 
     $activeClass = null;
     $documentedMethods = [];

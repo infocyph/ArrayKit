@@ -13,9 +13,6 @@ use Infocyph\ArrayKit\Config\LazyFileConfig;
 use RuntimeException;
 
 $arguments = $_SERVER['argv'] ?? [];
-if (!is_array($arguments)) {
-    throw new RuntimeException('CLI arguments are not available.');
-}
 [$script, $root, $workload, $operations, $warmup] = $arguments + [null, null, null, null, null];
 unset($script);
 
@@ -114,7 +111,10 @@ function releaseArrayQueryWorkload(): \Closure
     };
 }
 
-/** @param array<string,int>|false $usage */
+/**
+ * @param array<string,int>|false $usage
+ * @throws RuntimeException
+ */
 function releaseCpuSeconds(array|false $usage): float
 {
     if ($usage === false) {

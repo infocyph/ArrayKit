@@ -220,7 +220,7 @@ final class EnvLineParser
     {
         $length = strlen($value);
         for ($index = 0; $index < $length; $index++) {
-            if ($value[$index] === '#' && $index > 0 && in_array($value[$index - 1], [" ", "\t", "\n", "\r", "\0", "\x0B"], true)) {
+            if ($value[$index] === '#' && $index > 0 && in_array($value[$index - 1], [' ', "\t", "\n", "\r", "\0", "\x0B"], true)) {
                 return substr($value, 0, $index);
             }
         }
