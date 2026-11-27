@@ -271,6 +271,10 @@ class LayeredLazyFileConfig extends Config
         $this->materializeNamespace($this->namespaceFromPath((string) $targets));
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     private function materializeNamespace(string $namespace): void
     {
         if ($namespace === '' || isset($this->materializedNamespaces[$namespace])) {

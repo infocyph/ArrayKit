@@ -75,6 +75,8 @@ try {
  * @param list<array{name:string,operations:int,warmup:int}> $specs
  * @return array{schema_version:int,generated_at:string,environment:array<string,mixed>,workloads:list<array<string,mixed>>}
  * @throws RuntimeException
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
  */
 function releaseBenchmarkDocument(
     string $root,
@@ -183,7 +185,7 @@ function releaseBenchmarkWorkload(
             'error_rate' => $attempted > 0 ? $failed / $attempted : 0.0,
             'latency_ms' => [
                 'minimum' => $latencies === [] ? null : min($latencies),
-                'average' => $latencies === [] ? null : (float) array_sum($latencies) / (float) count($latencies),
+                'average' => $latencies === [] ? null : array_sum($latencies) / (float) count($latencies),
                 'p50' => releasePercentile($latencies, 50),
                 'p95' => releasePercentile($latencies, 95),
                 'p99' => releasePercentile($latencies, 99),
@@ -401,7 +403,7 @@ function releaseEnvironment(): array
 /** @param list<float> $values */
 function releaseAverage(array $values): ?float
 {
-    return $values === [] ? null : (float) array_sum($values) / (float) count($values);
+    return $values === [] ? null : array_sum($values) / (float) count($values);
 }
 
 /** @param list<float> $values */

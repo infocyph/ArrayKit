@@ -61,5 +61,6 @@ it('hydrates and exports only public instance properties', function () {
     ], coerce: true);
 
     expect($dto->toArray())->toBe(['nickname' => null])
-        ->and($dto::$shared)->toBe('original');
+        ->and($dto::$shared)->toBe('original')
+        ->and($dto->nonPublicValues())->toBe(['protected', 'private']);
 });

@@ -17,4 +17,10 @@ final class TestVisibilityDto
     protected string $protectedValue = 'protected';
 
     private string $privateValue = 'private';
+
+    /** @return array{string, string} */
+    public function nonPublicValues(): array
+    {
+        return [$this->protectedValue, $this->privateValue];
+    }
 }

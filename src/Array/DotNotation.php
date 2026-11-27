@@ -283,6 +283,7 @@ class DotNotation
      * Sets a value in the target array/object using dot notation.
      *
      * @param array<array-key, mixed> $target
+     * @throws \InvalidArgumentException
      */
     private static function setValue(array &$target, string $key, mixed $value, bool $overwrite): void
     {

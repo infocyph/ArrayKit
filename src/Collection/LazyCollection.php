@@ -91,6 +91,9 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return array<TKey, TValue>
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
     public function all(): array
     {
@@ -164,6 +167,9 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return Traversable<TKey, TValue>
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
     #[\Override]
     public function getIterator(): Traversable

@@ -15,8 +15,8 @@ use Infocyph\ArrayKit\Tests\Fixtures\Release532IntMode;
 use Infocyph\ArrayKit\Tests\Fixtures\Release532StringMode;
 
 it('validates positive random counts even for empty arrays', function () {
-    expect(fn () => BaseArrayHelper::random([], 1))->toThrow(InvalidArgumentException::class)
-        ->and(fn () => ArrayKit::helper()->random([], 2))->toThrow(InvalidArgumentException::class)
+    expect(static fn(): mixed => BaseArrayHelper::random([], 1))->toThrow(InvalidArgumentException::class)
+        ->and(static fn(): mixed => ArrayKit::helper()->random([], 2))->toThrow(InvalidArgumentException::class)
         ->and(BaseArrayHelper::random([]))->toBeNull()
         ->and(BaseArrayHelper::random([], 0))->toBe([]);
 });

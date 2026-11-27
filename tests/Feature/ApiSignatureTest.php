@@ -189,8 +189,8 @@ it('keeps documented public signatures aligned with reflection', function () {
             $documented = $documentedParameters[$parameterIndex];
             $actualDefault = null;
             if ($actual->isDefaultValueAvailable()) {
-                if ($actual->isDefaultValueConstant()) {
-                    $constantName = ltrim($actual->getDefaultValueConstantName(), '\\');
+                if (($constant = $actual->getDefaultValueConstantName()) !== null) {
+                    $constantName = ltrim($constant, '\\');
                     $actualDefault = basename(str_replace('\\', '/', $constantName));
                 } elseif ($actual->getDefaultValue() === null) {
                     $actualDefault = 'null';

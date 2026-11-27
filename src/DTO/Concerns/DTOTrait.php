@@ -87,6 +87,7 @@ trait DTOTrait
      * @param array<array-key, mixed> $values
      * @param array<string, string> $mapping
      * @throws \InvalidArgumentException
+     * @throws \RuntimeException
      */
     public function hydrateNestedGuarded(
         array $values,
@@ -147,6 +148,7 @@ trait DTOTrait
      *
      * @return array<array-key, mixed>
      * @throws \InvalidArgumentException
+     * @throws \RuntimeException
      */
     public function toArrayDeepGuarded(int $maxDepth = 64, int $maxNodes = 100000): array
     {

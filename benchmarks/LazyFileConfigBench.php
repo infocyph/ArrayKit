@@ -74,7 +74,10 @@ final class LazyFileConfigBench
         self::removePath(dirname($this->sourceDirectory));
     }
 
-    /** @throws \LogicException */
+    /**
+     * @throws \LogicException
+     * @throws \RuntimeException
+     */
     public function benchAlreadyLoadedNamespace(): void
     {
         ($this->loadedConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('app.nested.value');
@@ -90,25 +93,37 @@ final class LazyFileConfigBench
         ($this->warmConfig ?? throw new \LogicException('Benchmark setup was not run.'))->warmNamespaceCache('app');
     }
 
-    /** @throws \LogicException */
+    /**
+     * @throws \LogicException
+     * @throws \RuntimeException
+     */
     public function benchFlatLeafHit(): void
     {
         ($this->flatConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('app.nested.value');
     }
 
-    /** @throws \LogicException */
+    /**
+     * @throws \LogicException
+     * @throws \RuntimeException
+     */
     public function benchMissingNamespace(): void
     {
         ($this->missingConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('missing.value');
     }
 
-    /** @throws \LogicException */
+    /**
+     * @throws \LogicException
+     * @throws \RuntimeException
+     */
     public function benchNamespaceCacheLoad(): void
     {
         ($this->namespaceCacheConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('app');
     }
 
-    /** @throws \LogicException */
+    /**
+     * @throws \LogicException
+     * @throws \RuntimeException
+     */
     public function benchRepeatedMissingLookup(): void
     {
         for ($index = 0; $index < 100; $index++) {
@@ -116,7 +131,10 @@ final class LazyFileConfigBench
         }
     }
 
-    /** @throws \LogicException */
+    /**
+     * @throws \LogicException
+     * @throws \RuntimeException
+     */
     public function benchSourceLoad(): void
     {
         ($this->sourceConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('app.nested.value');
