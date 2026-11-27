@@ -29,7 +29,7 @@ secure randomness. Seeded shuffles are not suitable for secrets.
 See :doc:`migration`, :doc:`installation` and :doc:`array-helpers`.
 
 Correctness and Lifecycle
-------------------------
+-------------------------
 
 Strict duplicates include repeated null values without merging distinct
 types. Integer sums retain native precision where representable; enum getters
