@@ -12,8 +12,11 @@ Requirements
 
 ArrayKit has the following requirements:
 
-* **PHP 8.4+**
-* **ext-hash** (used by collision-safe strict value-set acceleration)
+* **PHP 8.4+** (CI matrix: PHP 8.4, 8.5 and 8.6)
+* **ext-filter**, **ext-hash** (strict value-set acceleration) and **ext-tokenizer**
+
+For locale-aware sorting outside the C/POSIX collation locale, install the optional
+``ext-intl`` extension.
 
 Autoload is PSR-4 based and loads namespaced helper functions from
 ``Infocyph\ArrayKit\*`` by default.

@@ -88,7 +88,8 @@ configuration or object models.
 
 ## Requirements
 
-* **PHP 8.4** or higher
+* **PHP 8.4** or higher (CI matrix: PHP 8.4, 8.5 and 8.6)
+* **ext-filter**, **ext-hash** and **ext-tokenizer**
 
 Runwire is optional. The current development line targets `infocyph/runwire` 4.0.1 for its passed-instance lazy-runtime integration on PHP 8.4, 8.5 and 8.6; ordinary ArrayKit installation has no Runwire runtime dependency.
 
