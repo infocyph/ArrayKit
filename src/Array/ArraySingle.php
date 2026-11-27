@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Array;
 
 use InvalidArgumentException;
-use Random\Engine\Mt19937;
+use Random\Engine\Xoshiro256StarStar;
 use Random\Randomizer;
 
+/** @api */
 class ArraySingle
 {
     /**
@@ -33,6 +34,7 @@ class ArraySingle
      * @param int $size The size of each chunk.
      * @param bool $preserveKeys Whether to preserve the keys in the chunks.
      * @return array<array-key, mixed> An array of arrays, each representing a chunk of the original array.
+     * @throws \InvalidArgumentException
      */
     public static function chunk(array $array, int $size, bool $preserveKeys = false): array
     {
@@ -52,6 +54,7 @@ class ArraySingle
      * @param array<array-key, mixed> $keys The array of keys.
      * @param array<array-key, mixed> $values The array of values.
      * @return array<array-key, mixed> The combined array.
+     * @throws \InvalidArgumentException
      */
     public static function combine(array $keys, array $values): array
     {
@@ -127,6 +130,7 @@ class ArraySingle
      *
      * @param array<array-key, mixed> $array
      * @return array<int|string, int>
+     * @throws \InvalidArgumentException
      */
     public static function countBy(array $array, ?callable $by = null): array
     {
@@ -204,7 +208,6 @@ class ArraySingle
      */
     public static function except(array $array, array|string $keys): array
     {
-        /** @var array<int, int|string> $keyList */
         $keyList = (array) $keys;
 
         return array_diff_key($array, array_flip($keyList));
@@ -440,9 +443,13 @@ class ArraySingle
 
         $left = $values[$mid - 1];
         $right = $values[$mid];
-        $sum = $left + $right;
+        $sum = ArraySingleOps::add($left, $right);
 
-        return is_finite((float) $sum) ? $sum / 2 : $left / 2 + $right / 2;
+        if (!is_finite((float) $sum)) {
+            return (float) $left / 2.0 + (float) $right / 2.0;
+        }
+
+        return is_int($sum) ? $sum / 2 : $sum / 2.0;
     }
 
     /**
@@ -504,7 +511,7 @@ class ArraySingle
      */
     public static function negative(array $array): array
     {
-        return static::where($array, static fn($value) => is_numeric($value) && $value < 0);
+        return static::where($array, static fn(mixed $value): bool => is_numeric($value) && $value < 0);
     }
 
     /**
@@ -566,7 +573,6 @@ class ArraySingle
      */
     public static function only(array $array, array|string $keys): array
     {
-        /** @var array<int, int|string> $keyList */
         $keyList = (array) $keys;
 
         return array_intersect_key($array, array_flip($keyList));
@@ -637,7 +643,7 @@ class ArraySingle
      */
     public static function positive(array $array): array
     {
-        return static::where($array, static fn($value) => is_numeric($value) && $value > 0);
+        return static::where($array, static fn(mixed $value): bool => is_numeric($value) && $value > 0);
     }
 
     /**
@@ -658,7 +664,7 @@ class ArraySingle
             array_unshift($array, $value);
         } else {
             if (!is_int($key) && !is_string($key)) {
-                $key = self::normalizeArrayKey($key);
+                $key = ArraySharedOps::normalizeArrayKey($key);
             }
 
             $array = [$key => $value] + $array;
@@ -717,6 +723,7 @@ class ArraySingle
      * @param array<array-key, mixed> $array
      * @param array<array-key, int|string>|callable $mapper
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function rekey(array $array, array|callable $mapper): array
     {
@@ -796,20 +803,15 @@ class ArraySingle
     }
 
     /**
-     * Shuffle values, using isolated deterministic state when a seed is given.
+     * Shuffle values with a secure randomizer by default.
+     * A supplied seed selects an isolated, reproducible, non-cryptographic engine.
      *
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
      */
     public static function shuffle(array $array, ?int $seed = null): array
     {
-        if ($seed === null) {
-            shuffle($array);
-
-            return $array;
-        }
-
-        return new Randomizer(new Mt19937($seed))->shuffleArray($array);
+        return new Randomizer($seed === null ? null : new Xoshiro256StarStar($seed))->shuffleArray($array);
     }
 
     /**
@@ -917,7 +919,7 @@ class ArraySingle
                     continue;
                 }
 
-                $total += $numeric;
+                $total = ArraySingleOps::add($total, $numeric);
             }
 
             return $total;
@@ -930,7 +932,7 @@ class ArraySingle
                 continue;
             }
 
-            $total += $numeric;
+            $total = ArraySingleOps::add($total, $numeric);
         }
 
         return $total;
@@ -999,11 +1001,9 @@ class ArraySingle
         return $callback($value, $key);
     }
 
-    private static function normalizeArrayKey(mixed $value): int|string
-    {
-        return ArraySharedOps::normalizeArrayKey($value);
-    }
-
+    /**
+     * @throws \InvalidArgumentException
+     */
     private static function requireArrayKey(mixed $value, string $operation): int|string
     {
         if (is_int($value) || is_string($value)) {

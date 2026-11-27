@@ -12,6 +12,10 @@ use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\ParamProviders;
 use PhpBench\Attributes\Revs;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(1)]
 #[Iterations(3)]
 #[BeforeMethods('setUp')]
@@ -37,11 +41,22 @@ final class CollectionBench
         Collection::make($this->data)->map(static fn(int $value): int => $value * 2);
     }
 
+    /**
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
+     */
     public function benchLazyArrayReplayMaterialization(): void
     {
         LazyCollection::from($this->data)->all();
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
+     */
     public function benchLazyChunkMaterialization(): void
     {
         LazyCollection::fromFactory(fn(): array => $this->data)
@@ -49,11 +64,21 @@ final class CollectionBench
             ->all();
     }
 
+    /**
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
+     */
     public function benchLazyFactoryArrayMaterialization(): void
     {
         LazyCollection::fromFactory(fn(): array => $this->data)->all();
     }
 
+    /**
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
+     */
     public function benchLazyFilterMaterialization(): void
     {
         LazyCollection::fromFactory(fn(): array => $this->data)
@@ -61,6 +86,11 @@ final class CollectionBench
             ->all();
     }
 
+    /**
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
+     */
     public function benchLazyGeneratorReplayMaterialization(): void
     {
         $data = $this->data;
@@ -71,6 +101,12 @@ final class CollectionBench
         LazyCollection::from($source)->all();
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
+     */
     public function benchLazyMapFilterTake(): void
     {
         LazyCollection::fromFactory(fn(): array => $this->data)
@@ -80,6 +116,11 @@ final class CollectionBench
             ->all();
     }
 
+    /**
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
+     */
     public function benchLazyMapMaterialization(): void
     {
         LazyCollection::fromFactory(fn(): array => $this->data)

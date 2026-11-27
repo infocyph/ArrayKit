@@ -32,6 +32,10 @@ final class Release530PersistentWorkerSoak
 
     private readonly string $sourceDirectory;
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     public function __construct()
     {
         $suffix = bin2hex(random_bytes(6));
@@ -46,6 +50,13 @@ final class Release530PersistentWorkerSoak
         $this->runtime = $this->runtime();
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     * @throws \Throwable
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     */
     public function run(): void
     {
         $this->installSignalHandlers();
@@ -89,26 +100,39 @@ final class Release530PersistentWorkerSoak
             return;
         }
 
-        foreach (scandir($directory) ?: [] as $entry) {
+        $entries = scandir($directory);
+        foreach ($entries === false ? [] : $entries as $entry) {
             if ($entry === '.' || $entry === '..') {
                 continue;
             }
 
             $path = $directory . DIRECTORY_SEPARATOR . $entry;
-            if (is_dir($path)) {
+            if (!is_link($path) && is_dir($path)) {
                 $this->removeDirectory($path);
             } elseif (is_file($path) || is_link($path)) {
-                if (function_exists('opcache_invalidate')) {
-                    opcache_invalidate($path, true);
-                }
-                unlink($path);
-                clearstatcache(true, $path);
+                $this->removeCacheFile($path);
             }
         }
 
         rmdir($directory);
     }
 
+    private function removeCacheFile(string $path): void
+    {
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($path, true);
+        }
+        unlink($path);
+        clearstatcache(true, $path);
+    }
+
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     * @throws \Throwable
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     */
     private function runCycle(int $cycle): void
     {
         $tenant = 'tenant-' . $cycle;
@@ -142,20 +166,7 @@ final class Release530PersistentWorkerSoak
         )->withRunwire($this->runtime, $request, checkpointEvery: 1);
 
         if (($cycle % 13) === 0) {
-            try {
-                $collection
-                    ->mapLazy(function (array $row) use ($request): array {
-                        if ($row['value'] === 2) {
-                            $request->cancel(CancellationReason::HOST_CANCELLED);
-                        }
-
-                        return $row;
-                    })
-                    ->all();
-
-                throw new RuntimeException('Cancelled worker cycle unexpectedly completed.');
-            } catch (CancelledException) {
-            }
+            $this->assertCancelledTraversal($collection, $request);
         } else {
             $rows = $collection->all();
             if (count($rows) !== 3 || array_unique(array_column($rows, 'tenant')) !== [$tenant]) {
@@ -176,6 +187,32 @@ final class Release530PersistentWorkerSoak
         }
     }
 
+    /**
+     * @template TKey of int
+     * @template TRow of array{tenant: string, value: int}
+     * @param LazyCollection<TKey, TRow> $collection
+     * @throws RuntimeException
+     * @throws \LogicException
+     * @throws \Throwable
+     */
+    private function assertCancelledTraversal(LazyCollection $collection, RequestContext $request): void
+    {
+        try {
+            $collection
+                ->mapLazy(function (array $row) use ($request): array {
+                    if ($row['value'] === 2) {
+                        $request->cancel(CancellationReason::HOST_CANCELLED);
+                    }
+
+                    return $row;
+                })
+                ->all();
+
+            throw new RuntimeException('Cancelled worker cycle unexpectedly completed.');
+        } catch (CancelledException) {
+        }
+    }
+
     private function retireInactiveGenerations(): void
     {
         $pointer = $this->cacheDirectory . '/.arraykit-generation';
@@ -184,13 +221,18 @@ final class Release530PersistentWorkerSoak
         }
 
         $active = trim((string) file_get_contents($pointer));
-        foreach (glob($this->cacheDirectory . '/.arraykit-gen-*', GLOB_ONLYDIR) ?: [] as $directory) {
+        $directories = glob($this->cacheDirectory . '/.arraykit-gen-*', GLOB_ONLYDIR);
+        foreach ($directories === false ? [] : $directories as $directory) {
             if (basename($directory) !== $active) {
                 $this->removeDirectory($directory);
             }
         }
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     private function refreshGeneratedCache(int $cycle): void
     {
         $version = intdiv($cycle, 50) + 1;
@@ -236,6 +278,9 @@ final class Release530PersistentWorkerSoak
         }
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     private function runtime(): RuntimeContext
     {
         $environment = new RuntimeEnvironment(
@@ -261,6 +306,9 @@ final class Release530PersistentWorkerSoak
         );
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private function writeSource(int $version): void
     {
         $source = sprintf(

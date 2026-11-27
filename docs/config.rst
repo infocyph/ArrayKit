@@ -261,6 +261,11 @@ Use nullable/default-friendly typed getters when you want soft type access:
     $cache = $config->getArray('cache', []);
     $mode = $config->getEnum('app.mode', AppMode::class, AppMode::Prod);
 
+``getEnum()`` requires the exact backing scalar type: an integer-backed enum
+will not accept a numeric string, and a string-backed enum will not accept an
+integer. Missing or incompatible values return the supplied default (or
+``null``). A nonexistent enum class raises ``InvalidArgumentException``.
+
 Writing Values
 --------------
 

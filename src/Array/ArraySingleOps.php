@@ -7,6 +7,11 @@ namespace Infocyph\ArrayKit\Array;
 /** @internal */
 final class ArraySingleOps
 {
+    public static function add(float|int $left, float|int $right): float|int
+    {
+        return is_int($left) && is_int($right) ? $left + $right : (float) $left + (float) $right;
+    }
+
     /**
      * @param array<array-key, mixed> $array
      */
@@ -21,7 +26,7 @@ final class ArraySingleOps
                 continue;
             }
 
-            $total += $numeric;
+            $total = self::add($total, $numeric);
             $count++;
         }
 
@@ -29,7 +34,7 @@ final class ArraySingleOps
             return 0.0;
         }
 
-        $avg = $total / $count;
+        $avg = is_int($total) ? $total / $count : $total / (float) $count;
         if (!is_finite($avg)) {
             $avg = self::overflowSafeAverage($array, $count, $avg);
         }
@@ -86,14 +91,6 @@ final class ArraySingleOps
     }
 
     /**
-     * Build a comparable fingerprint for a value.
-     */
-    public static function fingerprint(mixed $value, bool $strict = true): string
-    {
-        return ArrayValueSetOps::fingerprint($value, $strict);
-    }
-
-    /**
      * @param array<array-key, mixed> $array
      * @param array<array-key, mixed> $values
      * @return array<array-key, mixed>
@@ -145,7 +142,7 @@ final class ArraySingleOps
         }
 
         if (is_string($value) && is_numeric($value)) {
-            return $value + 0;
+            return array_sum([$value]);
         }
 
         return null;
@@ -223,7 +220,7 @@ final class ArraySingleOps
     {
         $average = 0.0;
         $correction = 0.0;
-        $scale = 2.0 ** (ceil(log($count, 2)) + 1);
+        $scale = 2.0 ** (ceil(log($count, 2)) + 1.0);
         foreach ($array as $value) {
             $numeric = self::numericValue($value);
             if ($numeric === null) {
@@ -236,7 +233,7 @@ final class ArraySingleOps
 
             // Power-of-two scaling leaves overflow headroom while preserving
             // small terms that may remain after large values cancel.
-            $term = $numeric / $scale;
+            $term = (float) $numeric / $scale;
             $next = $average + $term;
             $correction += abs($average) >= abs($term)
                 ? ($average - $next) + $term
@@ -246,7 +243,7 @@ final class ArraySingleOps
 
         $limit = PHP_FLOAT_MAX / $scale;
 
-        return max(-$limit, min($limit, $average / $count + $correction / $count)) * $scale;
+        return max(-$limit, min($limit, $average / (float) $count + $correction / (float) $count)) * $scale;
     }
 
     /**

@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+namespace Infocyph\ArrayKit\Tests\Feature;
+
+use BadMethodCallException;
+use InvalidArgumentException;
 use Infocyph\ArrayKit\Array\ArraySingle;
 use Infocyph\ArrayKit\Array\BaseArrayHelper;
 use Infocyph\ArrayKit\ArrayKit;
@@ -11,8 +15,8 @@ use Infocyph\ArrayKit\Tests\Fixtures\Release532IntMode;
 use Infocyph\ArrayKit\Tests\Fixtures\Release532StringMode;
 
 it('validates positive random counts even for empty arrays', function () {
-    expect(fn () => BaseArrayHelper::random([], 1))->toThrow(InvalidArgumentException::class)
-        ->and(fn () => ArrayKit::helper()->random([], 2))->toThrow(InvalidArgumentException::class)
+    expect(static fn(): mixed => BaseArrayHelper::random([], 1))->toThrow(InvalidArgumentException::class)
+        ->and(static fn(): mixed => ArrayKit::helper()->random([], 2))->toThrow(InvalidArgumentException::class)
         ->and(BaseArrayHelper::random([]))->toBeNull()
         ->and(BaseArrayHelper::random([], 0))->toBe([]);
 });
@@ -62,9 +66,9 @@ it('preserves finite averages across intermediate overflow and float-to-int boun
 it('forwards only callable public pipeline methods through collections', function () {
     $collection = Collection::make([3, 1, 2]);
 
-    expect(fn () => $collection->numericAggregate(null, true))
+    expect(static fn(): mixed => $collection->__call('numericAggregate', [null, true]))
         ->toThrow(BadMethodCallException::class)
-        ->and(fn () => $collection->unrecognizedInternalMethod())
+        ->and(static fn(): mixed => $collection->__call('unrecognizedInternalMethod', []))
         ->toThrow(BadMethodCallException::class)
         ->and($collection->values()->all())->toBe([3, 1, 2]);
 });
@@ -76,6 +80,15 @@ it('keeps finite extreme averages inside the input range', function (int $count)
 
 it('retains small remainders when extreme finite values cancel during averaging', function (float $remainder) {
     $extremes = [PHP_FLOAT_MAX, PHP_FLOAT_MAX, -PHP_FLOAT_MAX, -PHP_FLOAT_MAX];
-    expect(ArraySingle::avg([...$extremes, $remainder]))->toBe($remainder / 5)
-        ->and(ArraySingle::avg([$remainder, ...$extremes]))->toBe($remainder / 5);
+    expect(ArraySingle::avg([...$extremes, $remainder]))->toBe($remainder / 5.0)
+        ->and(ArraySingle::avg([$remainder, ...$extremes]))->toBe($remainder / 5.0);
 })->with([1.0, 1e-100, 1e-300, -1.0, -1e-100, -1e-300]);
+
+it('preserves integer precision and native mixed numeric promotion', function () {
+    $integer = PHP_INT_MAX - 2;
+    expect(ArraySingle::sum([$integer, 1]))->toBe(PHP_INT_MAX - 1)
+        ->and(ArraySingle::sum([' 42 ', '2e1', 0.5]))->toBe(62.5)
+        ->and(ArraySingle::median([1, 3]))->toBe(2)
+        ->and(ArraySingle::median([1, 2.0]))->toBe(1.5)
+        ->and(\Infocyph\ArrayKit\Array\ArrayMulti::sum([['value' => $integer], ['value' => 1]], 'value'))->toBe(PHP_INT_MAX - 1);
+});

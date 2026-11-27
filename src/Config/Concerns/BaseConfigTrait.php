@@ -12,7 +12,6 @@ use InvalidArgumentException;
 use OutOfBoundsException;
 use RuntimeException;
 use UnexpectedValueException;
-use UnitEnum as TEnum;
 
 /** @internal */
 trait BaseConfigTrait
@@ -54,6 +53,8 @@ trait BaseConfigTrait
      * @param string $key The dot-notation key referencing an array
      * @param mixed $value The value to append
      * @return bool True on success
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function append(string $key, mixed $value): bool
     {
@@ -67,6 +68,7 @@ trait BaseConfigTrait
 
     /**
      * Detect whether config changed compared to a named snapshot.
+     * @phpstan-impure
      */
     public function changed(string $snapshot = 'default'): bool
     {
@@ -77,6 +79,9 @@ trait BaseConfigTrait
         return $this->snapshots[$snapshot] !== $this->items;
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     public function exportCache(string $path): bool
     {
         $directory = dirname($path);
@@ -94,6 +99,8 @@ trait BaseConfigTrait
      *
      * @param string|array<array-key, mixed> $key Dot-notation key or multiple [key => value]
      * @param mixed|null $value The value to set if missing
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function fill(string|array $key, mixed $value = null): bool
     {
@@ -117,6 +124,7 @@ trait BaseConfigTrait
      */
     /**
      * @param string|int|array<int, string|int> $key
+     * @throws \RuntimeException
      */
     public function forget(string|int|array $key): bool
     {
@@ -180,9 +188,8 @@ trait BaseConfigTrait
     /**
      * Get an enum instance from a scalar stored config value.
      *
-     * @template TEnum of \UnitEnum
-     *
-     * @param class-string<TEnum> $enumClass
+     * @param class-string<\UnitEnum> $enumClass
+     * @throws \InvalidArgumentException
      */
     public function getEnum(string|int $key, string $enumClass, ?\UnitEnum $default = null): ?\UnitEnum
     {
@@ -196,15 +203,7 @@ trait BaseConfigTrait
         }
 
         if (is_subclass_of($enumClass, \BackedEnum::class)) {
-            if (!is_string($value) && !is_int($value)) {
-                return $default;
-            }
-
-            if (get_debug_type($value) !== new \ReflectionEnum($enumClass)->getBackingType()?->getName()) {
-                return $default;
-            }
-
-            return $enumClass::tryFrom($value) ?? $default;
+            return self::resolveBackedEnum($enumClass, $value) ?? $default;
         }
 
         if (!is_string($value)) {
@@ -260,6 +259,7 @@ trait BaseConfigTrait
      * Get a required configuration value or throw when missing.
      *
      * @param string|int|array<int, int|string> $key
+     * @throws \OutOfBoundsException
      */
     public function getOrFail(string|int|array $key): mixed
     {
@@ -328,6 +328,7 @@ trait BaseConfigTrait
      *
      * @param array<array-key, mixed> $resource The array containing config items
      * @return bool True if loaded successfully, false if already loaded
+     * @throws \RuntimeException
      */
     public function loadArray(array $resource): bool
     {
@@ -343,11 +344,19 @@ trait BaseConfigTrait
         return false;
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     * @throws \RuntimeException
+     */
     public function loadCache(string $path): bool
     {
         return $this->loadFile($path);
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     public function loadEnvFile(string $path): bool
     {
         $this->assertWritable();
@@ -364,6 +373,8 @@ trait BaseConfigTrait
      *
      * @param string $path The file path to load
      * @return bool True if loaded successfully, false if already loaded or file missing
+     * @throws \UnexpectedValueException
+     * @throws \RuntimeException
      */
     public function loadFile(string $path): bool
     {
@@ -388,6 +399,7 @@ trait BaseConfigTrait
      * Merge a config array into current items.
      *
      * @param array<array-key, mixed> $items
+     * @throws \RuntimeException
      */
     public function merge(array $items): bool
     {
@@ -398,6 +410,10 @@ trait BaseConfigTrait
         return true;
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     public function mergeEnvFile(string $path): bool
     {
         return $this->merge(EnvParser::parseFile($path));
@@ -407,6 +423,7 @@ trait BaseConfigTrait
      * Overlay another config array on top of current items.
      *
      * @param array<array-key, mixed> $overlay
+     * @throws \RuntimeException
      */
     public function overlay(array $overlay): bool
     {
@@ -420,6 +437,8 @@ trait BaseConfigTrait
      * @param string $key The dot-notation key referencing an array
      * @param mixed $value The value to prepend
      * @return bool True on success
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function prepend(string $key, mixed $value): bool
     {
@@ -461,6 +480,8 @@ trait BaseConfigTrait
      * Reload configuration from an array or file path, replacing existing data.
      *
      * @param array<array-key, mixed>|string $source
+     * @throws \UnexpectedValueException
+     * @throws \RuntimeException
      */
     public function reload(array|string $source): bool
     {
@@ -486,6 +507,7 @@ trait BaseConfigTrait
      * Replace the entire configuration storage with a new array.
      *
      * @param array<array-key, mixed> $items
+     * @throws \RuntimeException
      */
     public function replace(array $items): bool
     {
@@ -499,6 +521,7 @@ trait BaseConfigTrait
 
     /**
      * Restore configuration from a named snapshot.
+     * @throws \RuntimeException
      */
     public function restore(string $name = 'default'): bool
     {
@@ -525,6 +548,8 @@ trait BaseConfigTrait
      * @param mixed|null $value The value to set
      * @param bool $overwrite Overwrite existing? Default true.
      * @return bool True on success
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
@@ -537,6 +562,7 @@ trait BaseConfigTrait
 
     /**
      * Save a named snapshot of current configuration.
+     * @throws \UnexpectedValueException
      */
     public function snapshot(string $name = 'default'): bool
     {
@@ -546,6 +572,9 @@ trait BaseConfigTrait
         return true;
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     protected function assertWritable(): void
     {
         if ($this->readOnly) {
@@ -608,6 +637,9 @@ trait BaseConfigTrait
         return $cursor === null || is_scalar($cursor);
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     protected function materializeCacheValue(mixed $value): mixed
     {
         $activeReferences = [];
@@ -663,6 +695,9 @@ trait BaseConfigTrait
         return is_int($key) ? 'i:' . $key : 's:' . $key;
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     protected function writeCacheFile(string $path, string $contents): bool
     {
         try {
@@ -695,8 +730,24 @@ trait BaseConfigTrait
         return false;
     }
 
+    /** @param class-string<\BackedEnum> $enumClass */
+    private static function resolveBackedEnum(string $enumClass, mixed $value): ?\BackedEnum
+    {
+        $backingType = new \ReflectionEnum($enumClass)->getBackingType();
+        if (!$backingType instanceof \ReflectionNamedType) {
+            return null;
+        }
+
+        return match ($backingType->getName()) {
+            'int' => is_int($value) ? $enumClass::tryFrom($value) : null,
+            'string' => is_string($value) ? $enumClass::tryFrom($value) : null,
+            default => null,
+        };
+    }
+
     /**
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     private function arrayValueForMutation(string $key): array
     {
@@ -718,6 +769,7 @@ trait BaseConfigTrait
      * @param array<string, true> $activeReferences
      * @param array<int, true> $activeObjects
      * @return array<array-key, mixed>
+     * @throws \UnexpectedValueException
      */
     private function materializeCacheArray(array $value, array &$activeReferences, array &$activeObjects): array
     {
@@ -758,6 +810,7 @@ trait BaseConfigTrait
     /**
      * @param array<string, true> $activeReferences
      * @param array<int, true> $activeObjects
+     * @throws \UnexpectedValueException
      */
     private function materializeCacheValueRecursive(
         mixed $value,

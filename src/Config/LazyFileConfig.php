@@ -42,19 +42,22 @@ class LazyFileConfig extends Config
         $this->syncLoadedNamespacesFromItems();
     }
 
-    #[\Override]
     /**
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
+    #[\Override]
     public function all(): array
     {
         throw new RuntimeException('LazyFileConfig does not support full config retrieval. At least one key is required.');
     }
 
-    #[\Override]
     /**
      * @param string|array<array-key, mixed> $key
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
+    #[\Override]
     public function fill(string|array $key, mixed $value = null): bool
     {
         $this->assertWritable();
@@ -65,10 +68,12 @@ class LazyFileConfig extends Config
         return true;
     }
 
-    #[\Override]
     /**
      * @param string|int|array<int, string|int> $key
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
+    #[\Override]
     public function forget(string|int|array $key): bool
     {
         $this->assertWritable();
@@ -85,10 +90,12 @@ class LazyFileConfig extends Config
         return true;
     }
 
-    #[\Override]
     /**
      * @param string|int|array<int, string|int>|null $key
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
+    #[\Override]
     public function get(string|int|array|null $key = null, mixed $default = null): mixed
     {
         if ($key === null) {
@@ -115,10 +122,10 @@ class LazyFileConfig extends Config
         return $this->getResolvedValue($key, $default);
     }
 
-    #[\Override]
     /**
      * @param string|array<int, string> $keys
      */
+    #[\Override]
     public function has(string|array $keys): bool
     {
         $keys = (array) $keys;
@@ -129,10 +136,10 @@ class LazyFileConfig extends Config
         return array_all($keys, fn($path) => $this->hasResolvedValue($path));
     }
 
-    #[\Override]
     /**
      * @param string|array<int, string> $keys
      */
+    #[\Override]
     public function hasAny(string|array $keys): bool
     {
         $keys = (array) $keys;
@@ -145,16 +152,17 @@ class LazyFileConfig extends Config
 
     /**
      * Returns true if the namespace has already been resolved (file found or missing).
+     * @throws \InvalidArgumentException
      */
     public function isLoaded(string $namespace): bool
     {
         return isset($this->loadedNamespaces[$this->normalizeNamespace($namespace)]);
     }
 
-    #[\Override]
     /**
      * @param array<array-key, mixed> $resource
      */
+    #[\Override]
     public function loadArray(array $resource): bool
     {
         return $this->syncLoadedNamespacesAfter(parent::loadArray($resource));
@@ -162,6 +170,7 @@ class LazyFileConfig extends Config
 
     /**
      * Alias of isLoaded().
+     * @throws \InvalidArgumentException
      */
     public function loaded(string $namespace): bool
     {
@@ -182,10 +191,10 @@ class LazyFileConfig extends Config
         return $this->syncLoadedNamespacesAfter(parent::loadFile($path));
     }
 
-    #[\Override]
     /**
      * @param array<array-key, mixed> $items
      */
+    #[\Override]
     public function merge(array $items): bool
     {
         $changed = parent::merge($items);
@@ -204,6 +213,8 @@ class LazyFileConfig extends Config
      * Preload one or multiple top-level config namespaces.
      *
      * @param string|array<int, string> $namespaces Namespace (e.g. "db") or list of namespaces.
+     * @throws \UnexpectedValueException
+     * @throws \InvalidArgumentException
      */
     public function preload(string|array $namespaces): static
     {
@@ -214,10 +225,11 @@ class LazyFileConfig extends Config
         return $this;
     }
 
-    #[\Override]
     /**
      * @param array<array-key, mixed>|string $source
+     * @throws \RuntimeException
      */
+    #[\Override]
     public function reload(array|string $source): bool
     {
         $this->assertWritable();
@@ -225,10 +237,11 @@ class LazyFileConfig extends Config
         return $this->syncLoadedNamespacesAfter(parent::reload($source));
     }
 
-    #[\Override]
     /**
      * @param array<array-key, mixed> $items
+     * @throws \RuntimeException
      */
+    #[\Override]
     public function replace(array $items): bool
     {
         $this->assertWritable();
@@ -242,10 +255,12 @@ class LazyFileConfig extends Config
         return $this->syncLoadedNamespacesAfter(parent::restore($name));
     }
 
-    #[\Override]
     /**
      * @param string|array<array-key, mixed>|null $key
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
+    #[\Override]
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
         $this->assertWritable();
@@ -260,6 +275,10 @@ class LazyFileConfig extends Config
         return true;
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     protected function forgetPath(string $path): void
     {
         [$namespace, $rest] = $this->splitPath($path);
@@ -286,6 +305,10 @@ class LazyFileConfig extends Config
         $this->markNamespaceRuntime($namespace);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     protected function getPath(string $path, mixed $default): mixed
     {
         [$namespace, $rest] = $this->splitPath($path);
@@ -294,6 +317,10 @@ class LazyFileConfig extends Config
         return $this->resolveLoadedNamespaceValue($namespace, $rest, $default);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     protected function hasPath(string $path): bool
     {
         [$namespace, $rest] = $this->splitPath($path);
@@ -314,6 +341,9 @@ class LazyFileConfig extends Config
         return DotNotation::has($this->items[$namespace], $rest);
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     protected function loadNamespace(string $namespace): void
     {
         if (isset($this->loadedNamespaces[$namespace])) {
@@ -331,10 +361,7 @@ class LazyFileConfig extends Config
             return;
         }
 
-        $loaded = include $file;
-        if (!is_array($loaded)) {
-            throw new UnexpectedValueException("Config file [{$file}] must return an array.");
-        }
+        $loaded = $this->readNamespaceFile($file);
 
         $this->loadedNamespaces[$namespace] = true;
         $this->loadedNamespaceOrigins[$namespace] = $cachedFile !== null ? 'cache' : 'source';
@@ -352,6 +379,9 @@ class LazyFileConfig extends Config
         }
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     protected function normalizeNamespace(string $namespace): string
     {
         $trimmed = trim($namespace);
@@ -360,6 +390,24 @@ class LazyFileConfig extends Config
         }
 
         return $trimmed;
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     * @throws UnexpectedValueException
+     */
+    protected function readNamespaceFile(string $file): array
+    {
+        if (!is_file($file) || !is_readable($file)) {
+            throw new UnexpectedValueException("Config file [{$file}] is no longer readable.");
+        }
+
+        $loaded = include $file;
+        if (!is_array($loaded)) {
+            throw new UnexpectedValueException("Config file [{$file}] must return an array.");
+        }
+
+        return $loaded;
     }
 
     protected function resolveCachedNamespaceFile(string $namespace): ?string
@@ -373,6 +421,10 @@ class LazyFileConfig extends Config
         return $path;
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     protected function resolveLazyRawValue(string $path): mixed
     {
         [$namespace, $rest] = $this->splitPath($path);
@@ -408,6 +460,10 @@ class LazyFileConfig extends Config
         return $file;
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     #[\Override]
     protected function resolveRawValue(int|string $key): mixed
     {
@@ -427,6 +483,10 @@ class LazyFileConfig extends Config
         return $this->cacheResolvedValue($cacheKey, $this->resolveLazyRawValue($key));
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     protected function setPath(string $path, mixed $value, bool $overwrite): void
     {
         [$namespace, $rest] = $this->splitPath($path);
@@ -453,6 +513,7 @@ class LazyFileConfig extends Config
 
     /**
      * @return array{0: string, 1: string|null}
+     * @throws \InvalidArgumentException
      */
     protected function splitPath(string $path): array
     {
@@ -522,7 +583,11 @@ class LazyFileConfig extends Config
         return $changed;
     }
 
-    /** @param string|array<array-key, mixed> $key */
+    /**
+     * @param string|array<array-key, mixed> $key
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     private function writePaths(string|array $key, mixed $value, bool $overwrite, string $operation): void
     {
         if (is_string($key)) {

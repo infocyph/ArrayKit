@@ -31,6 +31,7 @@ final class EnvValueResolver
     /**
      * @param array<string, string|null> $items
      * @return array<string, string|null>
+     * @throws \UnexpectedValueException
      */
     public static function resolve(array $items): array
     {
@@ -57,6 +58,9 @@ final class EnvValueResolver
         return $items;
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     private static function assertClosedVariableExpansions(string $value): void
     {
         $length = strlen($value);
@@ -111,6 +115,7 @@ final class EnvValueResolver
      * @param array<string, string|null> $items
      * @param array<string, string|null> $resolved
      * @param array<string, true> $resolving
+     * @throws \UnexpectedValueException
      */
     private static function lookupVariable(string $name, array $items, array &$resolved, array $resolving): ?string
     {
@@ -134,6 +139,7 @@ final class EnvValueResolver
      * @param array<string, string|null> $items
      * @param array<string, string|null> $resolved
      * @param array<string, true> $resolving
+     * @throws \UnexpectedValueException
      */
     private static function resolveMatch(array $matches, array $items, array &$resolved, array $resolving): string
     {
@@ -160,6 +166,7 @@ final class EnvValueResolver
      * @param array<string, string|null> $items
      * @param array<string, string|null> $resolved
      * @param array<string, true> $resolving
+     * @throws \UnexpectedValueException
      */
     private static function resolveName(string $name, array $items, array &$resolved, array $resolving): ?string
     {
@@ -185,6 +192,7 @@ final class EnvValueResolver
      * @param array<string, string|null> $items
      * @param array<string, string|null> $resolved
      * @param array<string, true> $resolving
+     * @throws \UnexpectedValueException
      */
     private static function resolveVariables(string $value, array $items, array &$resolved, array $resolving): string
     {

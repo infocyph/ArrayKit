@@ -109,6 +109,20 @@ final class DotNotationPathOps
     }
 
     /**
+     * Restore original values through the captured reference cells.
+     *
+     * @template TValue
+     * @param array<string, TValue> $references
+     * @param array<string, TValue> $originals
+     */
+    public static function restoreMutationReferences(array &$references, array $originals): void
+    {
+        array_walk($references, static function (mixed &$reference, string $id) use ($originals): void {
+            $reference = $originals[$id];
+        });
+    }
+
+    /**
      * Retrieve a value from an array using an exact key path.
      */
     public static function segmentExact(mixed $array, string $path, mixed $default): mixed
@@ -192,6 +206,7 @@ final class DotNotationPathOps
      *
      * @param array<int, string> $segments
      * @param callable(mixed): mixed $defaultResolver
+     * @throws \RuntimeException
      */
     public static function traverseGet(
         mixed $target,
@@ -310,6 +325,7 @@ final class DotNotationPathOps
 
     /**
      * @phpstan-impure
+     * @throws \RuntimeException
      */
     private static function consumeTraversalNode(
         int &$visitedNodes,
@@ -328,6 +344,9 @@ final class DotNotationPathOps
         return false;
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function handleTraversalLimit(object $missing, bool $throwOnTooDeep, string $message): mixed
     {
         if ($throwOnTooDeep) {
@@ -397,6 +416,7 @@ final class DotNotationPathOps
     /**
      * @param array<int, string> $segments
      * @param callable(mixed): mixed $defaultResolver
+     * @throws \RuntimeException
      */
     private static function resolveWildcardItem(
         mixed $item,
@@ -443,6 +463,7 @@ final class DotNotationPathOps
      *
      * @param array<int, string> $segments
      * @param callable(mixed): mixed $defaultResolver
+     * @throws \RuntimeException
      */
     private static function traverseWildcard(
         mixed $target,

@@ -46,6 +46,7 @@ it('round trips literal path-control characters through flatten and expand', fun
 it('writes only to supported object properties', function () {
     $object = new class
     {
+        /** @var array<string, mixed> */
         public array $profile = [];
 
         public readonly string $identifier;
@@ -56,20 +57,30 @@ it('writes only to supported object properties', function () {
         {
             $this->identifier = 'fixed';
         }
+
+        public function secret(): string
+        {
+            return $this->secret;
+        }
     };
     $target = ['object' => $object, 'dynamic' => new stdClass];
 
     DotNotation::set($target, 'object.profile.name', 'Ada');
     DotNotation::set($target, 'dynamic.created', true);
 
+    $dynamic = $target['dynamic'] ?? null;
+    if (!$dynamic instanceof stdClass) {
+        throw new RuntimeException('Expected dynamic object to be retained.');
+    }
     expect($object->profile)->toBe(['name' => 'Ada'])
-        ->and($target['dynamic']->created)->toBeTrue()
+        ->and($dynamic->created)->toBeTrue()
         ->and(fn () => DotNotation::set($target, 'object.secret', 'visible'))
         ->toThrow(InvalidArgumentException::class)
         ->and(fn () => DotNotation::set($target, 'object.missing', 'value'))
         ->toThrow(InvalidArgumentException::class)
         ->and(fn () => DotNotation::set($target, 'object.identifier', 'changed'))
-        ->toThrow(InvalidArgumentException::class);
+        ->toThrow(InvalidArgumentException::class)
+        ->and($object->secret())->toBe('hidden');
 });
 
 it('renames overlapping parent and child paths without losing the captured value', function () {
@@ -368,7 +379,7 @@ it('sets multiple key-value pairs when given an array in set()', function () {
 it('does not overwrite existing keys when fill() is used', function () {
     $data = ['user' => ['name' => 'Frank']];
     DotNotation::fill($data, 'user.name', 'George');
-    expect($data['user']['name'])->toBe('Frank');
+    expect($data)->toBe(['user' => ['name' => 'Frank']]);
 });
 
 it('does not overwrite existing null object properties when fill() is used', function () {
@@ -376,13 +387,17 @@ it('does not overwrite existing null object properties when fill() is used', fun
 
     DotNotation::fill($data, 'user.middle_name', 'George');
 
-    expect($data['user']->middle_name)->toBeNull();
+    $user = $data['user'] ?? null;
+    if (!$user instanceof stdClass) {
+        throw new RuntimeException('Expected user object.');
+    }
+    expect($user->middle_name)->toBeNull();
 });
 
 it('fills missing keys when fill() is used', function () {
     $data = ['user' => []];
     DotNotation::fill($data, 'user.email', 'frank@example.com');
-    expect($data['user']['email'])->toBe('frank@example.com');
+    expect($data)->toBe(['user' => ['email' => 'frank@example.com']]);
 });
 
 it('supports escaped dot paths for set and forget', function () {
@@ -544,7 +559,7 @@ it('returns the given array using all()', function () {
 it('taps into an array and returns it unchanged', function () {
     $data = ['x' => 10, 'y' => 20];
     $called = false;
-    $result = DotNotation::tap($data, function ($arr) use (&$called, $data) {
+    $result = DotNotation::tap($data, static function (array $arr) use (&$called, $data): void {
         $called = true;
         expect($arr)->toBe($data);
     });
@@ -601,7 +616,7 @@ it('can throw on safe get traversal limit overflow', function () {
         ],
     ];
 
-    expect(fn () => DotNotation::getSafe($data, 'users.*.name', 'missing', maxDepth: 1, throwOnTooDeep: true))
+    expect(static fn(): mixed => DotNotation::getSafe($data, 'users.*.name', 'missing', maxDepth: 1, throwOnTooDeep: true))
         ->toThrow(RuntimeException::class);
 });
 
@@ -610,7 +625,7 @@ it('applies safe traversal limits to ordinary path segments and nodes', function
 
     expect(DotNotation::getSafe($data, 'one.two.three', 'missing', maxDepth: 2))->toBe('missing')
         ->and(DotNotation::getSafe($data, 'one.two.three', 'missing', maxNodes: 2))->toBe('missing')
-        ->and(fn () => DotNotation::getSafe(
+        ->and(static fn(): mixed => DotNotation::getSafe(
             $data,
             'one.two.three',
             'missing',

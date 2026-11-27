@@ -21,6 +21,7 @@ final class ConfigSnapshot
      *
      * @param array<array-key, mixed> $items
      * @return array<array-key, mixed>
+     * @throws \UnexpectedValueException
      */
     public static function detach(array $items): array
     {
@@ -36,6 +37,7 @@ final class ConfigSnapshot
      * @param array<string, true> $active
      * @param array<string, mixed> $copies
      * @return array<array-key, mixed>
+     * @throws \UnexpectedValueException
      */
     private static function copy(array $items, array &$active, array &$copies, int &$visited, int $depth = 1): array
     {
@@ -64,6 +66,7 @@ final class ConfigSnapshot
     /**
      * @param array<string, true> $active
      * @param array<string, mixed> $copies
+     * @throws \UnexpectedValueException
      */
     private static function copyReference(
         mixed $value,

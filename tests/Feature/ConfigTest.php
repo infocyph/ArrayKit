@@ -2,9 +2,15 @@
 
 declare(strict_types=1);
 
+namespace Infocyph\ArrayKit\Tests\Feature;
+
 use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\Support\Environment;
 use Infocyph\ArrayKit\Tests\Fixtures\ConfigMode;
+use InvalidArgumentException;
+use OutOfBoundsException;
+use ReflectionProperty;
+use RuntimeException;
 
 $config = new Config;
 
@@ -48,7 +54,7 @@ it('supports getOrFail for required keys', function () {
     $cfg->loadArray(['app' => ['name' => 'ArrayKit']]);
 
     expect($cfg->getOrFail('app.name'))->toBe('ArrayKit')
-        ->and(fn () => $cfg->getOrFail('app.missing'))->toThrow(\OutOfBoundsException::class);
+        ->and(static fn(): mixed => $cfg->getOrFail('app.missing'))->toThrow(\OutOfBoundsException::class);
 });
 
 it('validates every required key in bulk getOrFail calls', function () {
@@ -58,7 +64,7 @@ it('validates every required key in bulk getOrFail calls', function () {
     expect($cfg->getOrFail(['app.name', 'app.nullable']))->toBe([
         'app.name' => 'ArrayKit',
         'app.nullable' => null,
-    ])->and(fn () => $cfg->getOrFail(['app.name', 'app.missing']))
+    ])->and(static fn(): mixed => $cfg->getOrFail(['app.name', 'app.missing']))
         ->toThrow(OutOfBoundsException::class);
 });
 
@@ -211,7 +217,11 @@ it('bypasses memoization for direct top-level reads', function () {
             ->and($cfg->get('missing', 'fallback'))->toBe('fallback');
     }
 
-    $cacheSize = (fn (): int => count($this->resolvedValueCache))->call($cfg);
+    $cache = new ReflectionProperty($cfg, 'resolvedValueCache')->getValue($cfg);
+    if (!is_array($cache)) {
+        throw new RuntimeException('Expected an array cache.');
+    }
+    $cacheSize = count($cache);
     expect($cacheSize)->toBe(0);
 });
 
@@ -259,7 +269,11 @@ it('bounds the in-memory read cache for long-running processes', function () {
         $cfg->get('missing.'.$index);
     }
 
-    $cacheSize = (fn (): int => count($this->resolvedValueCache))->call($cfg);
+    $cache = new ReflectionProperty($cfg, 'resolvedValueCache')->getValue($cfg);
+    if (!is_array($cache)) {
+        throw new RuntimeException('Expected an array cache.');
+    }
+    $cacheSize = count($cache);
 
     expect($cacheSize)->toBeLessThanOrEqual(1024);
 });

@@ -75,18 +75,21 @@ it('keeps documented public signatures aligned with reflection', function () {
         }
 
         if ($type instanceof ReflectionUnionType) {
-            $parts = array_map(static fn(ReflectionNamedType $part): string => $part->getName(), $type->getTypes());
+            $parts = array_map(static fn(ReflectionNamedType|ReflectionIntersectionType $part): string => (string) $part, $type->getTypes());
 
             return $normalizeType(implode('|', $parts), $selfType);
         }
 
         if ($type instanceof ReflectionIntersectionType) {
-            $parts = array_map(static fn(ReflectionNamedType $part): string => $part->getName(), $type->getTypes());
+            $parts = array_map(static fn(ReflectionType $part): string => (string) $part, $type->getTypes());
             sort($parts);
 
             return $parts;
         }
 
+        if (!$type instanceof ReflectionNamedType) {
+            throw new RuntimeException('Unsupported reflection type: ' . get_debug_type($type));
+        }
         $name = $type->getName();
         if ($type->allowsNull() && $name !== 'mixed' && $name !== 'null') {
             $name .= '|null';
@@ -108,15 +111,19 @@ it('keeps documented public signatures aligned with reflection', function () {
             'type' => $normalizeType($matches['type'] ?? null),
             'reference' => ($matches['reference'] ?? '') === '&',
             'variadic' => ($matches['variadic'] ?? '') === '...',
-            'hasDefault' => array_key_exists('default', $matches) && $matches['default'] !== '',
+            'hasDefault' => array_key_exists('default', $matches),
             'default' => isset($matches['default']) ? ltrim(trim($matches['default']), '\\') : null,
         ];
     };
 
     $document = file_get_contents(__DIR__ . '/../../docs/rule-reference.rst');
-    expect($document)->not->toBeFalse();
-    $lines = preg_split('/\R/', (string) $document);
-    expect($lines)->toBeArray();
+    if ($document === false) {
+        throw new RuntimeException('Unable to read API reference.');
+    }
+    $lines = preg_split('/\R/', $document);
+    if ($lines === false) {
+        throw new RuntimeException('Unable to split API reference into lines.');
+    }
 
     $activeClass = null;
     $documentedMethods = [];
@@ -131,11 +138,14 @@ it('keeps documented public signatures aligned with reflection', function () {
 
         if (preg_match('/^\s+function Infocyph\\\\ArrayKit\\\\(?<name>[A-Za-z_][A-Za-z0-9_]*)\((?<parameters>.*)\)(?:: (?<return>[^\/]+))?/', $line, $functionMatches) === 1) {
             $functionName = 'Infocyph\\ArrayKit\\' . $functionMatches['name'];
+            if (!function_exists($functionName)) {
+                throw new RuntimeException('Documented function does not exist: ' . $functionName);
+            }
             $function = new ReflectionFunction($functionName);
             $documentedFunctions[$functionName] = true;
             $documentedParameters = trim($functionMatches['parameters']) === ''
                 ? []
-                : array_map($parseParameter, preg_split('/,\s*/', $functionMatches['parameters']));
+                : array_map($parseParameter, explode(',', $functionMatches['parameters']));
 
             expect($documentedParameters)->toHaveCount(count($function->getParameters()), $functionName)
                 ->and($reflectionType($function->getReturnType()))->toBe(
@@ -164,11 +174,11 @@ it('keeps documented public signatures aligned with reflection', function () {
         $declaringType = $method->getDeclaringClass()->getShortName();
         $documentedParameters = trim($matches['parameters']) === ''
             ? []
-            : array_map($parseParameter, preg_split('/,\s*/', $matches['parameters']));
+            : array_map($parseParameter, explode(',', $matches['parameters']));
         $actualParameters = $method->getParameters();
 
         expect($method->isPublic())->toBeTrue($activeClass . '::' . $method->getName())
-            ->and($method->isStatic())->toBe(($matches['static'] ?? '') !== '', $activeClass . '::' . $method->getName())
+            ->and($method->isStatic())->toBe($matches['static'] !== '', $activeClass . '::' . $method->getName())
             ->and($documentedParameters)->toHaveCount(count($actualParameters), $activeClass . '::' . $method->getName())
             ->and($reflectionType($method->getReturnType(), $declaringType))->toBe(
                 $normalizeType(isset($matches['return']) ? trim($matches['return']) : null, $declaringType),
@@ -179,8 +189,8 @@ it('keeps documented public signatures aligned with reflection', function () {
             $documented = $documentedParameters[$parameterIndex];
             $actualDefault = null;
             if ($actual->isDefaultValueAvailable()) {
-                if ($actual->isDefaultValueConstant()) {
-                    $constantName = ltrim((string) $actual->getDefaultValueConstantName(), '\\');
+                if (($constant = $actual->getDefaultValueConstantName()) !== null) {
+                    $constantName = ltrim($constant, '\\');
                     $actualDefault = basename(str_replace('\\', '/', $constantName));
                 } elseif ($actual->getDefaultValue() === null) {
                     $actualDefault = 'null';

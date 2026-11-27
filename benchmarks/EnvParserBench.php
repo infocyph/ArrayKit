@@ -10,6 +10,10 @@ use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\ParamProviders;
 use PhpBench\Attributes\Revs;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(1)]
 #[Iterations(3)]
 #[BeforeMethods('setUp')]
@@ -35,11 +39,17 @@ final class EnvParserBench
         $this->contents = implode("\n", $lines);
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     public function benchParse(): void
     {
         EnvParser::parse($this->contents);
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     public function benchParseRaw(): void
     {
         EnvParser::parseRaw($this->contents);

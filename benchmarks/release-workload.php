@@ -12,16 +12,19 @@ use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
 use RuntimeException;
 
-[$script, $root, $workload, $operations, $warmup] = $argv + [null, null, null, null, null];
-unset($script);
+$workload = $argv[1] ?? null;
+$operations = $argv[2] ?? null;
+$warmup = $argv[3] ?? null;
 
-if (!is_string($root) || !is_string($workload) || !is_numeric($operations) || !is_numeric($warmup)) {
+if (!is_string($workload) || !is_numeric($operations) || !is_numeric($warmup)) {
     throw new RuntimeException(
-        'Usage: release-workload.php <root> <workload> <operations> <warmup>',
+        'Usage: php -d auto_prepend_file=<autoload> release-workload.php <workload> <operations> <warmup>',
     );
 }
 
-require rtrim($root, DIRECTORY_SEPARATOR) . '/vendor/autoload.php';
+if (!class_exists(ArrayMulti::class)) {
+    throw new RuntimeException('Benchmark runner must bootstrap ArrayKit before launching this worker.');
+}
 
 $operations = max(1, (int) $operations);
 $warmup = max(0, (int) $warmup);
@@ -77,7 +80,7 @@ fwrite(STDOUT, json_encode([
     'elapsed_seconds' => $elapsedSeconds,
     'latencies_ms' => $latencies,
     'cpu_seconds' => max(0.0, $cpuSeconds),
-    'cpu_percent' => max(0.0, ($cpuSeconds / $elapsedSeconds) * 100),
+    'cpu_percent' => max(0.0, ($cpuSeconds / (float) $elapsedSeconds) * 100.0),
     'memory_initial_mb' => $memoryBefore / 1_048_576,
     'memory_final_mb' => $memoryAfter / 1_048_576,
     'memory_peak_mb' => memory_get_peak_usage(true) / 1_048_576,
@@ -110,18 +113,31 @@ function releaseArrayQueryWorkload(): \Closure
     };
 }
 
-function releaseCpuSeconds(array $usage): float
+/**
+ * @param array<array-key,mixed>|false $usage
+ * @throws RuntimeException
+ */
+function releaseCpuSeconds(array|false $usage): float
 {
-    $user = ((int) ($usage['ru_utime.tv_sec'] ?? 0))
-        + (((int) ($usage['ru_utime.tv_usec'] ?? 0)) / 1_000_000);
-    $system = ((int) ($usage['ru_stime.tv_sec'] ?? 0))
-        + (((int) ($usage['ru_stime.tv_usec'] ?? 0)) / 1_000_000);
+    if ($usage === false) {
+        throw new RuntimeException('Unable to read process CPU usage.');
+    }
+    $userSeconds = $usage['ru_utime.tv_sec'] ?? null;
+    $userMicros = $usage['ru_utime.tv_usec'] ?? null;
+    $systemSeconds = $usage['ru_stime.tv_sec'] ?? null;
+    $systemMicros = $usage['ru_stime.tv_usec'] ?? null;
+    if (!is_int($userSeconds) || !is_int($userMicros) || !is_int($systemSeconds) || !is_int($systemMicros)) {
+        throw new RuntimeException('Invalid process CPU usage.');
+    }
+    $user = (float) $userSeconds + ((float) $userMicros / 1_000_000.0);
+    $system = (float) $systemSeconds + ((float) $systemMicros / 1_000_000.0);
 
     return $user + $system;
 }
 
 /**
  * @return \Closure(): void
+ * @throws \RuntimeException
  */
 function releaseConfigSnapshotWorkload(): \Closure
 {
@@ -149,6 +165,7 @@ function releaseConfigSnapshotWorkload(): \Closure
 
 /**
  * @return \Closure(): void
+ * @throws \RuntimeException
  */
 function releaseDotConfigWorkload(): \Closure
 {
@@ -182,7 +199,7 @@ function releaseDotConfigWorkload(): \Closure
         );
 
         if (
-            count($ids) !== 64
+            !is_array($ids) || count($ids) !== 64
             || $flat !== [1, 2, 3]
             || $config->get('app.nested.value') !== 42
         ) {
@@ -214,6 +231,7 @@ function releaseLazyArrayWorkload(): \Closure
 /**
  * @param list<string> $temporaryDirectories
  * @return \Closure(): void
+ * @throws RuntimeException
  */
 function releaseLazyFileColdWorkload(array &$temporaryDirectories): \Closure
 {
@@ -234,6 +252,8 @@ function releaseLazyFileColdWorkload(array &$temporaryDirectories): \Closure
 /**
  * @param list<string> $temporaryDirectories
  * @return \Closure(): void
+ * @throws \RuntimeException
+ * @throws \InvalidArgumentException
  */
 function releaseLazyFileGeneratedWorkload(array &$temporaryDirectories): \Closure
 {
@@ -257,6 +277,7 @@ function releaseLazyFileGeneratedWorkload(array &$temporaryDirectories): \Closur
 /**
  * @param list<string> $temporaryDirectories
  * @return array{0:string,1:string}
+ * @throws \RuntimeException
  */
 function releaseLazyFileDirectories(array &$temporaryDirectories): array
 {
@@ -285,7 +306,9 @@ function releaseRemoveDirectory(string $directory): void
         return;
     }
 
-    foreach (scandir($directory) ?: [] as $entry) {
+    $entries = scandir($directory);
+
+    foreach ($entries === false ? [] : $entries as $entry) {
         if ($entry === '.' || $entry === '..') {
             continue;
         }

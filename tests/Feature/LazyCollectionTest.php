@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Infocyph\ArrayKit\Collection\LazyCollection;
 
 it('supports mapLazy/filterLazy/take/takeUntil/chunkLazy/cursor', function () {
-    $lazy = LazyCollection::make([1, 2, 3, 4, 5, 6]);
+    $lazy = LazyCollection::from([1, 2, 3, 4, 5, 6]);
 
     $mapped = $lazy
         ->mapLazy(fn (int $value): int => $value * 2)
@@ -106,7 +106,7 @@ it('shares source progress and the same terminal failure between interleaved rep
     foreach ([$left, $right] as $cursor) {
         try {
             $cursor->next();
-            test()->fail('The source failure was lost.');
+            \PHPUnit\Framework\Assert::fail('The source failure was lost.');
         } catch (RuntimeException $error) {
             expect($error)->toBe($failure);
         }

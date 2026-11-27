@@ -14,7 +14,7 @@ it('resolves canonical numeric nested configuration paths with memoization enabl
         ],
     ]);
 
-    foreach (range(1, 3) as $read) {
+    for ($read = 0; $read < 3; $read++) {
         expect($config->get('app.servers.0'))->toBe('first')
             ->and($config->get('app.servers.1'))->toBe('second')
             ->and($config->get('app.negative.-1'))->toBe('minus one')
@@ -61,7 +61,8 @@ it('does not memoize nested numeric array references', function (): void {
 
     $value = 'after';
 
-    expect($config->get('app.servers.0'))->toBe('after');
+    expect($value)->toBe('after')
+        ->and($config->get('app.servers.0'))->toBe('after');
 });
 
 it('returns identical numeric-path values with and without read caching', function (): void {

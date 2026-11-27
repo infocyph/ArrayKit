@@ -10,6 +10,10 @@ use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\ParamProviders;
 use PhpBench\Attributes\Revs;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(1)]
 #[Iterations(3)]
 #[BeforeMethods('setUp')]
@@ -42,6 +46,9 @@ final class ArrayMultiBench
         $this->needles = range(0, $params['needles'] - 1);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchCountBy(): void
     {
         ArrayMulti::countBy($this->rows, 'group');
@@ -57,34 +64,53 @@ final class ArrayMultiBench
         ArrayMulti::flatten($this->rows);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchGroupBy(): void
     {
         ArrayMulti::groupBy($this->rows, 'group');
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchKeyBy(): void
     {
         ArrayMulti::keyBy($this->rows, 'id');
     }
 
-    public function benchKeyByNative(): void
+    /** @return array<array-key, mixed> */
+    public function benchKeyByNative(): array
     {
         $result = [];
         foreach ($this->rows as $row) {
             $result[$row['id']] = $row;
         }
+
+        return $result;
     }
 
-    public function benchPluck(): void
+    /**
+     * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
+     */
+    public function benchPluck(): array
     {
-        ArrayMulti::pluck($this->rows, 'score', 'id');
+        return ArrayMulti::pluck($this->rows, 'score', 'id');
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function benchSortBy(): void
     {
         ArrayMulti::sortBy($this->rows, 'score', true, SORT_NUMERIC);
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function benchSortByMany(): void
     {
         ArrayMulti::sortByMany($this->rows, [
@@ -103,9 +129,10 @@ final class ArrayMultiBench
         ArrayMulti::uniqueBy($this->rows, 'derived', true);
     }
 
-    public function benchWhere(): void
+    /** @return array<array-key, mixed> */
+    public function benchWhere(): array
     {
-        ArrayMulti::where($this->rows, 'score', '>=', 500);
+        return ArrayMulti::where($this->rows, 'score', '>=', 500);
     }
 
     public function benchWhereIn(): void
@@ -113,7 +140,8 @@ final class ArrayMultiBench
         ArrayMulti::whereIn($this->rows, 'score', $this->needles, true);
     }
 
-    public function benchWhereInNative(): void
+    /** @return array<array-key, mixed> */
+    public function benchWhereInNative(): array
     {
         $result = [];
         foreach ($this->rows as $key => $row) {
@@ -121,6 +149,8 @@ final class ArrayMultiBench
                 $result[$key] = $row;
             }
         }
+
+        return $result;
     }
 
     public function benchWhereNotIn(): void

@@ -7,6 +7,7 @@ namespace Infocyph\ArrayKit\Array;
 use ArrayAccess;
 use InvalidArgumentException;
 
+/** @api */
 class BaseArrayHelper
 {
     /**
@@ -227,7 +228,7 @@ class BaseArrayHelper
             throw new InvalidArgumentException("You requested $number items, but array only has $count.");
         }
 
-        if ($count === 0 || ($number !== null && $number <= 0)) {
+        if ($array === [] || ($number !== null && $number <= 0)) {
             return ($number === null) ? null : [];
         }
 
@@ -254,6 +255,7 @@ class BaseArrayHelper
      * @param int $end The ending number of the sequence.
      * @param int $step The increment between each number in the sequence. Defaults to 1.
      * @return array<int, int> An array containing the sequence of numbers.
+     * @throws \InvalidArgumentException
      */
     public static function range(int $start, int $end, int $step = 1): array
     {

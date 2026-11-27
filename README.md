@@ -88,9 +88,12 @@ configuration or object models.
 
 ## Requirements
 
-* **PHP 8.4** or higher
+* **PHP 8.4** or higher (CI matrix: PHP 8.4, 8.5 and 8.6)
+* **ext-filter**, **ext-hash** and **ext-tokenizer**
 
-Runwire is optional. ArrayKit 5.3.2 qualifies its passed-instance lazy-runtime integration against `infocyph/runwire` 3.0 on PHP 8.4 and 8.5; ordinary ArrayKit installation has no Runwire runtime dependency.
+`ext-intl` is optional; it is required for locale-aware sorting outside the C/POSIX collation locale.
+
+Runwire is optional. The 5.4 release line targets `infocyph/runwire` `^4.0.1`, with exact 4.0.1 integration tested on PHP 8.4, 8.5 and 8.6. Ordinary ArrayKit installation has no Runwire runtime dependency.
 
 
 ## Installation
@@ -160,6 +163,10 @@ $flatZero = ArrayMulti::flatten($data, 0); // [[1, 2], [3, [4, 5]]]
 $flatOne = ArrayMulti::flatten($data, 1); // [1, 2, 3, [4, 5]]
 
 // Multi-column and query helpers
+$rows = [
+    ['status' => 'active', 'created_at' => '2026-01-01', 'email' => 'alice@example.com', 'role' => 'admin'],
+    ['status' => 'inactive', 'created_at' => '2026-01-02', 'email' => 'bob@example.com', 'role' => 'editor'],
+];
 $sortedMany = ArrayMulti::sortByMany($rows, [
     ['status', 'asc'],
     ['created_at', 'desc'],
@@ -168,7 +175,7 @@ $active = ArrayMulti::whereStartsWith($rows, 'status', 'act', false);
 $match = ArrayMulti::whereLike($rows, 'email', '%@example.com');
 $first = ArrayMulti::firstWhereIn($rows, 'role', ['admin', 'editor']);
 $uniqueUsers = ArrayMulti::uniqueBy($rows, 'email');
-$dupeUsers = ArrayMulti::duplicatesBy($rows, fn ($row) => strtolower((string) ($row['email'] ?? '')));
+$dupeUsers = ArrayMulti::duplicatesBy($rows, 'email');
 
 // Collapse one level
 $collapsed = ArrayMulti::collapse($data); // [1, 2, 3, [4, 5]]
@@ -305,6 +312,9 @@ $host = $config->get('db.host');
 
 - `ArrayMulti::flatten($array, 0)` keeps top-level values unchanged; `1` flattens one level; `INF` fully flattens.
 - `ArraySingle::avg()`, `sum()`, `isPositive()`, and `isNegative()` only consider numeric values (non-numeric values are ignored).
+- `ArraySingle::duplicates($values, true)` reports repeated `null` without conflating it with `false`, `0` or `''`.
+- Use `ArrayMulti::SORT_LOCALE` for locale-aware sorting instead of PHP's deprecated locale flag; non-C collation uses ICU and may differ from libc.
+- Unseeded `ArraySingle::shuffle()` uses secure randomness; seeded shuffles are reproducible but their exact order changed with the new engine.
 - `ArraySingle::paginate()` requires `page >= 1` and `perPage >= 1` (throws `InvalidArgumentException` otherwise).
 - Callback-based row helpers (`ArrayMulti::sortBy()`, `sum()`, `maxBy()`, `minBy()`) support `($row, $key)`.
 - `DotNotation` treats existing `null` keys/properties as present (does not fall back to defaults).

@@ -8,6 +8,16 @@ use Infocyph\ArrayKit\ArrayKit;
 use Infocyph\ArrayKit\Collection\LazyCollection;
 use Infocyph\ArrayKit\Config\LayeredLazyFileConfig;
 
+/**
+ * @param Closure(): void $beforeYield
+ * @return Generator<int, int>
+ */
+function batchADeferredSource(Closure $beforeYield): Generator
+{
+    $beforeYield();
+    yield 1;
+}
+
 function batchARemoveDirectory(string $path): void
 {
     if (is_file($path) || is_link($path)) {
@@ -20,7 +30,9 @@ function batchARemoveDirectory(string $path): void
         return;
     }
 
-    foreach (scandir($path) ?: [] as $entry) {
+    $entries = scandir($path);
+
+    foreach ($entries === false ? [] : $entries as $entry) {
         if ($entry === '.' || $entry === '..') {
             continue;
         }
@@ -38,7 +50,7 @@ it('bounds guarded traversal work across flat and wildcard inputs', function () 
         throwOnTooDeep: true,
     ))->toThrow(RuntimeException::class);
 
-    expect(fn () => DotNotation::getSafe(
+    expect(static fn(): mixed => DotNotation::getSafe(
         ['rows' => range(1, 10000)],
         'rows.*',
         maxNodes: 2,
@@ -60,6 +72,9 @@ it('shares wildcard node budgets and stops default resolution after exhaustion',
         maxNodes: 3,
     );
 
+    if (!is_array($result)) {
+        throw new RuntimeException('Expected an array result.');
+    }
     expect(count($result))->toBeLessThanOrEqual(3)
         ->and($defaults)->toBeLessThanOrEqual(3);
 });
@@ -70,7 +85,7 @@ it('advances guarded depth across wildcard traversal', function () {
         $value = [$value];
     }
 
-    expect(fn () => DotNotation::getSafe(
+    expect(static fn(): mixed => DotNotation::getSafe(
         ['rows' => [$value]],
         'rows.*.*.*.*.*.*.*.*.*.*.*.*',
         maxDepth: 2,
@@ -130,8 +145,15 @@ it('materializes known layered namespaces before exporting compiled config', fun
     try {
         $config = new LayeredLazyFileConfig($directory, namespaces: ['app']);
 
-        expect($config->exportCache($cache))->toBeTrue()
-            ->and(include $cache)->toBe(['app' => ['name' => 'source']]);
+        expect($config->exportCache($cache))->toBeTrue();
+        if (!is_file($cache)) {
+            throw new RuntimeException('Expected exported config cache.');
+        }
+        $contents = include $cache;
+        if (!is_array($contents)) {
+            throw new RuntimeException('Exported config must contain an array.');
+        }
+        expect($contents)->toBe(['app' => ['name' => 'source']]);
     } finally {
         batchARemoveDirectory($directory);
         if (is_file($cache)) {
@@ -144,17 +166,17 @@ it('preserves by-reference mutations through facade proxies', function () {
     $data = ['app' => ['name' => 'old'], 'remove' => true];
 
     expect(ArrayKit::dot()->set($data, 'app.name', 'new'))->toBeTrue()
-        ->and($data['app']['name'])->toBe('new');
+        ->and($data)->toBe(['app' => ['name' => 'new'], 'remove' => true]);
 
     ArrayKit::helper()->forget($data, 'remove');
 
     expect($data)->not->toHaveKey('remove');
 
     ArrayKit::dot()->fill($data, 'app.debug', true);
-    expect($data['app']['debug'])->toBeTrue();
+    expect($data)->toBe(['app' => ['name' => 'new', 'debug' => true]]);
 
     expect(ArrayKit::dot()->rename($data, 'app.debug', 'app.enabled'))->toBeTrue()
-        ->and($data['app']['enabled'])->toBeTrue();
+        ->and($data)->toBe(['app' => ['name' => 'new', 'enabled' => true]]);
 });
 
 it('replays terminal lazy source failures instead of presenting truncated success', function () {
@@ -166,7 +188,7 @@ it('replays terminal lazy source failures instead of presenting truncated succes
     foreach ([1, 2] as $attempt) {
         try {
             $lazy->all();
-            test()->fail("Traversal {$attempt} unexpectedly succeeded.");
+            \PHPUnit\Framework\Assert::fail("Traversal {$attempt} unexpectedly succeeded.");
         } catch (RuntimeException $error) {
             expect($error->getMessage())->toBe('source failure');
         }
@@ -174,13 +196,10 @@ it('replays terminal lazy source failures instead of presenting truncated succes
 });
 
 it('replays failures before the first lazy yield', function () {
-    $lazy = LazyCollection::from((function () {
-        if (true) {
-            throw new RuntimeException('initial failure');
-        }
-
-        yield 1;
-    })());
+    $source = batchADeferredSource(static function (): void {
+        throw new RuntimeException('initial failure');
+    });
+    $lazy = LazyCollection::from($source);
 
     expect(fn () => $lazy->all())->toThrow(RuntimeException::class, 'initial failure')
         ->and(fn () => $lazy->all())->toThrow(RuntimeException::class, 'initial failure');
@@ -216,7 +235,7 @@ it('shares safe dot budgets across multiple requested paths', function () {
     ))->toBe([
         'a.value' => 1,
         'b.value' => 'missing',
-    ])->and(fn () => DotNotation::getSafe(
+    ])->and(static fn(): mixed => DotNotation::getSafe(
         $data,
         ['a.value', 'b.value'],
         'missing',

@@ -91,6 +91,9 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return array<TKey, TValue>
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
     public function all(): array
     {
@@ -99,6 +102,7 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return self<int, array<int|string, TValue>>
+     * @throws \InvalidArgumentException
      */
     public function chunkLazy(int $size, bool $preserveKeys = false): self
     {
@@ -133,6 +137,9 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return Generator<TKey, TValue>
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
     public function cursor(): Generator
     {
@@ -160,7 +167,11 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return Traversable<TKey, TValue>
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
+    #[\Override]
     public function getIterator(): Traversable
     {
         return $this->cursor();
@@ -187,6 +198,7 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return self<TKey, TValue>
+     * @throws \InvalidArgumentException
      */
     public function take(int $limit): self
     {
@@ -248,6 +260,8 @@ final readonly class LazyCollection implements IteratorAggregate
      * Bind explicit Runwire runtime/request/scope instances to this collection.
      *
      * @return self<TKey, TValue>
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
      */
     public function withRunwire(
         RuntimeContext $runtime,
@@ -292,7 +306,15 @@ final readonly class LazyCollection implements IteratorAggregate
             $advancePending = false;
         }
 
-        return $sourceCursor->valid() ? [$sourceCursor->key(), $sourceCursor->current()] : null;
+        if (!$sourceCursor->valid()) {
+            return null;
+        }
+
+        // A valid generator has a current value of its declared yielded type, including null when allowed.
+        /** @var TSourceValue $value */
+        $value = $sourceCursor->current();
+
+        return [$sourceCursor->key(), $value];
     }
 
     /**
@@ -336,6 +358,7 @@ final readonly class LazyCollection implements IteratorAggregate
      * @param list<array{0: TSourceKey, 1: TSourceValue}> $cache
      * @param Generator<TSourceKey, TSourceValue>|null $sourceCursor
      * @return Generator<TSourceKey, TSourceValue>
+     * @throws \Throwable
      */
     private static function replayCursor(
         iterable $source,
@@ -395,6 +418,9 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return Generator<TKey, TValue>
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
     private function cursorWithBinding(?RunwireLazyBinding $binding): Generator
     {
@@ -410,20 +436,18 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return Generator<TKey, TValue>
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
     private function sourceCursorWithBinding(?RunwireLazyBinding $binding): Generator
     {
         $binding?->checkpoint();
 
         $factory = $this->factory;
-        $iterable = $factory($binding);
-        $iterator = (static function () use ($iterable): Generator {
-            yield from $iterable;
-        })();
-
         $processed = 0;
-        while ($iterator->valid()) {
-            yield $iterator->key() => $iterator->current();
+        foreach ($factory($binding) as $key => $value) {
+            yield $key => $value;
             $processed++;
 
             if (
@@ -432,8 +456,6 @@ final readonly class LazyCollection implements IteratorAggregate
             ) {
                 $binding->checkpoint();
             }
-
-            $iterator->next();
         }
     }
 }

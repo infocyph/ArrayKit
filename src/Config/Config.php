@@ -25,6 +25,8 @@ class Config
      * Hook-aware variant of fill().
      *
      * @param string|array<array-key, mixed> $key
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function fillWithHooks(string|array $key, mixed $value = null): bool
     {
@@ -74,6 +76,8 @@ class Config
      * Hook-aware variant of set().
      *
      * @param string|array<array-key, mixed>|null $key
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function setWithHooks(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {

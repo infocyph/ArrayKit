@@ -8,7 +8,7 @@ it('applies on get hook for a specific offset', function () {
     $collection = new HookedCollection(['title' => 'Hello']);
 
     // Hook to transform the title to uppercase on get
-    $collection->onGet('title', fn ($value) => strtoupper($value));
+    $collection->onGet('title', static fn(string $value): string => strtoupper($value));
 
     // Normal offsetGet triggers the hook:
     expect($collection['title'])->toBe('HELLO');
@@ -18,7 +18,7 @@ it('applies on set hook for a specific offset', function () {
     $collection = new HookedCollection;
 
     // Hook to append "!!!" to any new value set for offset "shout"
-    $collection->onSet('shout', fn ($value) => $value.'!!!');
+    $collection->onSet('shout', static fn(string $value): string => $value . '!!!');
 
     $collection['shout'] = 'Hey';
     expect($collection['shout'])->toBe('Hey!!!');
@@ -32,8 +32,8 @@ it('still behaves like a normal collection otherwise', function () {
 
 it('supports hooks for dot-notation keys', function () {
     $collection = new HookedCollection(['user' => ['name' => 'alice']]);
-    $collection->onGet('user.name', fn ($value) => strtoupper((string) $value));
-    $collection->onSet('user.role', fn ($value) => "Role: $value");
+    $collection->onGet('user.name', static fn(string $value): string => strtoupper($value));
+    $collection->onSet('user.role', static fn(string $value): string => "Role: $value");
 
     $collection['user.role'] = 'admin';
 
@@ -44,7 +44,7 @@ it('supports hooks for dot-notation keys', function () {
 
 it('can run pipeline operations without type errors', function () {
     $collection = new HookedCollection([1, 2, 3, 4]);
-    $filtered = $collection->filter(fn ($value) => $value % 2 === 0);
+    $filtered = $collection->filter(static fn(int $value): bool => $value % 2 === 0);
 
     expect($filtered)
         ->toBeInstanceOf(HookedCollection::class)

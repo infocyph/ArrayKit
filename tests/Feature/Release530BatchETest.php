@@ -12,6 +12,7 @@ use Infocyph\Runwire\Runtime\Enum\RuntimeDriver;
 use Infocyph\Runwire\RuntimeCapabilities;
 use Infocyph\Runwire\RuntimeContext;
 
+/** @throws InvalidArgumentException */
 function batchERuntime(bool $coroutines = false): RuntimeContext
 {
     return RuntimeContext::fromCapabilities(
@@ -28,6 +29,14 @@ function batchERuntime(bool $coroutines = false): RuntimeContext
     );
 }
 
+/**
+ * @template TKey of array-key
+ * @template TValue
+ * @param LazyCollection<TKey, TValue> $collection
+ * @return LazyCollection<TKey, TValue>
+ * @throws InvalidArgumentException
+ * @throws LogicException
+ */
 function batchEForwardBinding(
     LazyCollection $collection,
     RuntimeContext $runtime,
@@ -62,14 +71,20 @@ PHP;
     $code = str_replace('__SOURCE__', $source, $code);
     $process = proc_open([PHP_BINARY, '-r', $code], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
 
-    expect(is_resource($process))->toBeTrue();
+    if (!is_resource($process)) {
+        throw new RuntimeException('Unable to start fixture process.');
+    }
 
     $stdout = stream_get_contents($pipes[1]);
     $stderr = stream_get_contents($pipes[2]);
     fclose($pipes[1]);
     fclose($pipes[2]);
 
-    expect(proc_close($process))->toBe(0, $stdout . $stderr);
+    $exit = proc_close($process);
+    if ($stdout === false || $stderr === false) {
+        throw new RuntimeException('Unable to read fixture process output.');
+    }
+    expect($exit)->toBe(0, $stdout . $stderr);
 });
 
 it('keeps installed but unbound lazy collections on the ordinary path', function () {
@@ -152,7 +167,7 @@ it('checks cancellation before advancing the source after a checkpoint boundary'
             }
         }
 
-        test()->fail('Traversal unexpectedly completed after request cancellation.');
+        \PHPUnit\Framework\Assert::fail('Traversal unexpectedly completed after request cancellation.');
     } catch (CancelledException) {
         expect($seen)->toBe([1, 2])
             ->and($consumed)->toBe(2);
@@ -288,8 +303,8 @@ it('honors request cancellation while an active coroutine scope is bound without
         public int $factoryCalls = 0;
     };
 
-    expect(fn () => $coroutines->run(
-        function (CoroutineScope $scope) use ($runtime, $request, $state): array {
+    expect(static function () use ($coroutines, $runtime, $request, $state): void {
+        $coroutines->run(function (CoroutineScope $scope) use ($runtime, $request, $state): array {
             $scope->spawn(function () use ($request): void {
                 $request->cancel(CancellationReason::HOST_CANCELLED);
             });
@@ -303,8 +318,8 @@ it('honors request cancellation while an active coroutine scope is bound without
             )
                 ->withRunwire($runtime, $request, $scope, checkpointEvery: 1)
                 ->all();
-        },
-    ))->toThrow(CancelledException::class);
+        });
+    })->toThrow(CancelledException::class);
 
     expect($state->factoryCalls)->toBe(0)
         ->and($request->cancelled())->toBeTrue()

@@ -8,6 +8,7 @@ use Infocyph\ArrayKit\Array\ArrayMulti;
 use Infocyph\ArrayKit\Array\ArraySingle;
 use Infocyph\ArrayKit\Array\BaseArrayHelper;
 
+/** @api */
 class Pipeline
 {
     /**
@@ -40,6 +41,7 @@ class Pipeline
 
     /**
      * chunk the array (single-dim).
+     * @throws \InvalidArgumentException
      */
     public function chunk(int $size, bool $preserveKeys = false): Collection
     {
@@ -63,6 +65,7 @@ class Pipeline
      * (We treat $this->working as the *keys*, user passes an array of values.)
      *
      * @param array<array-key, mixed> $values
+     * @throws \InvalidArgumentException
      */
     public function combine(array $values): Collection
     {
@@ -75,6 +78,7 @@ class Pipeline
      * Count items grouped by value/callback buckets.
      *
      * @return array<int|string, int>
+     * @throws \InvalidArgumentException
      */
     public function countBy(callable|string|null $groupBy = null): array
     {
@@ -253,6 +257,7 @@ class Pipeline
 
     /**
      * Key rows by a derived key (last write wins on duplicates).
+     * @throws \InvalidArgumentException
      */
     public function keyBy(string|callable $keyBy): Collection
     {
@@ -351,6 +356,7 @@ class Pipeline
 
     /**
      * Return every n-th element, using ArraySingle::nth.
+     * @throws \InvalidArgumentException
      */
     public function nth(int $step, int $offset = 0): Collection
     {
@@ -392,6 +398,7 @@ class Pipeline
 
     /**
      * "Paginate" the array by slicing it into a smaller segment, using ArraySingle::paginate.
+     * @throws \InvalidArgumentException
      */
     public function paginate(int $page, int $perPage): Collection
     {
@@ -422,7 +429,10 @@ class Pipeline
         return $this->collection;
     }
 
-    /** Extract a column (optionally re-index) */
+    /**
+     * Extract a column (optionally re-index)
+     * @throws \InvalidArgumentException
+     */
     public function pluck(string $column, ?string $indexBy = null): Collection
     {
         $this->working = ArrayMulti::pluck($this->working, $column, $indexBy);
@@ -452,6 +462,7 @@ class Pipeline
      * Rename keys using a map or callback.
      *
      * @param array<array-key, int|string>|callable $mapper
+     * @throws \InvalidArgumentException
      */
     public function rekey(array|callable $mapper): Collection
     {
@@ -534,6 +545,7 @@ class Pipeline
 
     /**
      * Sort by a column or callback in ascending/descending order.
+     * @throws \RuntimeException
      */
     public function sortBy(string|callable $by, bool $desc = false, int $options = SORT_REGULAR): Collection
     {
@@ -546,6 +558,7 @@ class Pipeline
      * Sort rows by multiple column/callback criteria.
      *
      * @param array<int, array<int, mixed>> $criteria
+     * @throws \RuntimeException
      */
     public function sortByMany(array $criteria): Collection
     {
@@ -556,6 +569,7 @@ class Pipeline
 
     /**
      * Recursively sort the array by keys/values, using ArrayMulti::sortRecursive.
+     * @throws \RuntimeException
      */
     public function sortRecursive(int $options = SORT_REGULAR, bool $descending = false): Collection
     {
@@ -603,7 +617,10 @@ class Pipeline
         return $this->collection;
     }
 
-    /** Matrix transpose (rows ↔ columns) */
+    /**
+     * Matrix transpose (rows ↔ columns)
+     * @throws \InvalidArgumentException
+     */
     public function transpose(): Collection
     {
         $this->working = ArrayMulti::transpose($this->working);
@@ -733,6 +750,7 @@ class Pipeline
 
     /**
      * Filter rows by SQL-like pattern matching.
+     * @throws \RuntimeException
      */
     public function whereLike(string $key, string $pattern, bool $caseSensitive = false): Collection
     {

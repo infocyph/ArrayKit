@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Infocyph\ArrayKit\Tests\Feature;
+
 use Infocyph\ArrayKit\Array\ArraySharedOps;
 
 it('iterates with each and stops when callback returns false', function () {

@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Benchmarks;
 
 use Infocyph\ArrayKit\Array\ArraySingle;
-use Infocyph\ArrayKit\Array\ArraySingleOps;
+use Infocyph\ArrayKit\Array\ArrayValueSetOps;
 use PhpBench\Attributes\BeforeMethods;
 use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\ParamProviders;
 use PhpBench\Attributes\Revs;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(1)]
 #[Iterations(3)]
 #[BeforeMethods('setUp')]
@@ -36,19 +40,23 @@ final class ArrayValueSetBench
         }
     }
 
-    public function benchCanonicalFingerprintSet(): void
+    /** @return array<array-key, mixed> */
+    public function benchCanonicalFingerprintSet(): array
     {
         $seen = [];
         foreach ($this->values as $value) {
-            $seen[ArraySingleOps::fingerprint($value, true)] = true;
+            $seen[ArrayValueSetOps::fingerprint($value)] = true;
         }
+
+        return $seen;
     }
 
-    public function benchDigestWithVerifiedBuckets(): void
+    /** @return array<array-key, mixed> */
+    public function benchDigestWithVerifiedBuckets(): array
     {
         $buckets = [];
         foreach ($this->values as $value) {
-            $fingerprint = ArraySingleOps::fingerprint($value, true);
+            $fingerprint = ArrayValueSetOps::fingerprint($value);
             $digest = hash('xxh128', $fingerprint, true);
             if (!isset($buckets[$digest])) {
                 $buckets[$digest] = [$fingerprint];
@@ -60,6 +68,8 @@ final class ArrayValueSetBench
                 $buckets[$digest][] = $fingerprint;
             }
         }
+
+        return $buckets;
     }
 
     public function benchLooseNestedUnique(): void
@@ -85,7 +95,8 @@ final class ArrayValueSetBench
         ], true);
     }
 
-    public function benchStrictNestedScan(): void
+    /** @return array<array-key, mixed> */
+    public function benchStrictNestedScan(): array
     {
         $seen = [];
         foreach ($this->values as $value) {
@@ -93,6 +104,8 @@ final class ArrayValueSetBench
                 $seen[] = $value;
             }
         }
+
+        return $seen;
     }
 
     public function benchStrictNestedUnique(): void

@@ -14,6 +14,7 @@ it('detaches scalar and nested references for snapshots, changes and repeated re
     expect($config->snapshot('before'))->toBeTrue();
 
     $scalar = 5;
+    expect($scalar)->toBe(5);
     $nested['v'] = 30;
     expect($config->changed('before'))->toBeTrue()
         ->and($config->restore('before'))->toBeTrue()
@@ -48,6 +49,7 @@ it('detaches snapshot references across lazy and layered configuration owners', 
     );
     expect($lazy->snapshot())->toBeTrue();
     $lazyValue = 8;
+    expect($lazyValue)->toBe(8);
     expect($lazy->restore())->toBeTrue()
         ->and($lazy->get('app.v'))->toBe(1);
 
@@ -59,6 +61,7 @@ it('detaches snapshot references across lazy and layered configuration owners', 
     );
     $layered->snapshot();
     $layeredValue = 9;
+    expect($layeredValue)->toBe(9);
     expect($layered->restore())->toBeTrue()
         ->and($layered->get('app.v'))->toBe(2);
 });
@@ -106,6 +109,9 @@ PHP;
     $process->run();
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput());
     $result = json_decode($process->getOutput(), true, 512, JSON_THROW_ON_ERROR);
+    if (!is_array($result) || !is_int($result['growth'] ?? null)) {
+        throw new RuntimeException('Invalid snapshot worker result.');
+    }
     expect($result['growth'])->toBeLessThan(4 * 1024 * 1024)
         ->and($result['independent'])->toBeTrue()
         ->and($result['restored'])->toBe(1);
@@ -157,6 +163,9 @@ it('refreshes source-origin namespace state after a new generation is published'
             new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
             RecursiveIteratorIterator::CHILD_FIRST,
         ) as $entry) {
+            if (!$entry instanceof SplFileInfo) {
+                throw new RuntimeException('Unexpected directory entry.');
+            }
             $entry->isDir() ? rmdir($entry->getPathname()) : unlink($entry->getPathname());
         }
         rmdir($root);
@@ -186,16 +195,20 @@ it('discovers and returns canonical numeric namespace names in lazy and layered 
         expect($fresh->get('0.value'))->toBe('0');
 
         $layered = new LayeredLazyFileConfig($source, $cache, namespaces: ['0', '-1', '01']);
+        $all = $layered->all();
         expect($layered->get('0.value'))->toBe('0')
-            ->and($layered->all()[0]['value'])->toBe('0')
-            ->and($layered->all()[-1]['value'])->toBe('-1')
-            ->and($layered->all()['01']['value'])->toBe('01');
+            ->and($all[0] ?? null)->toBe(['value' => '0'])
+            ->and($all[-1] ?? null)->toBe(['value' => '-1'])
+            ->and($all['01'] ?? null)->toBe(['value' => '01']);
         $layered->warmNamespaceCache();
     } finally {
         foreach (new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
             RecursiveIteratorIterator::CHILD_FIRST,
         ) as $entry) {
+            if (!$entry instanceof SplFileInfo) {
+                throw new RuntimeException('Unexpected directory entry.');
+            }
             $entry->isDir() ? rmdir($entry->getPathname()) : unlink($entry->getPathname());
         }
         rmdir($root);

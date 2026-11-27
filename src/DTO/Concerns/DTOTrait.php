@@ -86,6 +86,8 @@ trait DTOTrait
      *
      * @param array<array-key, mixed> $values
      * @param array<string, string> $mapping
+     * @throws \InvalidArgumentException
+     * @throws \RuntimeException
      */
     public function hydrateNestedGuarded(
         array $values,
@@ -145,6 +147,8 @@ trait DTOTrait
      * configured cycle, depth and node limits.
      *
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
+     * @throws \RuntimeException
      */
     public function toArrayDeepGuarded(int $maxDepth = 64, int $maxNodes = 100000): array
     {
@@ -235,7 +239,7 @@ trait DTOTrait
         }
 
         $className = $type->getName();
-        if (is_callable([$className, 'create'])) {
+        if (class_exists($className) && is_callable([$className, 'create'])) {
             return $className::create($value);
         }
 

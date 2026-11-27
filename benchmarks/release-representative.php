@@ -26,7 +26,11 @@ $workloadSpecs = [
 $root = dirname(__DIR__);
 $worker = __DIR__ . '/release-workload.php';
 $buildDirectory = $root . '/build';
-$baselineDirectory = sys_get_temp_dir() . '/arraykit-release-baseline-' . getmypid();
+$pid = getmypid();
+if ($pid === false) {
+    throw new RuntimeException('Unable to determine benchmark process ID.');
+}
+$baselineDirectory = sys_get_temp_dir() . '/arraykit-release-baseline-' . $pid;
 
 if (!is_dir($buildDirectory) && !mkdir($buildDirectory, 0777, true)) {
     throw new RuntimeException('Unable to create release benchmark build directory.');
@@ -59,8 +63,8 @@ try {
 
     fwrite(STDOUT, sprintf(
         "Representative release benchmark generated for %s and %s.\n",
-        $baseline['environment']['release'],
-        $candidate['environment']['release'],
+        RELEASE_BASELINE_TAG . '@' . $baselineSha,
+        'candidate@' . $candidateSha,
     ));
 } finally {
     releaseRemoveBaseline($root, $baselineDirectory);
@@ -69,7 +73,10 @@ try {
 /**
  * @param array<string, mixed> $environment
  * @param list<array{name:string,operations:int,warmup:int}> $specs
- * @return array<string, mixed>
+ * @return array{schema_version:int,generated_at:string,environment:array<string,mixed>,workloads:list<array<string,mixed>>}
+ * @throws RuntimeException
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
  */
 function releaseBenchmarkDocument(
     string $root,
@@ -105,6 +112,9 @@ function releaseBenchmarkDocument(
 /**
  * @param array{name:string,operations:int,warmup:int} $spec
  * @return array<string, mixed>
+ * @throws \RuntimeException
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
  */
 function releaseBenchmarkWorkload(
     string $root,
@@ -150,7 +160,7 @@ function releaseBenchmarkWorkload(
 
     $medianRpm = releasePercentile($rpms, 50);
     $spread = $medianRpm > 0
-        ? ((max($rpms) - min($rpms)) / $medianRpm) * 100
+        ? ((max($rpms) - min($rpms)) / $medianRpm) * 100.0
         : 100.0;
 
     return [
@@ -175,7 +185,7 @@ function releaseBenchmarkWorkload(
             'error_rate' => $attempted > 0 ? $failed / $attempted : 0.0,
             'latency_ms' => [
                 'minimum' => $latencies === [] ? null : min($latencies),
-                'average' => $latencies === [] ? null : array_sum($latencies) / count($latencies),
+                'average' => $latencies === [] ? null : array_sum($latencies) / (float) count($latencies),
                 'p50' => releasePercentile($latencies, 50),
                 'p95' => releasePercentile($latencies, 95),
                 'p99' => releasePercentile($latencies, 99),
@@ -183,12 +193,12 @@ function releaseBenchmarkWorkload(
             ],
             'cpu' => [
                 'average_percent' => releaseAverage($cpuAverages),
-                'peak_percent' => $cpuPeaks === [] ? null : max($cpuPeaks),
+                'peak_percent' => max($cpuPeaks),
             ],
             'memory' => [
                 'average_mb' => releaseAverage($memoryAverages),
-                'peak_mb' => $memoryPeaks === [] ? null : max($memoryPeaks),
-                'growth_mb' => $memoryGrowth === [] ? null : max($memoryGrowth),
+                'peak_mb' => max($memoryPeaks),
+                'growth_mb' => max($memoryGrowth),
             ],
             'stability' => [
                 'status' => $failed === 0 && $spread <= RELEASE_STABILITY_SPREAD_PERCENT
@@ -213,6 +223,9 @@ function releaseBenchmarkWorkload(
  *     memory_peak_mb:float,
  *     memory_growth_mb:float
  * }
+ * @throws RuntimeException
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
  */
 function releaseBenchmarkTrial(
     string $root,
@@ -232,8 +245,9 @@ function releaseBenchmarkTrial(
             'opcache.enable_cli=1',
             '-d',
             'opcache.jit=0',
+            '-d',
+            'auto_prepend_file=' . $root . '/vendor/autoload.php',
             $worker,
-            $root,
             $workload,
             (string) $operations,
             (string) $warmup,
@@ -258,7 +272,7 @@ function releaseBenchmarkTrial(
             throw new RuntimeException('Release benchmark worker returned invalid JSON.');
         }
 
-        $results[] = $decoded;
+        $results[] = releaseValidateWorkerResult($decoded);
     }
 
     $elapsedSeconds = max((hrtime(true) - $startedAt) / 1_000_000_000, 0.000001);
@@ -273,18 +287,15 @@ function releaseBenchmarkTrial(
     $memoryPeak = [];
 
     foreach ($results as $result) {
-        $attempted += (int) ($result['attempted'] ?? 0);
-        $successful += (int) ($result['successful'] ?? 0);
-        $failed += (int) ($result['failed'] ?? 0);
-        $latencies = [
-            ...$latencies,
-            ...array_map('floatval', is_array($result['latencies_ms'] ?? null) ? $result['latencies_ms'] : []),
-        ];
-        $cpuSeconds += (float) ($result['cpu_seconds'] ?? 0.0);
-        $cpuPeaks[] = (float) ($result['cpu_percent'] ?? 0.0);
-        $memoryInitial[] = (float) ($result['memory_initial_mb'] ?? 0.0);
-        $memoryFinal[] = (float) ($result['memory_final_mb'] ?? 0.0);
-        $memoryPeak[] = (float) ($result['memory_peak_mb'] ?? 0.0);
+        $attempted += $result['attempted'];
+        $successful += $result['successful'];
+        $failed += $result['failed'];
+        $latencies = [...$latencies, ...$result['latencies_ms']];
+        $cpuSeconds += $result['cpu_seconds'];
+        $cpuPeaks[] = $result['cpu_percent'];
+        $memoryInitial[] = $result['memory_initial_mb'];
+        $memoryFinal[] = $result['memory_final_mb'];
+        $memoryPeak[] = $result['memory_peak_mb'];
     }
 
     $averageInitial = releaseAverage($memoryInitial) ?? 0.0;
@@ -294,14 +305,58 @@ function releaseBenchmarkTrial(
         'attempted' => $attempted,
         'successful' => $successful,
         'failed' => $failed,
-        'successful_rpm' => ($successful / $elapsedSeconds) * 60,
+        'successful_rpm' => ((float) $successful / (float) $elapsedSeconds) * 60.0,
         'latencies_ms' => $latencies,
-        'cpu_average_percent' => ($cpuSeconds / $elapsedSeconds) * 100,
+        'cpu_average_percent' => ($cpuSeconds / (float) $elapsedSeconds) * 100.0,
         'cpu_peak_percent' => $cpuPeaks === [] ? 0.0 : max($cpuPeaks),
         'memory_average_mb' => $averageFinal,
         'memory_peak_mb' => $memoryPeak === [] ? 0.0 : max($memoryPeak),
         'memory_growth_mb' => max(0.0, $averageFinal - $averageInitial),
     ];
+}
+
+/**
+ * @param array<array-key,mixed> $result
+ * @return array{attempted:int,successful:int,failed:int,latencies_ms:list<float>,cpu_seconds:float,cpu_percent:float,memory_initial_mb:float,memory_final_mb:float,memory_peak_mb:float}
+ * @throws RuntimeException
+ */
+function releaseValidateWorkerResult(array $result): array
+{
+    $attempted = $result['attempted'] ?? null;
+    $successful = $result['successful'] ?? null;
+    $failed = $result['failed'] ?? null;
+    $rawLatencies = $result['latencies_ms'] ?? null;
+    if (!is_int($attempted) || !is_int($successful) || !is_int($failed)
+        || $attempted < 0 || $successful < 0 || $failed < 0
+        || $attempted !== $successful + $failed
+        || !is_array($rawLatencies) || !array_is_list($rawLatencies)
+        || count($rawLatencies) !== $attempted
+    ) {
+        throw new RuntimeException('Release benchmark worker returned invalid operation counts or latency samples.');
+    }
+    $latencies = array_map(releaseMetric(...), $rawLatencies);
+
+    return [
+        'attempted' => $attempted,
+        'successful' => $successful,
+        'failed' => $failed,
+        'latencies_ms' => $latencies,
+        'cpu_seconds' => releaseMetric($result['cpu_seconds'] ?? null),
+        'cpu_percent' => releaseMetric($result['cpu_percent'] ?? null),
+        'memory_initial_mb' => releaseMetric($result['memory_initial_mb'] ?? null),
+        'memory_final_mb' => releaseMetric($result['memory_final_mb'] ?? null),
+        'memory_peak_mb' => releaseMetric($result['memory_peak_mb'] ?? null),
+    ];
+}
+
+/** @throws RuntimeException */
+function releaseMetric(mixed $value): float
+{
+    if ((!is_int($value) && !is_float($value)) || !is_finite((float) $value) || $value < 0) {
+        throw new RuntimeException('Release benchmark worker returned an invalid numeric metric.');
+    }
+
+    return (float) $value;
 }
 
 /**
@@ -337,7 +392,7 @@ function releaseEnvironment(): array
         'php_sapi' => PHP_SAPI,
         'operating_system' => $operatingSystem,
         'cpu_model' => $cpuModel,
-        'memory_limit' => (string) ini_get('memory_limit'),
+        'memory_limit' => ini_get('memory_limit'),
         'opcache' => 'cli-enabled',
         'jit' => false,
         'xdebug' => extension_loaded('xdebug'),
@@ -346,11 +401,13 @@ function releaseEnvironment(): array
     ];
 }
 
+/** @param list<float> $values */
 function releaseAverage(array $values): ?float
 {
-    return $values === [] ? null : array_sum($values) / count($values);
+    return $values === [] ? null : array_sum($values) / (float) count($values);
 }
 
+/** @param list<float> $values */
 function releasePercentile(array $values, int $percentile): ?float
 {
     if ($values === []) {
@@ -358,12 +415,21 @@ function releasePercentile(array $values, int $percentile): ?float
     }
 
     sort($values, SORT_NUMERIC);
-    $index = (int) ceil(($percentile / 100) * count($values)) - 1;
+    $index = (int) ceil(((float) $percentile / 100.0) * (float) count($values)) - 1;
     $index = max(0, min(count($values) - 1, $index));
 
-    return (float) $values[$index];
+    return $values[$index];
 }
 
+/**
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\ProcessStartFailedException
+ * @throws \Symfony\Component\Process\Exception\RuntimeException
+ * @throws \Symfony\Component\Process\Exception\ProcessTimedOutException
+ * @throws \Symfony\Component\Process\Exception\ProcessSignaledException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
+ * @throws RuntimeException
+ */
 function releasePrepareBaseline(string $root, string $baselineDirectory): void
 {
     releaseRemoveBaseline($root, $baselineDirectory);
@@ -396,6 +462,16 @@ function releasePrepareBaseline(string $root, string $baselineDirectory): void
     ], $baselineDirectory, 240);
 }
 
+/**
+ * @param list<string> $command
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
+ * @throws \Symfony\Component\Process\Exception\ProcessStartFailedException
+ * @throws \Symfony\Component\Process\Exception\RuntimeException
+ * @throws \Symfony\Component\Process\Exception\ProcessTimedOutException
+ * @throws \Symfony\Component\Process\Exception\ProcessSignaledException
+ * @throws \RuntimeException
+ */
 function releaseProcess(array $command, string $workingDirectory, int $timeout = 120): string
 {
     $process = new Process($command, $workingDirectory, ['XDEBUG_MODE' => 'off']);
@@ -413,6 +489,14 @@ function releaseProcess(array $command, string $workingDirectory, int $timeout =
     return $process->getOutput();
 }
 
+/**
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
+ * @throws \Symfony\Component\Process\Exception\ProcessStartFailedException
+ * @throws \Symfony\Component\Process\Exception\RuntimeException
+ * @throws \Symfony\Component\Process\Exception\ProcessTimedOutException
+ * @throws \Symfony\Component\Process\Exception\ProcessSignaledException
+ */
 function releaseRemoveBaseline(string $root, string $baselineDirectory): void
 {
     if (!is_dir($baselineDirectory)) {
@@ -426,14 +510,19 @@ function releaseRemoveBaseline(string $root, string $baselineDirectory): void
     $remove->setTimeout(60);
     $remove->run();
 
-    if (is_dir($baselineDirectory)) {
-        releaseRemoveDirectory($baselineDirectory);
-    }
+    clearstatcache(true, $baselineDirectory);
+    releaseRemoveDirectory($baselineDirectory);
 }
 
 function releaseRemoveDirectory(string $directory): void
 {
-    foreach (scandir($directory) ?: [] as $entry) {
+    if (!is_dir($directory)) {
+        return;
+    }
+
+    $entries = scandir($directory);
+
+    foreach ($entries === false ? [] : $entries as $entry) {
         if ($entry === '.' || $entry === '..') {
             continue;
         }
@@ -451,6 +540,7 @@ function releaseRemoveDirectory(string $directory): void
 
 /**
  * @param array<string, mixed> $document
+ * @throws \RuntimeException
  */
 function releaseWriteJson(string $path, array $document): void
 {

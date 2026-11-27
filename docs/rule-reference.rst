@@ -185,6 +185,8 @@ ArraySharedOps (Internal)
 
 .. code-block:: php
 
+    public static function decrementDepth(float|int $depth): float|int
+
     public static function each(array $array, callable $callback): array
     public static function every(array $array, callable $callback): bool
     public static function partition(array $array, callable $callback): array
@@ -255,6 +257,9 @@ ArraySingle
 
 ArrayMulti
 ----------------------------------
+
+The public ``ArrayMulti::SORT_LOCALE`` constant has integer value 5. Use it
+for locale-aware sorting; see :doc:`array-helpers` for ICU requirements.
 
 .. code-block:: php
 

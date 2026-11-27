@@ -13,4 +13,9 @@ final class Release530BatchDUser
     public Release530BatchDAddress $address;
 
     public mixed $payload = null;
+
+    public function __construct()
+    {
+        $this->address = new Release530BatchDAddress();
+    }
 }

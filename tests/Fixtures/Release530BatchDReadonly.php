@@ -10,5 +10,5 @@ final class Release530BatchDReadonly
 {
     use DTOTrait;
 
-    public readonly string $name;
+    public function __construct(public readonly string $name = '') {}
 }

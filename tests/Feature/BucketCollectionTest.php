@@ -13,6 +13,7 @@ it('serializes arrayable input only once', function () {
     $source = new class implements JsonSerializable {
         public int $calls = 0;
 
+        #[Override]
         public function jsonSerialize(): mixed
         {
             $this->calls++;
@@ -33,11 +34,14 @@ it('supports array access', function () {
 
 it('supports iteration', function () {
     $collection = new Collection(['a' => 1, 'b' => 2]);
-    $keys = [];
+    $items = [];
     foreach ($collection as $key => $val) {
-        $keys[] = $key;
+        if (!is_int($val)) {
+            throw new UnexpectedValueException('Expected integer fixture value.');
+        }
+        $items[$key] = $val;
     }
-    expect($keys)->toBe(['a', 'b']);
+    expect($items)->toBe(['a' => 1, 'b' => 2]);
 });
 
 it('supports nested iteration without pointer side effects', function () {
@@ -46,6 +50,9 @@ it('supports nested iteration without pointer side effects', function () {
 
     foreach ($collection as $outerKey => $outerValue) {
         foreach ($collection as $innerKey => $innerValue) {
+            if (!is_int($outerValue) || !is_int($innerValue)) {
+                throw new UnexpectedValueException('Expected integer collection values.');
+            }
             $pairs[] = [$outerKey, $innerKey, $outerValue + $innerValue];
         }
     }
@@ -65,7 +72,7 @@ it('provides a merge method', function () {
 
 it('can filter and return a new collection', function () {
     $collection = new Collection([1, 2, 3, 4]);
-    $even = $collection->filter(fn ($val) => $val % 2 === 0);
+    $even = $collection->filter(static fn(int $val): bool => $val % 2 === 0);
     expect($even->all())->toBe([1 => 2, 3 => 4]);
 });
 

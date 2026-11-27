@@ -11,6 +11,8 @@ use Infocyph\ArrayKit\Concerns\HookTrait;
  * Class HookedCollection
  *
  * A collection that supports get/set hooks for dynamic transformations.
+ *
+ * @api
  */
 class HookedCollection extends Collection
 {
@@ -61,6 +63,7 @@ class HookedCollection extends Collection
      *
      * @param mixed $offset The array key
      * @param mixed $value The value to set
+     * @throws \InvalidArgumentException
      */
     #[\Override]
     public function offsetSet(mixed $offset, mixed $value): void

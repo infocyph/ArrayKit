@@ -13,6 +13,7 @@ use Infocyph\Runwire\Runtime\RuntimeEnvironment;
 use Infocyph\Runwire\RuntimeContext;
 use Infocyph\Runwire\RuntimeOptions;
 
+/** @throws InvalidArgumentException */
 function batchFRuntime(RuntimeDriver $driver): RuntimeContext
 {
     $environment = new RuntimeEnvironment(
@@ -103,7 +104,7 @@ it('does not retain request-scoped config or cancellation state across repeated 
                     })
                     ->all();
 
-                test()->fail('Cancelled worker cycle unexpectedly completed.');
+                \PHPUnit\Framework\Assert::fail('Cancelled worker cycle unexpectedly completed.');
             } catch (CancelledException) {
                 expect($seen)->toBe([$tenant, $tenant]);
             }

@@ -92,7 +92,7 @@ body:
     id: php_version
     attributes:
       label: PHP version
-      placeholder: e.g. 8.4.13
+      placeholder: e.g. 8.6.0
     validations:
       required: true
 

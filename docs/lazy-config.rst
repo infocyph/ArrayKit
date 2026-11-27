@@ -183,7 +183,7 @@ Read from the warmed cache on later requests:
     // Exact scalar reads can come from the active .arraykit-flat.php without loading db.php.
     $host = $config->get('db.host');
 
-    // Structural reads load bootstrap/cache/config/db.php when available.
+    // Structural reads load db.php from the active cache generation when available.
     $database = $config->get('db');
 
 Important lazy-cache details:
@@ -193,6 +193,10 @@ Important lazy-cache details:
 - Source-backed warm-up rereads current source/environment values; explicit in-memory runtime overrides remain authoritative.
 - ``flushNamespaceCache()`` publishes a generation with the selected cached namespaces removed; unrelated root files are preserved.
 - Namespace and generated cache PHP files are trusted deployment-owned inputs, not a sandbox boundary.
+- A resolved namespace file that is no longer readable raises
+  ``UnexpectedValueException`` rather than being marked loaded. A file that
+  returns a non-array also raises this exception. For generated-cache fallback,
+  see :doc:`config-layering`.
 - Prefer deployment/bootstrap/admin warm-up, not request-time regeneration.
 - Retire old generation directories only after workers that may still reference them have been replaced.
 

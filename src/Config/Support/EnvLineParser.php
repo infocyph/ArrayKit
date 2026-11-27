@@ -15,6 +15,7 @@ final class EnvLineParser
 
     /**
      * @return array<string, string|null>
+     * @throws \UnexpectedValueException
      */
     public static function parseContents(string $contents): array
     {
@@ -24,6 +25,7 @@ final class EnvLineParser
     /**
      * @param iterable<int, string> $lines
      * @return array<string, string|null>
+     * @throws \UnexpectedValueException
      */
     public static function parseLines(iterable $lines): array
     {
@@ -52,6 +54,9 @@ final class EnvLineParser
         return $items;
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     private static function assertQuotedValueRemainder(string $remainder): void
     {
         $remainder = trim($remainder);
@@ -129,6 +134,9 @@ final class EnvLineParser
         return $value !== '' && ($value[0] === '"' || $value[0] === '\'') ? $value[0] : null;
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     private static function parseQuotedValue(string $value, string $quote): string
     {
         $length = strlen($value);
@@ -156,6 +164,9 @@ final class EnvLineParser
         throw new UnexpectedValueException('Unclosed quoted environment value.');
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     private static function parseValue(string $value): string
     {
         if ($value === '') {
@@ -210,7 +221,7 @@ final class EnvLineParser
     {
         $length = strlen($value);
         for ($index = 0; $index < $length; $index++) {
-            if ($value[$index] === '#' && $index > 0 && str_contains(" \t\n\r\0\x0B", $value[$index - 1])) {
+            if ($value[$index] === '#' && $index > 0 && in_array($value[$index - 1], [' ', "\t", "\n", "\r", "\0", "\x0B"], true)) {
                 return substr($value, 0, $index);
             }
         }

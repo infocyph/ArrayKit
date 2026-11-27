@@ -29,6 +29,7 @@ Contents
     lifecycle
     traits-and-helpers
     migration
+    release-5.4.0
     release-5.3.0
     rule-reference
 

@@ -7,6 +7,7 @@ namespace Infocyph\ArrayKit\Array;
 use Infocyph\ArrayKit\Array\Concerns\ArrayMultiQuerySortTrait;
 use InvalidArgumentException;
 
+/** @api */
 class ArrayMulti
 {
     use ArrayMultiQuerySortTrait;
@@ -14,6 +15,7 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function chunk(array $array, int $size, bool $preserveKeys = false): array
     {
@@ -68,6 +70,7 @@ class ArrayMulti
      * Safe depth calculation with recursion/node guards.
      *
      * @param array<array-key, mixed> $array
+     * @throws \RuntimeException
      */
     public static function depthGuarded(
         array $array,
@@ -167,6 +170,7 @@ class ArrayMulti
      *
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     public static function flattenGuarded(
         array $array,
@@ -230,7 +234,6 @@ class ArrayMulti
     public static function only(array $array, array|string $keys): array
     {
         $result = [];
-        /** @var array<int, int|string> $pickKeys */
         $pickKeys = (array) $keys;
         $pick = array_flip($pickKeys);
 
@@ -257,7 +260,7 @@ class ArrayMulti
 
     /**
      * @param array<array-key, mixed> $array
-     * @return array<array-key, mixed>
+     * @return array{array<array-key, mixed>, array<array-key, mixed>}
      */
     public static function partition(array $array, callable $callback): array
     {
@@ -283,6 +286,7 @@ class ArrayMulti
      * @param array<array-key, mixed> $array
      * @param array<int|string, int|string>|callable $mapper
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function rekey(array $array, array|callable $mapper): array
     {
@@ -331,6 +335,7 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $matrix
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function transpose(array $matrix): array
     {
@@ -378,6 +383,7 @@ class ArrayMulti
 
     /**
      * @phpstan-impure
+     * @throws \RuntimeException
      */
     private static function consumeTraversalNode(
         int &$visitedNodes,
@@ -414,6 +420,7 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     private static function flattenIntoGuarded(
         array $array,
@@ -460,6 +467,7 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $item
      * @param array<int, mixed> $result
+     * @throws \RuntimeException
      */
     private static function flattenNestedGuarded(
         array $item,
@@ -487,7 +495,7 @@ class ArrayMulti
 
         foreach (self::flattenIntoGuarded(
             $item,
-            $depth - 1,
+            ArraySharedOps::decrementDepth($depth),
             $currentDepth + 1,
             $visitedNodes,
             $maxDepth,
@@ -501,6 +509,7 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $item
      * @param array<int, mixed> $result
+     * @throws \RuntimeException
      */
     private static function flattenOneLevelGuarded(
         array $item,
@@ -534,9 +543,12 @@ class ArrayMulti
      */
     private static function flattenValues(array $array, float|int $depth): array
     {
-        return $depth === 1 ? array_values($array) : static::flatten($array, $depth - 1);
+        return $depth === 1 ? array_values($array) : static::flatten($array, ArraySharedOps::decrementDepth($depth));
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function handleTraversalLimit(bool $throwOnTooDeep, string $message): void
     {
         if ($throwOnTooDeep) {
@@ -562,6 +574,7 @@ class ArrayMulti
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \RuntimeException
      */
     private static function measureDepthGuarded(
         array $array,
@@ -608,6 +621,9 @@ class ArrayMulti
         return $maxNodes > 0 && $visitedNodes >= $maxNodes;
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function traversalDepthAllowed(
         int $currentDepth,
         int $maxDepth,
@@ -625,6 +641,7 @@ class ArrayMulti
     /**
      * @param list<array-key> $keys
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     private static function validatedMatrixRow(mixed $row, array $keys): array
     {

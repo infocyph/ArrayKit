@@ -10,6 +10,10 @@ use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\ParamProviders;
 use PhpBench\Attributes\Revs;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(1)]
 #[Iterations(3)]
 #[BeforeMethods('setUp')]
@@ -24,7 +28,16 @@ final class ConfigBench
 
     private Config $uncached;
 
-    /** @param array{path:string, reads:int} $params */
+    public function __construct()
+    {
+        $this->cached = new Config();
+        $this->uncached = new Config();
+    }
+
+    /**
+     * @param array{path:string, reads:int} $params
+     * @throws \RuntimeException
+     */
     public function setUp(array $params): void
     {
         $items = [
@@ -59,16 +72,27 @@ final class ConfigBench
         }
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     public function benchFill(): void
     {
         $this->cached->fill('one.two.added', 1);
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function benchForget(): void
     {
         $this->cached->forget('one.two.three');
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     public function benchSet(): void
     {
         $this->cached->set('one.two.value', 1);

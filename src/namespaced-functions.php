@@ -41,6 +41,7 @@ if (!function_exists(__NAMESPACE__ . '\\array_set')) {
     /**
      * @param array<array-key, mixed> $array
      * @param string|array<int|string, mixed>|null $key
+     * @throws \InvalidArgumentException
      */
     function array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
     {
@@ -70,6 +71,7 @@ if (!function_exists(__NAMESPACE__ . '\\env')) {
 }
 
 if (!function_exists(__NAMESPACE__ . '\\dotenv')) {
+    /** @return ModuleProxy<\Infocyph\ArrayKit\Config\EnvParser> */
     function dotenv(): ModuleProxy
     {
         return ArrayKit::dotenv();

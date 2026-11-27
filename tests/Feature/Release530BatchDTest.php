@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Infocyph\ArrayKit\Tests\Feature;
+
 use Infocyph\ArrayKit\Collection\LazyCollection;
 use Infocyph\ArrayKit\Tests\Fixtures\Release530BatchDAddress;
 use Infocyph\ArrayKit\Tests\Fixtures\Release530BatchDInherited;
@@ -99,7 +101,7 @@ it('hydrates typed nested DTOs through the guarded entry point', function () {
         'payload' => ['roles' => ['admin', 'editor']],
     ]);
 
-    expect($dto->address)->toBeInstanceOf(Release530BatchDAddress::class)
+    expect(get_class($dto->address))->toBe(Release530BatchDAddress::class)
         ->and($dto->address->city)->toBe('Dhaka')
         ->and($dto->payload)->toBe(['roles' => ['admin', 'editor']]);
 });
@@ -114,7 +116,7 @@ it('includes inherited public state in guarded deep export', function () {
 });
 
 it('preserves readonly hydration behavior when the trait owns the property scope', function () {
-    $dto = new Release530BatchDReadonly();
+    $dto = new \ReflectionClass(Release530BatchDReadonly::class)->newInstanceWithoutConstructor();
     $dto->hydrateNestedGuarded(['name' => 'fixed']);
 
     expect($dto->name)->toBe('fixed')

@@ -13,6 +13,10 @@ use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\Revs;
 use PhpBench\Attributes\Subject;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(500)]
 #[Iterations(5)]
 #[BeforeMethods('setUp')]
@@ -20,20 +24,35 @@ final class CoreBench
 {
     private Config $config;
 
+    /** @var array<string, mixed> */
     private array $dot = [];
 
+    /** @var list<array{id:int,name:string,scores:list<int>}> */
     private array $nested = [];
 
+    /** @var list<array{id:int,role?:string|null}> */
     private array $queryRows = [];
 
+    /** @var list<array{id:int,group:string,role:string|null}> */
     private array $queryRowsLarge = [];
 
+    /** @var list<int> */
     private array $single = [];
 
+    /** @var array<string,int> */
     private array $singleAssoc = [];
 
+    /** @var list<array{id:int,payload:string}> */
     private array $uniqueNestedLarge = [];
 
+    public function __construct()
+    {
+        $this->config = new Config();
+    }
+
+    /**
+     * @throws \RuntimeException
+     */
     public function setUp(): void
     {
         $this->single = [
@@ -124,12 +143,18 @@ final class CoreBench
         ArrayMulti::flatten([[[[1, 2], 3], [4, [5, [6]]]], 7]);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     #[Subject]
     public function benchArrayMultiKeyBy(): void
     {
         ArrayMulti::keyBy($this->nested, 'id');
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     #[Subject]
     public function benchArrayMultiKeyBy10k(): void
     {
@@ -164,12 +189,18 @@ final class CoreBench
         ArrayMulti::whereIn($this->queryRows, 'role', [null], true);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     #[Subject]
     public function benchArraySingleCountBy(): void
     {
         ArraySingle::countBy($this->single);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     #[Subject]
     public function benchArraySingleNth(): void
     {

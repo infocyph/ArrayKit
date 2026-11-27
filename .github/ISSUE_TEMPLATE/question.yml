@@ -47,7 +47,7 @@ body:
     attributes:
       label: Environment
       description: Include package, PHP, Composer, OS, extensions or CI details only when relevant.
-      placeholder: Package 2.4.1, PHP 8.4, Composer 2.9, Ubuntu 24.04...
+      placeholder: Package 2.4.1, PHP 8.6, Composer 2.9, Ubuntu 24.04...
 
   - type: textarea
     id: additional

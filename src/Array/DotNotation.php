@@ -6,10 +6,14 @@ namespace Infocyph\ArrayKit\Array;
 
 use Infocyph\ArrayKit\Array\Concerns\DotNotationPublicApiTrait;
 
+/** @api */
 class DotNotation
 {
     use DotNotationPublicApiTrait;
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function canResolveSafeKey(int $visitedNodes, int $maxNodes, bool $throwOnTooDeep): bool
     {
         if ($maxNodes <= 0 || $visitedNodes < $maxNodes) {
@@ -107,6 +111,9 @@ class DotNotation
         return self::resolveValue($target, $key, $default);
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function getValueSafe(
         mixed $target,
         int|string $key,
@@ -151,6 +158,7 @@ class DotNotation
      *
      * @param array<array-key, mixed> $target
      * @param array<int, string> $segments
+     * @throws \InvalidArgumentException
      */
     private static function handleWildcardSet(
         array &$target,
@@ -170,6 +178,9 @@ class DotNotation
         }
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     private static function hasWritableObjectProperty(object $target, string $propertyName): bool
     {
         $propertyExists = property_exists($target, $propertyName);
@@ -272,6 +283,7 @@ class DotNotation
      * Sets a value in the target array/object using dot notation.
      *
      * @param array<array-key, mixed> $target
+     * @throws \InvalidArgumentException
      */
     private static function setValue(array &$target, string $key, mixed $value, bool $overwrite): void
     {
@@ -292,6 +304,7 @@ class DotNotation
      *
      * @param array<array-key, mixed> &$target
      * @param array<int, string> $segments
+     * @throws \InvalidArgumentException
      */
     private static function setValueArray(
         array &$target,
@@ -318,6 +331,7 @@ class DotNotation
 
     /**
      * @param array<int, string> $segments
+     * @throws \InvalidArgumentException
      */
     private static function setValueBySegments(
         mixed &$target,
@@ -360,6 +374,7 @@ class DotNotation
      * Sets a value in a target that is not an array or object.
      *
      * @param array<int, string> $segments
+     * @throws \InvalidArgumentException
      */
     private static function setValueFallback(
         mixed &$target,
@@ -377,7 +392,7 @@ class DotNotation
         $target = [];
         if ($position < count($segments)) {
             self::setValueBySegments($target[$segment], $segments, $position, $value, $overwrite);
-        } elseif ($overwrite) {
+        } else {
             $target[$segment] = $value;
         }
     }
@@ -386,9 +401,10 @@ class DotNotation
      * Sets a value in an object using dot-notation segments.
      *
      * @param array<int, string> $segments
+     * @throws \InvalidArgumentException
      */
     private static function setValueObject(
-        object &$target,
+        object $target,
         string $segment,
         array $segments,
         int $position,
@@ -429,6 +445,7 @@ class DotNotation
      * Traverses the target array/object to retrieve a value using dot notation.
      *
      * @param array<int, string> $segments
+     * @throws \RuntimeException
      */
     private static function traverseGet(mixed $target, array $segments, mixed $default, object $missing): mixed
     {
@@ -443,6 +460,7 @@ class DotNotation
 
     /**
      * @param array<int, string> $segments
+     * @throws \RuntimeException
      */
     private static function traverseGetWithLimits(
         mixed $target,

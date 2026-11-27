@@ -12,6 +12,10 @@ use PhpBench\Attributes\ParamProviders;
 use PhpBench\Attributes\RetryThreshold;
 use PhpBench\Attributes\Revs;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(3)]
 #[Iterations(5)]
 #[RetryThreshold(100)]
@@ -56,9 +60,9 @@ final class MembershipCrossoverBench
         ArraySingle::containsAll($this->haystack, $this->allNeedles, true);
     }
 
-    public function benchContainsAllScan(): void
+    public function benchContainsAllScan(): bool
     {
-        array_all(
+        return array_all(
             $this->allNeedles,
             fn(int $needle): bool => in_array($needle, $this->haystack, true),
         );
@@ -69,9 +73,9 @@ final class MembershipCrossoverBench
         ArraySingle::containsAny($this->haystack, $this->needles, true);
     }
 
-    public function benchContainsAnyScan(): void
+    public function benchContainsAnyScan(): bool
     {
-        array_any(
+        return array_any(
             $this->needles,
             fn(int $needle): bool => in_array($needle, $this->haystack, true),
         );
@@ -82,7 +86,8 @@ final class MembershipCrossoverBench
         ArraySingle::diff($this->haystack, $this->needles, true);
     }
 
-    public function benchDiffScan(): void
+    /** @return array<array-key, mixed> */
+    public function benchDiffScan(): array
     {
         $results = [];
         foreach ($this->haystack as $key => $value) {
@@ -90,6 +95,8 @@ final class MembershipCrossoverBench
                 $results[$key] = $value;
             }
         }
+
+        return $results;
     }
 
     public function benchIntersectAdaptive(): void
@@ -97,7 +104,8 @@ final class MembershipCrossoverBench
         ArraySingle::intersect($this->haystack, $this->needles, true);
     }
 
-    public function benchIntersectScan(): void
+    /** @return array<array-key, mixed> */
+    public function benchIntersectScan(): array
     {
         $results = [];
         foreach ($this->haystack as $key => $value) {
@@ -105,6 +113,8 @@ final class MembershipCrossoverBench
                 $results[$key] = $value;
             }
         }
+
+        return $results;
     }
 
     public function benchWhereInAdaptive(): void
@@ -112,7 +122,8 @@ final class MembershipCrossoverBench
         ArrayMulti::whereIn($this->rows, 'id', $this->needles, true);
     }
 
-    public function benchWhereInScan(): void
+    /** @return array<array-key, mixed> */
+    public function benchWhereInScan(): array
     {
         $results = [];
         foreach ($this->rows as $key => $row) {
@@ -120,6 +131,8 @@ final class MembershipCrossoverBench
                 $results[$key] = $row;
             }
         }
+
+        return $results;
     }
 
     /** @return array<string, array{size:int, distribution:string}> */

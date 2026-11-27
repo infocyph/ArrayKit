@@ -46,6 +46,6 @@ body:
     attributes:
       label: Environment details
       description: PHP version, Composer version, OS, CI provider (if relevant).
-      placeholder: PHP 8.3, Composer 2.9, Ubuntu 24.04...
+      placeholder: PHP 8.6, Composer 2.9, Ubuntu 24.04...
     validations:
       required: true

@@ -30,7 +30,7 @@ use Infocyph\ArrayKit\Facade\ModuleProxy;
 final class ArrayKit
 {
     /**
-     * @var array<class-string, ModuleProxy>
+     * @var array<class-string, ModuleProxy<object>>
      */
     private static array $moduleProxies = [];
 
@@ -43,6 +43,7 @@ final class ArrayKit
 
     /**
      * @param array<array-key, mixed> $items
+     * @throws \RuntimeException
      */
     public static function config(array $items = []): Config
     {
@@ -54,21 +55,25 @@ final class ArrayKit
         return $config;
     }
 
+    /** @return ModuleProxy<DotNotation> */
     public static function dot(): ModuleProxy
     {
         return self::proxy(DotNotation::class);
     }
 
+    /** @return ModuleProxy<EnvParser> */
     public static function dotenv(): ModuleProxy
     {
         return self::proxy(EnvParser::class);
     }
 
+    /** @return ModuleProxy<Environment> */
     public static function env(): ModuleProxy
     {
         return self::proxy(Environment::class);
     }
 
+    /** @return ModuleProxy<BaseArrayHelper> */
     public static function helper(): ModuleProxy
     {
         return self::proxy(BaseArrayHelper::class);
@@ -99,6 +104,7 @@ final class ArrayKit
         return new LazyFileConfig($directory, $extension, $items, $namespaceCacheDirectory);
     }
 
+    /** @return ModuleProxy<ArrayMulti> */
     public static function multi(): ModuleProxy
     {
         return self::proxy(ArrayMulti::class);
@@ -109,16 +115,23 @@ final class ArrayKit
         return Collection::make($data)->process();
     }
 
+    /** @return ModuleProxy<ArraySingle> */
     public static function single(): ModuleProxy
     {
         return self::proxy(ArraySingle::class);
     }
 
     /**
-     * @param class-string $className
+     * @template T of object
+     * @param class-string<T> $className
+     * @return ModuleProxy<T>
      */
     private static function proxy(string $className): ModuleProxy
     {
-        return self::$moduleProxies[$className] ?? self::$moduleProxies[$className] = new ModuleProxy($className);
+        // The cache key is the same class string used to construct each proxy.
+        /** @var ModuleProxy<T> $proxy */
+        $proxy = self::$moduleProxies[$className] ?? self::$moduleProxies[$className] = new ModuleProxy($className);
+
+        return $proxy;
     }
 }

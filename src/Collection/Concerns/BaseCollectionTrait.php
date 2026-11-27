@@ -118,6 +118,7 @@ trait BaseCollectionTrait
      *
      * @param string $key The key of the item to set.
      * @param mixed $value The value to set.
+     * @throws \InvalidArgumentException
      */
     public function __set(string $key, mixed $value): void
     {
@@ -364,7 +365,7 @@ trait BaseCollectionTrait
     public function jsonSerialize(): array
     {
         return array_map(
-            static fn($value) => $value instanceof JsonSerializable ? $value->jsonSerialize() : $value,
+            static fn(mixed $value): mixed => $value instanceof JsonSerializable ? $value->jsonSerialize() : $value,
             $this->data,
         );
     }
@@ -451,6 +452,7 @@ trait BaseCollectionTrait
      *
      * @param mixed $offset The key of the item to set, or null to append.
      * @param mixed $value The value of the item to set.
+     * @throws \InvalidArgumentException
      */
     public function offsetSet(mixed $offset, mixed $value): void
     {
@@ -525,6 +527,7 @@ trait BaseCollectionTrait
      * @param array<array-key, mixed>|string|null $keys The key(s) to set.
      * @param mixed $value The value to set.
      * @return bool True on success.
+     * @throws \InvalidArgumentException
      */
     public function set(array|string|null $keys = null, mixed $value = null): bool
     {

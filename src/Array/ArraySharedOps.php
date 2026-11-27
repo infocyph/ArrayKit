@@ -26,10 +26,17 @@ final class ArraySharedOps
         }
 
         if (is_array($value)) {
-            return json_encode($value) ?: '';
+            $encoded = json_encode($value);
+
+            return $encoded === false ? '' : $encoded;
         }
 
         return '';
+    }
+
+    public static function decrementDepth(float|int $depth): float|int
+    {
+        return is_int($depth) ? $depth - 1 : $depth - 1.0;
     }
 
     /**
@@ -66,7 +73,7 @@ final class ArraySharedOps
 
     /**
      * @param array<array-key, mixed> $array
-     * @return array<array-key, mixed>
+     * @return array{array<array-key, mixed>, array<array-key, mixed>}
      */
     public static function partition(array $array, callable $callback): array
     {
@@ -99,7 +106,7 @@ final class ArraySharedOps
      */
     public static function skipUntil(array $array, callable $callback): array
     {
-        return self::skipWhile($array, fn($value, $key) => !$callback($value, $key));
+        return self::skipWhile($array, static fn(mixed $value, int|string $key): bool => !$callback($value, $key));
     }
 
     /**

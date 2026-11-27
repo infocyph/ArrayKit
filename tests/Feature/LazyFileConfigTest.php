@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Infocyph\ArrayKit\Config\LazyFileConfig;
 use Infocyph\ArrayKit\Config\Support\Environment;
 
+/** @param array<array-key, mixed> $contents */
 function lazyConfigWriteArrayFile(string $directory, string $name, array $contents): void
 {
     $export = var_export($contents, true);
@@ -45,11 +46,17 @@ function lazyConfigDeleteDirectory(string $directory): void
 }
 
 /**
- * @return array<string, mixed>
+ * @return array<array-key, mixed>
+ * @throws UnexpectedValueException
  */
 function lazyConfigItems(LazyFileConfig $config): array
 {
-    return (fn (): array => $this->items)->call($config);
+    $items = new ReflectionProperty($config, 'items')->getValue($config);
+    if (!is_array($items)) {
+        throw new UnexpectedValueException('Expected array configuration items.');
+    }
+
+    return $items;
 }
 
 function lazyConfigActiveCacheDirectory(string $directory): string
@@ -107,6 +114,10 @@ afterEach(function () {
 it('preserves per-match default callbacks through the protected namespace reader', function () {
     lazyConfigWriteArrayFile($this->configPath, 'app', ['rows' => [[], []]]);
     $config = new class($this->configPath) extends LazyFileConfig {
+        /**
+         * @throws InvalidArgumentException
+         * @throws UnexpectedValueException
+         */
         public function readPath(string $path, mixed $default): mixed
         {
             return $this->getPath($path, $default);
@@ -219,7 +230,7 @@ it('throws if full config retrieval is requested without a key', function () {
 
     $config = new LazyFileConfig($this->configPath);
 
-    expect(fn () => $config->get())->toThrow(RuntimeException::class)
+    expect(static fn(): mixed => $config->get())->toThrow(RuntimeException::class)
         ->and(fn () => $config->all())->toThrow(RuntimeException::class);
 });
 
@@ -247,7 +258,7 @@ it('throws when a namespace file does not return an array', function () {
 
     $config = new LazyFileConfig($this->configPath);
 
-    expect(fn () => $config->get('db.host'))->toThrow(UnexpectedValueException::class);
+    expect(static fn(): mixed => $config->get('db.host'))->toThrow(UnexpectedValueException::class);
 });
 
 it('can retry a namespace after its invalid file is corrected', function () {
@@ -258,7 +269,7 @@ it('can retry a namespace after its invalid file is corrected', function () {
 
     $config = new LazyFileConfig($this->configPath);
 
-    expect(fn () => $config->get('db.host'))->toThrow(UnexpectedValueException::class);
+    expect(static fn(): mixed => $config->get('db.host'))->toThrow(UnexpectedValueException::class);
 
     lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost']);
 
@@ -275,8 +286,8 @@ it('supports hook-aware lazy get and set variants', function () {
     lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost']);
 
     $config = new LazyFileConfig($this->configPath);
-    $config->onSet('db.host', fn ($value) => strtoupper((string) $value));
-    $config->onGet('db.host', fn ($value) => strtolower((string) $value));
+    $config->onSet('db.host', static fn(string $value): string => strtoupper($value));
+    $config->onGet('db.host', static fn(string $value): string => strtolower($value));
 
     $config->setWithHooks('db.host', 'INTERNAL');
 
@@ -288,8 +299,8 @@ it('supports hook-aware lazy bulk operations', function () {
     lazyConfigWriteArrayFile($this->configPath, 'db', ['host' => 'localhost', 'port' => 3306]);
 
     $config = new LazyFileConfig($this->configPath);
-    $config->onSet('db.host', fn ($value) => strtoupper((string) $value));
-    $config->onGet('db.host', fn ($value) => strtolower((string) $value));
+    $config->onSet('db.host', static fn(string $value): string => strtoupper($value));
+    $config->onGet('db.host', static fn(string $value): string => strtolower($value));
 
     $config->setWithHooks([
         'db.host' => 'INTERNAL',
@@ -311,7 +322,7 @@ it('supports replace/reload and required key access in lazy config', function ()
     $config->replace(['app' => ['name' => 'ArrayKit']]);
     expect($config->get('app.name'))->toBe('ArrayKit')
         ->and($config->getOrFail('app.name'))->toBe('ArrayKit')
-        ->and(fn () => $config->getOrFail('queue.driver'))->toThrow(OutOfBoundsException::class);
+        ->and(static fn(): mixed => $config->getOrFail('queue.driver'))->toThrow(OutOfBoundsException::class);
 
     $config->reload(['cache' => ['driver' => 'file']]);
     expect($config->get('cache.driver'))->toBe('file');
@@ -500,9 +511,15 @@ PHP;
 
     $warm = proc_open([PHP_BINARY, '-r', $warmCode], $descriptors, $warmPipes);
     $flush = proc_open([PHP_BINARY, '-r', $flushCode], $descriptors, $flushPipes);
-
-    expect(is_resource($warm))->toBeTrue()
-        ->and(is_resource($flush))->toBeTrue();
+    if ($warm === false || $flush === false) {
+        foreach ([$warm, $flush] as $process) {
+            if (is_resource($process)) {
+                proc_terminate($process);
+                proc_close($process);
+            }
+        }
+        throw new RuntimeException('Failed to start cache fixture workers.');
+    }
 
     $warmError = stream_get_contents($warmPipes[2]);
     $flushError = stream_get_contents($flushPipes[2]);
@@ -510,8 +527,8 @@ PHP;
         fclose($pipe);
     }
 
-    expect(proc_close($warm))->toBe(0, $warmError)
-        ->and(proc_close($flush))->toBe(0, $flushError);
+    expect(proc_close($warm))->toBe(0, $warmError === false ? 'Failed to read warm worker stderr' : $warmError)
+        ->and(proc_close($flush))->toBe(0, $flushError === false ? 'Failed to read flush worker stderr' : $flushError);
 
     $fresh = new LazyFileConfig($this->configPath, namespaceCacheDirectory: $this->cachePath);
     expect($fresh->get('app.version'))->toBe(1)
@@ -540,4 +557,23 @@ it('can resolve exact scalar paths from the flat index when namespace structure 
         ->and($fresh->get('db.options.timeout'))->toBe(5)
         ->and($fresh->get('db.options', 'missing'))->toBe('missing')
         ->and($fresh->get('db', 'missing'))->toBe('missing');
+});
+
+it('reports a namespace disappearing after resolution without marking it loaded', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'app', ['value' => 1]);
+    $config = new class($this->configPath) extends LazyFileConfig {
+        #[Override]
+        protected function resolveNamespaceFile(string $namespace): ?string
+        {
+            $file = parent::resolveNamespaceFile($namespace);
+            if ($file !== null) {
+                unlink($file);
+            }
+
+            return $file;
+        }
+    };
+
+    expect(static fn(): mixed => $config->get('app.value'))->toThrow(UnexpectedValueException::class, 'no longer readable');
+    expect($config->isLoaded('app'))->toBeFalse();
 });

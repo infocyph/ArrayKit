@@ -7,9 +7,13 @@ use Infocyph\ArrayKit\Array\ArraySingle;
 use Infocyph\ArrayKit\Array\DotNotation;
 use Infocyph\ArrayKit\Collection\Collection;
 
+/** @throws RuntimeException */
 function batchCClosedResource(): mixed
 {
     $resource = fopen('php://temp', 'r+');
+    if ($resource === false) {
+        throw new RuntimeException('Unable to open temporary resource.');
+    }
     fclose($resource);
 
     return $resource;
