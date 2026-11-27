@@ -56,13 +56,13 @@ it('bounds missing direct lookups and default callbacks under the shared safe bu
     expect(DotNotation::getSafe([], $keys, $default, maxNodes: 2))->toHaveCount(2)
         ->and($calls)->toBe(2);
     $calls = 0;
-    expect(fn () => DotNotation::getSafe([], $keys, $default, maxNodes: 2, throwOnTooDeep: true))
+    expect(static fn(): mixed => DotNotation::getSafe([], $keys, $default, maxNodes: 2, throwOnTooDeep: true))
         ->toThrow(RuntimeException::class)
         ->and($calls)->toBe(2);
 });
 
 it('rejects unfinished throwing lookups and accepts an exactly complete budget', function () {
-    expect(fn () => DotNotation::getSafe(['a' => 1, 'b' => 2], ['a', 'b'], maxNodes: 1, throwOnTooDeep: true))
+    expect(static fn(): mixed => DotNotation::getSafe(['a' => 1, 'b' => 2], ['a', 'b'], maxNodes: 1, throwOnTooDeep: true))
         ->toThrow(RuntimeException::class)
         ->and(DotNotation::getSafe(['a' => 1, 'b' => 2], ['a', 'b'], maxNodes: 2, throwOnTooDeep: true))
         ->toBe(['a' => 1, 'b' => 2]);
@@ -252,10 +252,13 @@ it('memoizes consumed referenced scalar entries while keeping unread entries laz
     $second = 2;
     $lazy = LazyCollection::from(['first' => &$first, 'second' => &$second]);
     $first = 3;
+    expect($first)->toBe(3);
     expect($lazy->take(1)->all())->toBe(['first' => 3]);
     $first = 4;
     $second = 5;
+    expect([$first, $second])->toBe([4, 5]);
     expect($lazy->all())->toBe(['first' => 3, 'second' => 5]);
     $second = 6;
+    expect($second)->toBe(6);
     expect($lazy->all())->toBe(['first' => 3, 'second' => 5]);
 });

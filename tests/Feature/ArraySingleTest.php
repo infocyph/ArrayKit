@@ -4,6 +4,28 @@ declare(strict_types=1);
 
 use Infocyph\ArrayKit\Array\ArraySingle;
 
+/** @param array<array-key, mixed> $row */
+function arraySingleFixtureInt(array $row, string $key): int
+{
+    $value = $row[$key] ?? null;
+    if (!is_int($value)) {
+        throw new UnexpectedValueException('Expected integer fixture field: ' . $key);
+    }
+
+    return $value;
+}
+
+/** @param array<array-key, mixed> $row */
+function arraySingleFixtureText(array $row, string $key): string
+{
+    $value = $row[$key] ?? null;
+    if (!is_string($value)) {
+        throw new UnexpectedValueException('Expected string fixture field: ' . $key);
+    }
+
+    return $value;
+}
+
 it('checks if a key exists in a single-dimensional array', function () {
     $data = ['one' => 1, 'two' => 2];
     expect(ArraySingle::exists($data, 'two'))
@@ -51,7 +73,7 @@ it('ignores non-numeric values when calculating median', function () {
 
 it('searches an array for a callback condition', function () {
     $data = [1, 2, 3, 4];
-    $key = ArraySingle::search($data, fn ($value) => $value === 3);
+    $key = ArraySingle::search($data, static fn(int $value): bool => $value === 3);
     expect($key)->toBe(2);
 });
 
@@ -133,7 +155,7 @@ it('sums the array using sum()', function () {
     $arr = [1, 2, 3];
     expect(ArraySingle::sum($arr))
         ->toBe(6)
-        ->and(ArraySingle::sum($arr, fn ($v) => $v * 2))
+        ->and(ArraySingle::sum($arr, static fn(int $v): int => $v * 2))
         ->toBe(12);
 });
 
@@ -141,7 +163,7 @@ it('ignores non-numeric values in sum() and supports callback keys', function ()
     $arr = [2 => 1, 4 => '2', 8 => 'x'];
 
     expect(ArraySingle::sum($arr))->toBe(3)
-        ->and(ArraySingle::sum($arr, fn ($value, $key) => is_numeric($value) ? ((float) $value + $key) : null))
+        ->and(ArraySingle::sum($arr, static fn(mixed $value, int $key): ?float => is_numeric($value) ? (float) $value + (float) $key : null))
         ->toBe(9.0);
 });
 
@@ -220,7 +242,7 @@ it('slices the array using slice()', function () {
 });
 it('partitions the array based on a callback using partition()', function () {
     $arr = [1, 2, 3, 4, 5];
-    $result = ArraySingle::partition($arr, fn ($v) => $v % 2 === 0);
+    $result = ArraySingle::partition($arr, static fn(int $v): bool => $v % 2 === 0);
     expect($result)->toBe([
         [1 => 2, 3 => 4], // passed 'even' numbers
         [0 => 1, 2 => 3, 4 => 5], // failed 'odd' numbers
@@ -228,7 +250,7 @@ it('partitions the array based on a callback using partition()', function () {
 });
 it('rejects unwanted values using reject()', function () {
     $arr = [1, 2, 3, 4, 5, 'a', 'b', 'c'];
-    $result = ArraySingle::reject($arr, fn ($val) => is_numeric($val) && $val > 3);
+    $result = ArraySingle::reject($arr, static fn(mixed $val): bool => is_numeric($val) && $val > 3);
     expect(array_values($result))->toBe([1, 2, 3, 'a', 'b', 'c']);
 });
 
@@ -238,11 +260,11 @@ it('skips the first n items using skip()', function () {
 });
 it('skips items while the callback returns true using skipWhile()', function () {
     $arr = [1, 2, 3, 4, 5];
-    expect(array_values(ArraySingle::skipWhile($arr, fn ($v) => $v < 3)))->toBe([3, 4, 5]);
+    expect(array_values(ArraySingle::skipWhile($arr, static fn(int $v): bool => $v < 3)))->toBe([3, 4, 5]);
 });
 it('skips items until the callback returns true using skipUntil()', function () {
     $arr = [1, 2, 3, 4, 5];
-    expect(array_values(ArraySingle::skipUntil($arr, fn ($v) => $v === 3)))->toBe([3, 4, 5]);
+    expect(array_values(ArraySingle::skipUntil($arr, static fn(int $v): bool => $v === 3)))->toBe([3, 4, 5]);
 });
 
 it('throws for invalid nth step values', function () {
@@ -270,12 +292,12 @@ it('supports countBy, min/max, minBy/maxBy, mapWithKeys, values and rekey helper
     ];
 
     expect(ArraySingle::countBy([1, 2, 2, 3, 3, 3]))->toBe([1 => 1, 2 => 2, 3 => 3])
-        ->and(ArraySingle::countBy($rows, fn (array $row) => $row['group']))->toBe(['a' => 2, 'b' => 1])
+        ->and(ArraySingle::countBy($rows, static fn(array $row): string => arraySingleFixtureText($row, 'group')))->toBe(['a' => 2, 'b' => 1])
         ->and(ArraySingle::min([9, 2, 4]))->toBe(2)
         ->and(ArraySingle::max([9, 2, 4]))->toBe(9)
-        ->and(ArraySingle::minBy($rows, fn (array $row) => $row['score']))->toBe(['id' => 1, 'group' => 'a', 'score' => 10])
-        ->and(ArraySingle::maxBy($rows, fn (array $row) => $row['score']))->toBe(['id' => 2, 'group' => 'a', 'score' => 30])
-        ->and(ArraySingle::mapWithKeys($rows, fn (array $row) => [$row['id'] => $row['score']]))->toBe([1 => 10, 2 => 30, 3 => 20])
+        ->and(ArraySingle::minBy($rows, static fn(array $row): int => arraySingleFixtureInt($row, 'score')))->toBe(['id' => 1, 'group' => 'a', 'score' => 10])
+        ->and(ArraySingle::maxBy($rows, static fn(array $row): int => arraySingleFixtureInt($row, 'score')))->toBe(['id' => 2, 'group' => 'a', 'score' => 30])
+        ->and(ArraySingle::mapWithKeys($rows, static fn(array $row): array => [arraySingleFixtureInt($row, 'id') => arraySingleFixtureInt($row, 'score')]))->toBe([1 => 10, 2 => 30, 3 => 20])
         ->and(ArraySingle::values(['x' => 1, 'y' => 2]))->toBe([1, 2])
         ->and(ArraySingle::rekey(['first_name' => 'Ada'], ['first_name' => 'firstName']))->toBe(['firstName' => 'Ada']);
 });

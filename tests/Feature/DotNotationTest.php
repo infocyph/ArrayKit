@@ -544,7 +544,7 @@ it('returns the given array using all()', function () {
 it('taps into an array and returns it unchanged', function () {
     $data = ['x' => 10, 'y' => 20];
     $called = false;
-    $result = DotNotation::tap($data, function ($arr) use (&$called, $data) {
+    $result = DotNotation::tap($data, static function (array $arr) use (&$called, $data): void {
         $called = true;
         expect($arr)->toBe($data);
     });
@@ -601,7 +601,7 @@ it('can throw on safe get traversal limit overflow', function () {
         ],
     ];
 
-    expect(fn () => DotNotation::getSafe($data, 'users.*.name', 'missing', maxDepth: 1, throwOnTooDeep: true))
+    expect(static fn(): mixed => DotNotation::getSafe($data, 'users.*.name', 'missing', maxDepth: 1, throwOnTooDeep: true))
         ->toThrow(RuntimeException::class);
 });
 
@@ -610,7 +610,7 @@ it('applies safe traversal limits to ordinary path segments and nodes', function
 
     expect(DotNotation::getSafe($data, 'one.two.three', 'missing', maxDepth: 2))->toBe('missing')
         ->and(DotNotation::getSafe($data, 'one.two.three', 'missing', maxNodes: 2))->toBe('missing')
-        ->and(fn () => DotNotation::getSafe(
+        ->and(static fn(): mixed => DotNotation::getSafe(
             $data,
             'one.two.three',
             'missing',

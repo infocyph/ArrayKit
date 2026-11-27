@@ -14,6 +14,7 @@ it('detaches scalar and nested references for snapshots, changes and repeated re
     expect($config->snapshot('before'))->toBeTrue();
 
     $scalar = 5;
+    expect($scalar)->toBe(5);
     $nested['v'] = 30;
     expect($config->changed('before'))->toBeTrue()
         ->and($config->restore('before'))->toBeTrue()
@@ -48,6 +49,7 @@ it('detaches snapshot references across lazy and layered configuration owners', 
     );
     expect($lazy->snapshot())->toBeTrue();
     $lazyValue = 8;
+    expect($lazyValue)->toBe(8);
     expect($lazy->restore())->toBeTrue()
         ->and($lazy->get('app.v'))->toBe(1);
 
@@ -59,6 +61,7 @@ it('detaches snapshot references across lazy and layered configuration owners', 
     );
     $layered->snapshot();
     $layeredValue = 9;
+    expect($layeredValue)->toBe(9);
     expect($layered->restore())->toBeTrue()
         ->and($layered->get('app.v'))->toBe(2);
 });

@@ -4,6 +4,28 @@ declare(strict_types=1);
 
 use Infocyph\ArrayKit\Array\ArrayMulti;
 
+/** @param array<array-key, mixed> $row */
+function arrayMultiFixtureInt(array $row, string $key): int
+{
+    $value = $row[$key] ?? null;
+    if (!is_int($value)) {
+        throw new UnexpectedValueException('Expected integer fixture field: ' . $key);
+    }
+
+    return $value;
+}
+
+/** @param array<array-key, mixed> $row */
+function arrayMultiFixtureText(array $row, string $key): string
+{
+    $value = $row[$key] ?? null;
+    if (!is_string($value)) {
+        throw new UnexpectedValueException('Expected string fixture field: ' . $key);
+    }
+
+    return $value;
+}
+
 it('can collapse a multi-dimensional array', function () {
     $source = [[1, 2], [3, 4], [5]];
     $result = ArrayMulti::collapse($source);
@@ -134,7 +156,7 @@ it('sorts by column using numeric sort options', function () {
 
     $sorted = ArrayMulti::sortBy($data, 'score', false, SORT_NUMERIC);
 
-    expect(array_values(array_column($sorted, 'score')))->toBe(['1', '2', '10']);
+    expect(array_column($sorted, 'score'))->toBe(['1', '2', '10']);
 });
 
 // sortRecursive() descending
@@ -168,7 +190,7 @@ it('returns the first item that matches the callback using first()', function ()
         ['a' => 2],
         ['a' => 3],
     ];
-    $result = ArrayMulti::first($data, fn ($row) => $row['a'] > 1, 'default');
+    $result = ArrayMulti::first($data, static fn(array $row): bool => arrayMultiFixtureInt($row, 'a') > 1, 'default');
     expect($result)->toBe(['a' => 2]);
 });
 
@@ -188,7 +210,7 @@ it('returns the last item that matches the callback using last()', function () {
         ['a' => 2],
         ['a' => 3],
     ];
-    $result = ArrayMulti::last($data, fn ($row) => $row['a'] < 3, 'default');
+    $result = ArrayMulti::last($data, static fn(array $row): bool => arrayMultiFixtureInt($row, 'a') < 3, 'default');
     expect($result)->toBe(['a' => 2]);
 });
 
@@ -214,7 +236,7 @@ it('filters a 2D array using whereCallback()', function () {
         ['a' => 2],
         ['a' => 3],
     ];
-    $result = ArrayMulti::whereCallback($data, fn ($row) => $row['a'] > 1);
+    $result = ArrayMulti::whereCallback($data, static fn(array $row): bool => arrayMultiFixtureInt($row, 'a') > 1);
     expect($result)->toBe([
         1 => ['a' => 2],
         2 => ['a' => 3],
@@ -259,7 +281,7 @@ it('maps over a 2D array using map()', function () {
         ['num' => 2],
         ['num' => 3],
     ];
-    $result = ArrayMulti::map($data, fn ($row) => $row['num'] * 10);
+    $result = ArrayMulti::map($data, static fn(array $row): int => arrayMultiFixtureInt($row, 'num') * 10);
     expect($result)->toBe([
         0 => 10,
         1 => 20,
@@ -275,8 +297,8 @@ it('iterates over a 2D array using each()', function () {
         ['a' => 3],
     ];
     $sum = 0;
-    ArrayMulti::each($data, function ($row) use (&$sum) {
-        $sum += $row['a'];
+    ArrayMulti::each($data, static function (array $row) use (&$sum): void {
+        $sum += arrayMultiFixtureInt($row, 'a');
     });
     expect($sum)->toBe(6);
 });
@@ -288,7 +310,7 @@ it('reduces a 2D array to a single value using reduce()', function () {
         ['num' => 3],
         ['num' => 4],
     ];
-    $result = ArrayMulti::reduce($data, fn ($carry, $row) => $carry + $row['num'], 0);
+    $result = ArrayMulti::reduce($data, static fn(int $carry, array $row): int => $carry + arrayMultiFixtureInt($row, 'num'), 0);
     expect($result)->toBe(9);
 });
 
@@ -299,7 +321,7 @@ it('returns true for some() if at least one row matches', function () {
         ['flag' => false],
         ['flag' => true],
     ];
-    expect(ArrayMulti::some($data, fn ($row) => $row['flag']))->toBeTrue();
+    expect(ArrayMulti::some($data, static fn(array $row): bool => ($row['flag'] ?? null) === true))->toBeTrue();
 });
 
 // every()
@@ -308,9 +330,9 @@ it('returns true for every() if all rows match', function () {
         ['pass' => true],
         ['pass' => true],
     ];
-    expect(ArrayMulti::every($data, fn ($row) => $row['pass']))->toBeTrue();
+    expect(ArrayMulti::every($data, static fn(array $row): bool => ($row['pass'] ?? null) === true))->toBeTrue();
     $data[1]['pass'] = false;
-    expect(ArrayMulti::every($data, fn ($row) => $row['pass']))->toBeFalse();
+    expect(ArrayMulti::every($data, static fn(array $row): bool => ($row['pass'] ?? null) === true))->toBeFalse();
 });
 
 // contains()
@@ -341,7 +363,7 @@ it('passes row key to sum callback', function () {
         4 => ['val' => 2],
     ];
 
-    expect(ArrayMulti::sum($data, fn (array $row, int $key) => $row['val'] + $key))->toBe(9);
+    expect(ArrayMulti::sum($data, static fn(array $row, int $key): int => arrayMultiFixtureInt($row, 'val') + $key))->toBe(9);
 });
 
 // partition()
@@ -351,7 +373,7 @@ it('partitions a 2D array using partition()', function () {
         ['score' => 50],
         ['score' => 90],
     ];
-    [$pass, $fail] = ArrayMulti::partition($data, fn ($row) => $row['score'] >= 60);
+    [$pass, $fail] = ArrayMulti::partition($data, static fn(array $row): bool => arrayMultiFixtureInt($row, 'score') >= 60);
     expect($pass)->toBe([
         0 => ['score' => 80],
         2 => ['score' => 90],
@@ -539,14 +561,14 @@ it('supports keyBy/indexBy/countBy/firstWhere/mapWithKeys helpers', function () 
         11 => ['id' => 11, 'team' => 'B', 'score' => 70],
         12 => ['id' => 12, 'team' => 'A', 'score' => 55],
     ])
-        ->and(ArrayMulti::indexBy($rows, fn (array $row) => 'row_'.$row['id']))->toBe([
+        ->and(ArrayMulti::indexBy($rows, static fn(array $row): string => 'row_' . arrayMultiFixtureInt($row, 'id')))->toBe([
             'row_10' => ['id' => 10, 'team' => 'A', 'score' => 40],
             'row_11' => ['id' => 11, 'team' => 'B', 'score' => 70],
             'row_12' => ['id' => 12, 'team' => 'A', 'score' => 55],
         ])
         ->and(ArrayMulti::countBy($rows, 'team'))->toBe(['A' => 2, 'B' => 1])
         ->and(ArrayMulti::firstWhere($rows, 'score', '>=', 50))->toBe(['id' => 11, 'team' => 'B', 'score' => 70])
-        ->and(ArrayMulti::mapWithKeys($rows, fn (array $row) => [$row['id'] => $row['team']]))->toBe([10 => 'A', 11 => 'B', 12 => 'A']);
+        ->and(ArrayMulti::mapWithKeys($rows, static fn(array $row): array => [arrayMultiFixtureInt($row, 'id') => arrayMultiFixtureText($row, 'team')]))->toBe([10 => 'A', 11 => 'B', 12 => 'A']);
 });
 
 it('supports min/max/minBy/maxBy helpers', function () {
@@ -570,15 +592,15 @@ it('passes row key to sortBy/maxBy/minBy callbacks', function () {
 
     $sorted = ArrayMulti::sortBy(
         $rows,
-        fn (array $row, string $key) => $key.':'.$row['id'],
+        static fn(array $row, string $key): string => $key . ':' . arrayMultiFixtureInt($row, 'id'),
         false,
         SORT_STRING,
     );
 
     expect(array_keys($sorted))->toBe(['a', 'z'])
-        ->and(ArrayMulti::maxBy($rows, fn (array $row, string $key) => $row['score'] + ($key === 'z' ? 100 : 0)))
+        ->and(ArrayMulti::maxBy($rows, static fn(array $row, string $key): int => arrayMultiFixtureInt($row, 'score') + ($key === 'z' ? 100 : 0)))
         ->toBe(['id' => 1, 'score' => 10])
-        ->and(ArrayMulti::minBy($rows, fn (array $row, string $key) => $row['score'] + ($key === 'z' ? 100 : 0)))
+        ->and(ArrayMulti::minBy($rows, static fn(array $row, string $key): int => arrayMultiFixtureInt($row, 'score') + ($key === 'z' ? 100 : 0)))
         ->toBe(['id' => 2, 'score' => 20]);
 });
 
@@ -637,10 +659,10 @@ it('supports uniqueBy and duplicatesBy helpers', function () {
         ['id' => 3, 'email' => 'b@example.com'],
     ];
 
-    expect(ArrayMulti::uniqueBy($rows, fn (array $row) => strtolower($row['email'])))->toBe([
+    expect(ArrayMulti::uniqueBy($rows, static fn(array $row): string => strtolower(arrayMultiFixtureText($row, 'email'))))->toBe([
         0 => ['id' => 1, 'email' => 'A@example.com'],
         2 => ['id' => 3, 'email' => 'b@example.com'],
-    ])->and(ArrayMulti::duplicatesBy($rows, fn (array $row) => strtolower($row['email'])))->toBe([
+    ])->and(ArrayMulti::duplicatesBy($rows, static fn(array $row): string => strtolower(arrayMultiFixtureText($row, 'email'))))->toBe([
         1 => ['id' => 2, 'email' => 'a@example.com'],
     ]);
 });
@@ -649,6 +671,9 @@ it('preserves strict derived equality for adversarial values', function () {
     $firstObject = new stdClass();
     $secondObject = new stdClass();
     $resource = fopen('php://memory', 'rb');
+    if ($resource === false) {
+        throw new RuntimeException('Failed to open fixture stream.');
+    }
 
     $rows = [
         ['value' => 0],
@@ -786,6 +811,9 @@ it('rejects invalid chunks and ragged transpose matrices', function () {
 
 it('handles closed resources through strict scan fallback', function () {
     $resource = fopen('php://memory', 'rb');
+    if ($resource === false) {
+        throw new RuntimeException('Failed to open fixture stream.');
+    }
     fclose($resource);
 
     expect(ArrayMulti::uniqueBy([
