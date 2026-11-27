@@ -46,6 +46,9 @@ it('supports nested iteration without pointer side effects', function () {
 
     foreach ($collection as $outerKey => $outerValue) {
         foreach ($collection as $innerKey => $innerValue) {
+            if (!is_int($outerValue) || !is_int($innerValue)) {
+                throw new UnexpectedValueException('Expected integer collection values.');
+            }
             $pairs[] = [$outerKey, $innerKey, $outerValue + $innerValue];
         }
     }
@@ -65,7 +68,7 @@ it('provides a merge method', function () {
 
 it('can filter and return a new collection', function () {
     $collection = new Collection([1, 2, 3, 4]);
-    $even = $collection->filter(fn ($val) => $val % 2 === 0);
+    $even = $collection->filter(static fn(int $val): bool => $val % 2 === 0);
     expect($even->all())->toBe([1 => 2, 3 => 4]);
 });
 

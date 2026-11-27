@@ -17,6 +17,7 @@ use JsonSerializable;
  * interfaces (ArrayAccess, IteratorAggregate, Countable, JsonSerializable).
  * Inherits most of its behavior from BaseCollectionTrait.
  *
+ * @mixin Pipeline
  * @phpstan-consistent-constructor
  *
  * @implements ArrayAccess<array-key, mixed>

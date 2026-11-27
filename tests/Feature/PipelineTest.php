@@ -17,12 +17,27 @@ it('supports keyBy/indexBy/mapWithKeys/countBy in pipelines', function () {
         2 => ['id' => 2, 'team' => 'B', 'score' => 50],
         3 => ['id' => 3, 'team' => 'A', 'score' => 40],
     ])
-        ->and($rows->copy()->indexBy(fn (array $row) => 'r'.$row['id'])->all())->toBe([
+        ->and($rows->copy()->indexBy(static function (array $row): string {
+            $id = $row['id'] ?? null;
+            if (!is_int($id)) {
+                throw new UnexpectedValueException('Expected an integer row ID.');
+            }
+
+            return 'r' . $id;
+        })->all())->toBe([
             'r1' => ['id' => 1, 'team' => 'A', 'score' => 30],
             'r2' => ['id' => 2, 'team' => 'B', 'score' => 50],
             'r3' => ['id' => 3, 'team' => 'A', 'score' => 40],
         ])
-        ->and($rows->copy()->mapWithKeys(fn (array $row) => [$row['id'] => $row['score']])->all())->toBe([1 => 30, 2 => 50, 3 => 40])
+        ->and($rows->copy()->mapWithKeys(static function (array $row): array {
+            $id = $row['id'] ?? null;
+            $score = $row['score'] ?? null;
+            if (!is_int($id) || !is_int($score)) {
+                throw new UnexpectedValueException('Expected integer row fields.');
+            }
+
+            return [$id => $score];
+        })->all())->toBe([1 => 30, 2 => 50, 3 => 40])
         ->and($rows->process()->countBy('team'))->toBe(['A' => 2, 'B' => 1]);
 });
 

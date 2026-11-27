@@ -10,6 +10,7 @@ use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
 use Infocyph\ArrayKit\Facade\ModuleProxy;
 
+/** @param array<array-key, mixed> $contents */
 function arrayKitWriteArrayFile(string $directory, string $name, array $contents): void
 {
     $export = var_export($contents, true);
@@ -65,7 +66,7 @@ afterEach(function () {
 it('exposes array modules through one facade', function () {
     $single = ArrayKit::single();
 
-    expect($single)->toBeInstanceOf(ModuleProxy::class)
+    expect(get_class($single))->toBe(ModuleProxy::class)
         ->and(ArrayKit::single())->toBe($single)
         ->and($single->isList([1, 2, 3]))->toBeTrue()
         ->and(ArrayKit::multi()->flatten([[1], [2, [3]]]))->toBe([1, 2, 3])
@@ -74,14 +75,14 @@ it('exposes array modules through one facade', function () {
 });
 
 it('does not expose private module methods through the facade', function () {
-    expect(fn () => ArrayKit::single()->toNumericOrNull(1))
+    expect(fn () => ArrayKit::single()->__call('toNumericOrNull', [1]))
         ->toThrow(BadMethodCallException::class);
 });
 
 it('creates config instances from the facade', function () {
     $config = ArrayKit::config(['app' => ['name' => 'ArrayKit']]);
 
-    expect($config)->toBeInstanceOf(Config::class)
+    expect(get_class($config))->toBe(Config::class)
         ->and($config->get('app.name'))->toBe('ArrayKit');
 });
 
@@ -90,7 +91,7 @@ it('creates lazy config instances from the facade', function () {
 
     $config = ArrayKit::lazyConfig($this->configPath, namespaceCacheDirectory: $this->configPath.DIRECTORY_SEPARATOR.'cache');
 
-    expect($config)->toBeInstanceOf(LazyFileConfig::class)
+    expect(get_class($config))->toBe(LazyFileConfig::class)
         ->and($config->get('db.host'))->toBe('localhost')
         ->and($config->namespaceCacheDirectory())->toBe($this->configPath.DIRECTORY_SEPARATOR.'cache');
 });
@@ -101,9 +102,9 @@ it('creates collection and pipeline helpers from the facade', function () {
     $lazy = ArrayKit::lazyCollection([1, 2, 3]);
     $sum = ArrayKit::pipeline([1, 2, 3])->sum();
 
-    expect($collection)->toBeInstanceOf(Collection::class)
-        ->and($hooked)->toBeInstanceOf(HookedCollection::class)
-        ->and($lazy)->toBeInstanceOf(LazyCollection::class)
-        ->and($lazy->mapLazy(fn (int $v) => $v * 2)->all())->toBe([2, 4, 6])
+    expect(get_class($collection))->toBe(Collection::class)
+        ->and(get_class($hooked))->toBe(HookedCollection::class)
+        ->and(get_class($lazy))->toBe(LazyCollection::class)
+        ->and($lazy->mapLazy(static fn(mixed $v): int => is_int($v) ? $v * 2 : throw new UnexpectedValueException('Expected an integer.'))->all())->toBe([2, 4, 6])
         ->and($sum)->toBe(6);
 });

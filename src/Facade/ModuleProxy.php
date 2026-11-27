@@ -8,10 +8,14 @@ use BadMethodCallException;
 use Infocyph\ArrayKit\Array\DotNotation;
 use UnexpectedValueException;
 
+/**
+ * @template-covariant T of object
+ * @mixin T
+ */
 final readonly class ModuleProxy
 {
     /**
-     * @param class-string $targetClass
+     * @param class-string<T> $targetClass
      */
     public function __construct(
         private string $targetClass,

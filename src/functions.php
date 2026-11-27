@@ -110,6 +110,7 @@ if (!function_exists('env')) {
 if (!function_exists('dotenv')) {
     /**
      * Access the ArrayKit .env file parser facade.
+     * @return ModuleProxy<\Infocyph\ArrayKit\Config\EnvParser>
      */
     function dotenv(): ModuleProxy
     {

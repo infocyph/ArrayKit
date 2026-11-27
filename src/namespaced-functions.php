@@ -70,6 +70,7 @@ if (!function_exists(__NAMESPACE__ . '\\env')) {
 }
 
 if (!function_exists(__NAMESPACE__ . '\\dotenv')) {
+    /** @return ModuleProxy<\Infocyph\ArrayKit\Config\EnvParser> */
     function dotenv(): ModuleProxy
     {
         return ArrayKit::dotenv();
