@@ -110,8 +110,10 @@ final class DotNotationPathOps
 
     /**
      * Restore original values through the captured reference cells.
-     * @param array<string, mixed> $references
-     * @param array<string, mixed> $originals
+     *
+     * @template TValue
+     * @param array<string, TValue> $references
+     * @param array<string, TValue> $originals
      */
     public static function restoreMutationReferences(array &$references, array $originals): void
     {
