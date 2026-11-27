@@ -118,6 +118,7 @@ trait BaseCollectionTrait
      *
      * @param string $key The key of the item to set.
      * @param mixed $value The value to set.
+     * @throws \InvalidArgumentException
      */
     public function __set(string $key, mixed $value): void
     {
@@ -126,7 +127,6 @@ trait BaseCollectionTrait
 
     /**
      * Convert the collection to a JSON string when treated as a string.
-     * @throws \InvalidArgumentException
      */
     public function __toString(): string
     {
