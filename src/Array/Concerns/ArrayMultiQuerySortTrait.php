@@ -1214,15 +1214,6 @@ trait ArrayMultiQuerySortTrait
         return true;
     }
 
-    private static function resolveDerivedValue(mixed $row, string|callable $keyOrCallback, int|string $index): mixed
-    {
-        if (!is_string($keyOrCallback)) {
-            return self::invokeRowCallback($keyOrCallback, $row, $index);
-        }
-
-        return is_array($row) && array_key_exists($keyOrCallback, $row) ? $row[$keyOrCallback] : null;
-    }
-
     private static function resolveSortByManyValue(mixed $row, string|callable $by, int|string $key): mixed
     {
         if (!is_string($by)) {

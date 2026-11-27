@@ -228,7 +228,7 @@ class BaseArrayHelper
             throw new InvalidArgumentException("You requested $number items, but array only has $count.");
         }
 
-        if ($count === 0 || ($number !== null && $number <= 0)) {
+        if ($array === [] || ($number !== null && $number <= 0)) {
             return ($number === null) ? null : [];
         }
 

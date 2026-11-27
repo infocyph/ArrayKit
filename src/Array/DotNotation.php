@@ -387,7 +387,7 @@ class DotNotation
         $target = [];
         if ($position < count($segments)) {
             self::setValueBySegments($target[$segment], $segments, $position, $value, $overwrite);
-        } elseif ($overwrite) {
+        } else {
             $target[$segment] = $value;
         }
     }

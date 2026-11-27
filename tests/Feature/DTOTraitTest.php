@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Infocyph\ArrayKit\Tests\Feature;
+
 use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
 use Infocyph\ArrayKit\Tests\Fixtures\DTOTraitUser;
 
@@ -11,9 +13,9 @@ it('can create a DTO from an array', function () {
     {
         use DTOTrait;
 
-        public string $name;
+        public string $name = '';
 
-        public int $age;
+        public int $age = 0;
     };
 
     $dto = $dtoClass::create(['name' => 'Alice', 'age' => 30, 'extra' => 'ignored']);

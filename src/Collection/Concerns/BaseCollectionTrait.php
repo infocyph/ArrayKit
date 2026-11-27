@@ -364,7 +364,7 @@ trait BaseCollectionTrait
     public function jsonSerialize(): array
     {
         return array_map(
-            static fn($value) => $value instanceof JsonSerializable ? $value->jsonSerialize() : $value,
+            static fn(mixed $value): mixed => $value instanceof JsonSerializable ? $value->jsonSerialize() : $value,
             $this->data,
         );
     }

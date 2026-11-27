@@ -187,9 +187,7 @@ final class ArrayValueSetOps
     public static function unique(array $array, bool $strict): array
     {
         if (!$strict) {
-            $unique = array_unique($array, \SORT_REGULAR);
-
-            return $unique;
+            return array_unique($array, \SORT_REGULAR);
         }
 
         $seen = [];
@@ -446,8 +444,8 @@ final class ArrayValueSetOps
     private static function fingerprintLoose(mixed $value): string
     {
         return match (true) {
-            is_int($value), is_float($value), is_bool($value), $value === null => 'numeric:' . (float) $value,
-            is_string($value) => is_numeric($value) ? 'numeric:' . (float) $value : 'string:' . $value,
+            is_int($value), is_float($value), is_bool($value), $value === null => 'numeric:' . (string) (float) $value,
+            is_string($value) => is_numeric($value) ? 'numeric:' . (string) (float) $value : 'string:' . $value,
             is_array($value) => 'array:' . self::fingerprintArrayLoose($value),
             is_object($value) => 'object-value:' . self::fingerprintArrayLoose(get_object_vars($value)),
             is_resource($value) => 'resource:' . get_resource_type($value) . ':' . (int) $value,

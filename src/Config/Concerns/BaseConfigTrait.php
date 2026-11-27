@@ -202,12 +202,7 @@ trait BaseConfigTrait
         }
 
         if (is_subclass_of($enumClass, \BackedEnum::class)) {
-            $backingType = new \ReflectionEnum($enumClass)->getBackingType();
-            if (!$backingType instanceof \ReflectionNamedType || get_debug_type($value) !== $backingType->getName()) {
-                return $default;
-            }
-
-            return is_int($value) || is_string($value) ? ($enumClass::tryFrom($value) ?? $default) : $default;
+            return self::resolveBackedEnum($enumClass, $value) ?? $default;
         }
 
         if (!is_string($value)) {
@@ -825,5 +820,20 @@ trait BaseConfigTrait
         throw new UnexpectedValueException(
             'Compiled configuration contains unsupported value type [' . get_debug_type($value) . '].',
         );
+    }
+
+    /** @param class-string<\BackedEnum> $enumClass */
+    private static function resolveBackedEnum(string $enumClass, mixed $value): ?\BackedEnum
+    {
+        $backingType = new \ReflectionEnum($enumClass)->getBackingType();
+        if (!$backingType instanceof \ReflectionNamedType) {
+            return null;
+        }
+
+        return match ($backingType->getName()) {
+            'int' => is_int($value) ? $enumClass::tryFrom($value) : null,
+            'string' => is_string($value) ? $enumClass::tryFrom($value) : null,
+            default => null,
+        };
     }
 }

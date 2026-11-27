@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+namespace Infocyph\ArrayKit\Tests\Feature;
+
+use BadMethodCallException;
+use InvalidArgumentException;
 use Infocyph\ArrayKit\Array\ArraySingle;
 use Infocyph\ArrayKit\Array\BaseArrayHelper;
 use Infocyph\ArrayKit\ArrayKit;
