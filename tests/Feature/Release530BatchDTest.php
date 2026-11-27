@@ -116,7 +116,7 @@ it('includes inherited public state in guarded deep export', function () {
 });
 
 it('preserves readonly hydration behavior when the trait owns the property scope', function () {
-    $dto = new Release530BatchDReadonly();
+    $dto = new \ReflectionClass(Release530BatchDReadonly::class)->newInstanceWithoutConstructor();
     $dto->hydrateNestedGuarded(['name' => 'fixed']);
 
     expect($dto->name)->toBe('fixed')

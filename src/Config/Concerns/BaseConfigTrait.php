@@ -67,6 +67,7 @@ trait BaseConfigTrait
 
     /**
      * Detect whether config changed compared to a named snapshot.
+     * @phpstan-impure
      */
     public function changed(string $snapshot = 'default'): bool
     {
@@ -180,9 +181,7 @@ trait BaseConfigTrait
     /**
      * Get an enum instance from a scalar stored config value.
      *
-     * @template TConfigEnum of \UnitEnum
-     *
-     * @param class-string<TConfigEnum> $enumClass
+     * @param class-string<\UnitEnum> $enumClass
      * @throws \InvalidArgumentException
      */
     public function getEnum(string|int $key, string $enumClass, ?\UnitEnum $default = null): ?\UnitEnum
@@ -197,12 +196,11 @@ trait BaseConfigTrait
         }
 
         if (is_subclass_of($enumClass, \BackedEnum::class)) {
+            $backingType = new \ReflectionEnum($enumClass)->getBackingType()?->getName();
             if (!is_string($value) && !is_int($value)) {
                 return $default;
             }
-
-            $backingType = new \ReflectionEnum($enumClass)->getBackingType();
-            if (!$backingType instanceof \ReflectionNamedType || get_debug_type($value) !== $backingType->getName()) {
+            if (get_debug_type($value) !== $backingType) {
                 return $default;
             }
 

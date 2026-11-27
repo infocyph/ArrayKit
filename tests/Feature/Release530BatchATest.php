@@ -177,12 +177,12 @@ it('replays terminal lazy source failures instead of presenting truncated succes
 });
 
 it('replays failures before the first lazy yield', function () {
-    $source = (static function (iterable $values): Generator {
-        foreach ($values as $value) {
-            throw new RuntimeException('initial failure');
-        }
+    $source = (static function (Closure $beforeYield): Generator {
+        $beforeYield();
         yield 1;
-    })([1]);
+    })(static function (): void {
+        throw new RuntimeException('initial failure');
+    });
     $lazy = LazyCollection::from($source);
 
     expect(fn () => $lazy->all())->toThrow(RuntimeException::class, 'initial failure')

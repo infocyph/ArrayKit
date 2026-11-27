@@ -25,7 +25,7 @@ it('rejects cyclic object values before guarded sort delegates to PHP comparison
             maxNodes: 2,
             throwOnTooDeep: true,
         ))->toThrow(RuntimeException::class);
-})->with([SORT_REGULAR, SORT_NUMERIC, SORT_STRING, SORT_NATURAL, SORT_LOCALE_STRING]);
+})->with([SORT_REGULAR, SORT_NUMERIC, SORT_STRING, SORT_NATURAL, ArrayMulti::SORT_LOCALE]);
 
 it('treats opaque and wide object values as an explicit bounded-sort boundary', function () {
     $wide = new stdClass();
@@ -64,6 +64,7 @@ it('keeps the original move source when a destination readonly property rejects 
 
 it('retains the source after a rejecting magic setter and works through the facade', function () {
     $target = new class {
+        /** @throws RuntimeException */
         public function __set(string $name, mixed $value): void
         {
             throw new RuntimeException("Rejected {$name} value of type " . get_debug_type($value));

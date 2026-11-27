@@ -122,7 +122,6 @@ it('keeps documented public signatures aligned with reflection', function () {
     if ($lines === false) {
         throw new RuntimeException('Unable to split API reference into lines.');
     }
-    expect($lines)->toBeArray();
 
     $activeClass = null;
     $documentedMethods = [];

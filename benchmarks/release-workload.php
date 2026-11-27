@@ -12,9 +12,10 @@ use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
 use RuntimeException;
 
-$arguments = $_SERVER['argv'] ?? [];
-[$script, $root, $workload, $operations, $warmup] = $arguments + [null, null, null, null, null];
-unset($script);
+$root = $argv[1] ?? null;
+$workload = $argv[2] ?? null;
+$operations = $argv[3] ?? null;
+$warmup = $argv[4] ?? null;
 
 if (!is_string($root) || !is_string($workload) || !is_numeric($operations) || !is_numeric($warmup)) {
     throw new RuntimeException(
@@ -112,7 +113,7 @@ function releaseArrayQueryWorkload(): \Closure
 }
 
 /**
- * @param array<string,int>|false $usage
+ * @param array<array-key,mixed>|false $usage
  * @throws RuntimeException
  */
 function releaseCpuSeconds(array|false $usage): float
@@ -120,10 +121,15 @@ function releaseCpuSeconds(array|false $usage): float
     if ($usage === false) {
         throw new RuntimeException('Unable to read process CPU usage.');
     }
-    $user = (float) ($usage['ru_utime.tv_sec'] ?? 0)
-        + ((float) ($usage['ru_utime.tv_usec'] ?? 0) / 1_000_000.0);
-    $system = (float) ($usage['ru_stime.tv_sec'] ?? 0)
-        + ((float) ($usage['ru_stime.tv_usec'] ?? 0) / 1_000_000.0);
+    $userSeconds = $usage['ru_utime.tv_sec'] ?? null;
+    $userMicros = $usage['ru_utime.tv_usec'] ?? null;
+    $systemSeconds = $usage['ru_stime.tv_sec'] ?? null;
+    $systemMicros = $usage['ru_stime.tv_usec'] ?? null;
+    if (!is_int($userSeconds) || !is_int($userMicros) || !is_int($systemSeconds) || !is_int($systemMicros)) {
+        throw new RuntimeException('Invalid process CPU usage.');
+    }
+    $user = (float) $userSeconds + ((float) $userMicros / 1_000_000.0);
+    $system = (float) $systemSeconds + ((float) $systemMicros / 1_000_000.0);
 
     return $user + $system;
 }

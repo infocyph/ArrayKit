@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use Infocyph\ArrayKit\Array\ArraySingle;
 
-/** @param array<array-key, mixed> $row */
+/**
+ * @param array<array-key, mixed> $row
+ * @throws UnexpectedValueException
+ */
 function arraySingleFixtureInt(array $row, string $key): int
 {
     $value = $row[$key] ?? null;
@@ -15,7 +18,10 @@ function arraySingleFixtureInt(array $row, string $key): int
     return $value;
 }
 
-/** @param array<array-key, mixed> $row */
+/**
+ * @param array<array-key, mixed> $row
+ * @throws UnexpectedValueException
+ */
 function arraySingleFixtureText(array $row, string $key): string
 {
     $value = $row[$key] ?? null;

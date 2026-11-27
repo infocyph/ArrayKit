@@ -59,8 +59,8 @@ try {
 
     fwrite(STDOUT, sprintf(
         "Representative release benchmark generated for %s and %s.\n",
-        $baseline['environment']['release'],
-        $candidate['environment']['release'],
+        RELEASE_BASELINE_TAG . '@' . $baselineSha,
+        'candidate@' . $candidateSha,
     ));
 } finally {
     releaseRemoveBaseline($root, $baselineDirectory);
@@ -69,7 +69,7 @@ try {
 /**
  * @param array<string, mixed> $environment
  * @param list<array{name:string,operations:int,warmup:int}> $specs
- * @return array{schema_version:int,generated_at:string,environment:array<string,mixed>&array{release:string},workloads:list<array<string,mixed>>}
+ * @return array{schema_version:int,generated_at:string,environment:array<string,mixed>,workloads:list<array<string,mixed>>}
  */
 function releaseBenchmarkDocument(
     string $root,
@@ -292,9 +292,9 @@ function releaseBenchmarkTrial(
         'attempted' => $attempted,
         'successful' => $successful,
         'failed' => $failed,
-        'successful_rpm' => (float) ((float) $successful / (float) $elapsedSeconds) * 60.0,
+        'successful_rpm' => ((float) $successful / (float) $elapsedSeconds) * 60.0,
         'latencies_ms' => $latencies,
-        'cpu_average_percent' => (float) ($cpuSeconds / (float) $elapsedSeconds) * 100.0,
+        'cpu_average_percent' => ($cpuSeconds / (float) $elapsedSeconds) * 100.0,
         'cpu_peak_percent' => $cpuPeaks === [] ? 0.0 : max($cpuPeaks),
         'memory_average_mb' => $averageFinal,
         'memory_peak_mb' => $memoryPeak === [] ? 0.0 : max($memoryPeak),

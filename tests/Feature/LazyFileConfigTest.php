@@ -47,6 +47,7 @@ function lazyConfigDeleteDirectory(string $directory): void
 
 /**
  * @return array<array-key, mixed>
+ * @throws UnexpectedValueException
  */
 function lazyConfigItems(LazyFileConfig $config): array
 {

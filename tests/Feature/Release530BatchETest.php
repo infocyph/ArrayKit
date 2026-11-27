@@ -296,8 +296,8 @@ it('honors request cancellation while an active coroutine scope is bound without
         public int $factoryCalls = 0;
     };
 
-    expect(static fn(): mixed => $coroutines->run(
-        function (CoroutineScope $scope) use ($runtime, $request, $state): array {
+    expect(static function () use ($coroutines, $runtime, $request, $state): void {
+        $coroutines->run(function (CoroutineScope $scope) use ($runtime, $request, $state): array {
             $scope->spawn(function () use ($request): void {
                 $request->cancel(CancellationReason::HOST_CANCELLED);
             });
@@ -311,8 +311,8 @@ it('honors request cancellation while an active coroutine scope is bound without
             )
                 ->withRunwire($runtime, $request, $scope, checkpointEvery: 1)
                 ->all();
-        },
-    ))->toThrow(CancelledException::class);
+        });
+    })->toThrow(CancelledException::class);
 
     expect($state->factoryCalls)->toBe(0)
         ->and($request->cancelled())->toBeTrue()

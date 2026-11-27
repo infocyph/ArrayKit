@@ -168,7 +168,12 @@ final class Release530PersistentWorkerSoak
         }
     }
 
-    /** @param LazyCollection<int, array{tenant: string, value: int}> $collection */
+    /**
+     * @template TKey of int
+     * @template TRow of array{tenant: string, value: int}
+     * @param LazyCollection<TKey, TRow> $collection
+     * @throws RuntimeException
+     */
     private function assertCancelledTraversal(LazyCollection $collection, RequestContext $request): void
     {
         try {
