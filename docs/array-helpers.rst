@@ -356,7 +356,14 @@ Behavior Notes
 - ``ArrayMulti::whereIn()`` / ``whereNotIn()`` treat ``null`` as a real value when the key exists.
 - ``ArrayMulti::where()`` / ``firstWhere()`` distinguish explicit ``null`` from
   the two-argument shorthand form.
-- Use ``ArrayMulti::SORT_LOCALE`` instead of PHP's deprecated locale sort flag. The legacy integer value is unchanged. C/POSIX collation uses bytewise comparisons; other locales use ICU via ``ext-intl`` and can differ from historical libc ordering. Missing ICU support fails explicitly for non-C locales.
+- Strict ``duplicates()`` reports repeated ``null`` separately from ``false``,
+  ``0`` and empty strings.
+- Numeric sums preserve native integer precision until PHP promotes the result
+  to a float. Mixed numeric types follow native PHP numeric promotion.
+- Use ``ArrayMulti::SORT_LOCALE`` instead of PHP's deprecated locale sort flag.
+  The legacy integer value (5) is unchanged. C/POSIX collation uses bytewise
+  comparisons; other locales use ICU via ``ext-intl`` and can differ from
+  historical libc ordering. Missing ICU support fails explicitly for non-C locales.
 - ``ArrayMulti::flatten($array, 0)`` returns unchanged top-level values.
 - Use ``depthGuarded()``, ``flattenGuarded()``, and ``sortRecursiveGuarded()`` when processing untrusted/deep inputs.
 - Guarded recursive sorting accepts scalar/array values only. It refuses object values, including objects nested inside arrays, because PHP sorting may compare arbitrarily deep public object graphs outside a traversal budget. Normalize object data before guarded sorting, or use ordinary ``sortRecursive()`` only for trusted inputs.
@@ -368,6 +375,24 @@ Behavior Notes
 - ``BaseArrayHelper::random()`` throws ``InvalidArgumentException`` when requested count exceeds array size.
 - Recursive/reference-containing arrays are outside the supported input contract
   for unguarded equality, fingerprint, flatten, and recursive-sort helpers.
+
+Locale-Aware Sorting
+--------------------
+
+Use the active ``LC_COLLATE`` locale and ArrayKit's locale sort option:
+
+.. code-block:: php
+
+    use Infocyph\ArrayKit\Array\ArrayMulti;
+
+    $rows = [['name' => 'Zoe'], ['name' => 'Ada']];
+    $sorted = ArrayMulti::sortBy($rows, 'name', options: ArrayMulti::SORT_LOCALE);
+
+The option also works with ``sortByDesc()``, individual ``sortByMany()``
+criteria, ``sortRecursive()`` and ``sortRecursiveGuarded()``. Recursive
+sorting orders associative keys and list values. Locale comparison failures
+raise ``RuntimeException``. Configure the process locale during bootstrap;
+avoid changing global locale state per request in persistent workers.
 
 Randomized and Reproducible Shuffling
 -------------------------------------

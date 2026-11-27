@@ -310,10 +310,10 @@ renewable sources when each traversal can create a fresh iterable.
 Optional Runwire Binding
 ------------------------
 
-Runwire is optional. The current development line targets Runwire 4.0.1 and tests the
-integration on PHP 8.4, 8.5 and 8.6. Ordinary ``LazyCollection`` use does not
-require or load Runwire. When a host already owns a Runwire runtime, pass those exact instances
-to ``withRunwire()``:
+Runwire is optional. ArrayKit 5.4 targets Runwire ``^4.0.1``; exact 4.0.1
+is tested on PHP 8.4, 8.5 and 8.6. Ordinary ``LazyCollection`` use does not
+require or load Runwire. When a host already owns a compatible Runwire runtime,
+pass those exact instances to ``withRunwire()``:
 
 .. code-block:: php
 

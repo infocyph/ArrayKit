@@ -21,6 +21,20 @@ For locale-aware sorting outside the C/POSIX collation locale, install the optio
 Autoload is PSR-4 based and loads namespaced helper functions from
 ``Infocyph\ArrayKit\*`` by default.
 
+Optional Runwire integration
+----------------------------
+
+ArrayKit 5.4 targets Runwire ``^4.0.1``. The integration matrix tests exact
+Runwire 4.0.1 on PHP 8.4, 8.5 and 8.6. Only applications that bind a Runwire
+runtime to ``LazyCollection`` need to install Runwire explicitly:
+
+.. code-block:: bash
+
+    composer require 'infocyph/runwire:^4.0.1'
+
+See :doc:`collection` for host-owned runtime and request binding. No runtime
+is created by ArrayKit.
+
 Optional global helpers
 -----------------------
 

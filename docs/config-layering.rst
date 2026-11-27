@@ -77,7 +77,9 @@ Resilient Lazy Source Cache
 ``ResilientLazyFileConfig`` treats generated namespace-cache corruption as a
 cache miss and retries the authoritative source namespace. Invalid source files
 still fail normally; resilience applies only to disposable generated cache
-artifacts.
+artifacts. A generated namespace file that becomes unreadable after resolution
+is also treated as a cache miss; an unreadable authoritative source still
+raises ``UnexpectedValueException``.
 
 Malformed generated namespace files and invalid ``.arraykit-flat.php`` indexes
 are disposable cache artifacts. Generated files live in immutable generations

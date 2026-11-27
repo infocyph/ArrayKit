@@ -258,6 +258,9 @@ ArraySingle
 ArrayMulti
 ----------------------------------
 
+The public ``ArrayMulti::SORT_LOCALE`` constant has integer value 5. Use it
+for locale-aware sorting; see :doc:`array-helpers` for ICU requirements.
+
 .. code-block:: php
 
     public static function only(array $array, array|string $keys): array

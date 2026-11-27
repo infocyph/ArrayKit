@@ -3,6 +3,32 @@ Migration and Compatibility
 
 This page highlights behavior and API additions that may affect usage patterns.
 
+5.4 Upgrade
+-----------
+
+The 5.4 release line retains PHP 8.4 as its minimum and tests PHP 8.4, 8.5
+and 8.6. Before upgrading from 5.3.2:
+
+1. Ensure ``ext-filter``, ``ext-hash`` and ``ext-tokenizer`` are installed.
+2. If using optional Runwire bindings, upgrade the host to Runwire ``^4.0.1``.
+   Exact 4.0.1 is tested; older Runwire lines are not qualified by this release.
+3. Replace ``SORT_LOCALE_STRING`` with ``ArrayMulti::SORT_LOCALE`` (integer
+   value 5). C/POSIX collation uses bytewise comparison; other locales require
+   ``ext-intl`` and use ICU, whose order can differ from libc.
+4. Review any fixtures or application logic that depend on a particular seeded
+   shuffle permutation. The deterministic engine changed from Mt19937 to
+   Xoshiro256StarStar; identical seeds remain reproducible within the engine.
+   Unseeded shuffles use secure randomness and do not advance global Mt19937.
+
+Strict duplicate detection now reports repeated ``null`` values. Numeric
+accumulation retains integer precision where PHP can represent the result;
+backed enum getters reject mismatched scalar types. A namespace file that
+becomes unreadable after resolution raises ``UnexpectedValueException``
+without marking that namespace loaded. Resilient generated-cache fallback
+remains available through ``ResilientLazyFileConfig``.
+
+See :doc:`release-5.4.0` for the release summary and verification limits.
+
 5.3 Upgrade
 -----------
 
@@ -45,9 +71,9 @@ reference aliasing, and lazy config refresh against newly published source
 generations. It also fixes numeric namespace discovery, numeric and enum edge
 cases, median overflow and private pipeline method dispatch.
 
-The current development line targets optional Runwire integration against Runwire 4.0.1 or later in the 4.x series. Production
-installation does not require Runwire; applications that explicitly bind a
-Runwire runtime must use a compatible 4.x host instance.
+The 5.3.2 maintenance line qualified optional Runwire integration against
+Runwire 3.0. Production installation did not require Runwire. For the current
+compatibility target, see the 5.4 upgrade notes above.
 
 Normal array/snapshot APIs retain their signatures. Snapshotting now visits
 nested arrays to detach external references; object values remain shallow.
@@ -93,12 +119,9 @@ Behavior Changes
 
 - ``wrap()`` now treats only ``null`` as absence. Falsey non-null scalars are
   wrapped instead of being discarded.
-- ``ArraySingle::shuffle()`` uses a secure randomizer when no seed is provided.
-  Seeded shuffles use an isolated Xoshiro256StarStar engine, avoiding the
-  former Mersenne Twister engine's 32-bit seed truncation. Identical seeds
-  remain reproducible, but the exact seeded order changes from older releases.
-  Seeded shuffles are non-cryptographic and neither mode advances PHP's global
-  Mersenne Twister state.
+- Seeded ``ArraySingle::shuffle()`` uses an isolated randomizer rather than
+  reseeding PHP's global Mersenne Twister state. See the 5.4 upgrade notes
+  for the subsequent engine and unseeded behavior changes.
 - ``groupBy()``, ``keyBy()`` / ``indexBy()``, and ``countBy()`` skip rows whose
   derived field is missing. Present values must produce integer or string keys;
   ``null`` and other invalid key types now throw ``InvalidArgumentException``.
