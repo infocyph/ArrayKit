@@ -257,9 +257,7 @@ trait ArrayMultiQuerySortTrait
      */
     public static function max(array $array, string|callable $keyOrCallback): float|int|null
     {
-        return self::formatNumericResult(
-            self::selectExtremeValue($array, $keyOrCallback, pickMax: true),
-        );
+        return self::selectExtremeValue($array, $keyOrCallback, pickMax: true);
     }
 
     /**
@@ -279,9 +277,7 @@ trait ArrayMultiQuerySortTrait
      */
     public static function min(array $array, string|callable $keyOrCallback): float|int|null
     {
-        return self::formatNumericResult(
-            self::selectExtremeValue($array, $keyOrCallback, pickMax: false),
-        );
+        return self::selectExtremeValue($array, $keyOrCallback, pickMax: false);
     }
 
     /**
@@ -1061,7 +1057,6 @@ trait ArrayMultiQuerySortTrait
 
         return $default;
     }
-
 
     /**
      * PHP comparisons may recursively walk unbounded object graphs. Object

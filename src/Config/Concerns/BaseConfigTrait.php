@@ -202,15 +202,12 @@ trait BaseConfigTrait
         }
 
         if (is_subclass_of($enumClass, \BackedEnum::class)) {
-            $backingType = new \ReflectionEnum($enumClass)->getBackingType()?->getName();
-            if (!is_string($value) && !is_int($value)) {
-                return $default;
-            }
-            if (get_debug_type($value) !== $backingType) {
+            $backingType = new \ReflectionEnum($enumClass)->getBackingType();
+            if (!$backingType instanceof \ReflectionNamedType || get_debug_type($value) !== $backingType->getName()) {
                 return $default;
             }
 
-            return $enumClass::tryFrom($value) ?? $default;
+            return is_int($value) || is_string($value) ? ($enumClass::tryFrom($value) ?? $default) : $default;
         }
 
         if (!is_string($value)) {

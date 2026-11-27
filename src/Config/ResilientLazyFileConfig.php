@@ -9,7 +9,8 @@ use UnexpectedValueException;
 /**
  * Lazy file configuration that treats generated namespace-cache corruption as
  * a cache miss while keeping source configuration failures visible.
-  * @api
+ *
+ * @api
  */
 class ResilientLazyFileConfig extends LazyFileConfig
 {

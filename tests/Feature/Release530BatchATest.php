@@ -8,6 +8,16 @@ use Infocyph\ArrayKit\ArrayKit;
 use Infocyph\ArrayKit\Collection\LazyCollection;
 use Infocyph\ArrayKit\Config\LayeredLazyFileConfig;
 
+/**
+ * @param Closure(): void $beforeYield
+ * @return Generator<int, int>
+ */
+function batchADeferredSource(Closure $beforeYield): Generator
+{
+    $beforeYield();
+    yield 1;
+}
+
 function batchARemoveDirectory(string $path): void
 {
     if (is_file($path) || is_link($path)) {
@@ -177,10 +187,7 @@ it('replays terminal lazy source failures instead of presenting truncated succes
 });
 
 it('replays failures before the first lazy yield', function () {
-    $source = (static function (Closure $beforeYield): Generator {
-        $beforeYield();
-        yield 1;
-    })(static function (): void {
+    $source = batchADeferredSource(static function (): void {
         throw new RuntimeException('initial failure');
     });
     $lazy = LazyCollection::from($source);

@@ -11,7 +11,8 @@ use Infocyph\ArrayKit\Concerns\HookTrait;
  * Class HookedCollection
  *
  * A collection that supports get/set hooks for dynamic transformations.
-  * @api
+ *
+ * @api
  */
 class HookedCollection extends Collection
 {

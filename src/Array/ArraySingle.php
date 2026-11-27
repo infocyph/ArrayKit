@@ -660,7 +660,7 @@ class ArraySingle
             array_unshift($array, $value);
         } else {
             if (!is_int($key) && !is_string($key)) {
-                $key = self::normalizeArrayKey($key);
+                $key = ArraySharedOps::normalizeArrayKey($key);
             }
 
             $array = [$key => $value] + $array;
@@ -1001,7 +1001,6 @@ class ArraySingle
     {
         return $callback($value, $key);
     }
-
 
     /**
      * @throws \InvalidArgumentException

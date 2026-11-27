@@ -490,7 +490,7 @@ class ArrayMulti
 
         foreach (self::flattenIntoGuarded(
             $item,
-            (is_int($depth) ? $depth - 1 : $depth - 1.0),
+            --$depth,
             $currentDepth + 1,
             $visitedNodes,
             $maxDepth,
@@ -537,7 +537,7 @@ class ArrayMulti
      */
     private static function flattenValues(array $array, float|int $depth): array
     {
-        return $depth === 1 ? array_values($array) : static::flatten($array, (is_int($depth) ? $depth - 1 : $depth - 1.0));
+        return $depth === 1 ? array_values($array) : static::flatten($array, --$depth);
     }
 
     /**

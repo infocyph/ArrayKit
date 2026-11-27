@@ -11,7 +11,8 @@ namespace Infocyph\ArrayKit\Config;
  * Namespace materialization is used deliberately so exact-path reads always
  * match reads against the fully merged configuration, including list/scalar
  * shadowing semantics.
-  * @api
+ *
+ * @api
  */
 class LayeredLazyFileConfig extends Config
 {
