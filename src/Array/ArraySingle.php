@@ -33,6 +33,7 @@ class ArraySingle
      * @param int $size The size of each chunk.
      * @param bool $preserveKeys Whether to preserve the keys in the chunks.
      * @return array<array-key, mixed> An array of arrays, each representing a chunk of the original array.
+     * @throws \InvalidArgumentException
      */
     public static function chunk(array $array, int $size, bool $preserveKeys = false): array
     {
@@ -52,6 +53,7 @@ class ArraySingle
      * @param array<array-key, mixed> $keys The array of keys.
      * @param array<array-key, mixed> $values The array of values.
      * @return array<array-key, mixed> The combined array.
+     * @throws \InvalidArgumentException
      */
     public static function combine(array $keys, array $values): array
     {
@@ -1004,6 +1006,9 @@ class ArraySingle
         return ArraySharedOps::normalizeArrayKey($value);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     private static function requireArrayKey(mixed $value, string $operation): int|string
     {
         if (is_int($value) || is_string($value)) {

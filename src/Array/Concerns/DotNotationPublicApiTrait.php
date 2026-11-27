@@ -23,6 +23,7 @@ trait DotNotationPublicApiTrait
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function arrayValue(array $array, string $key, mixed $default = null): array
     {
@@ -36,6 +37,7 @@ trait DotNotationPublicApiTrait
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \InvalidArgumentException
      */
     public static function boolean(array $array, string $key, mixed $default = null): bool
     {
@@ -84,6 +86,7 @@ trait DotNotationPublicApiTrait
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \InvalidArgumentException
      */
     public static function float(array $array, string $key, mixed $default = null): float
     {
@@ -256,6 +259,7 @@ trait DotNotationPublicApiTrait
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \InvalidArgumentException
      */
     public static function integer(array $array, string $key, mixed $default = null): int
     {
@@ -357,6 +361,7 @@ trait DotNotationPublicApiTrait
      * Rename a dot path from one key to another.
      *
      * @param array<array-key, mixed> $array
+     * @throws \Throwable
      */
     public static function rename(array &$array, string $from, string $to, bool $overwrite = true): bool
     {
@@ -419,6 +424,7 @@ trait DotNotationPublicApiTrait
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \InvalidArgumentException
      */
     public static function string(array $array, string $key, mixed $default = null): string
     {

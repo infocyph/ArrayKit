@@ -363,6 +363,7 @@ trait ArrayMultiQuerySortTrait
      *
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     public static function sortBy(
         array $array,
@@ -410,6 +411,7 @@ trait ArrayMultiQuerySortTrait
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     public static function sortByDesc(array $array, string|callable $by, int $options = \SORT_REGULAR): array
     {
@@ -426,6 +428,7 @@ trait ArrayMultiQuerySortTrait
      * @param array<array-key, mixed> $array
      * @param array<int, array<int, mixed>> $criteria
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     public static function sortByMany(array $array, array $criteria): array
     {
@@ -451,6 +454,7 @@ trait ArrayMultiQuerySortTrait
      *
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     public static function sortRecursive(array $array, int $options = \SORT_REGULAR, bool $descending = false): array
     {
@@ -471,6 +475,7 @@ trait ArrayMultiQuerySortTrait
      *
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     public static function sortRecursiveGuarded(
         array $array,
@@ -884,6 +889,7 @@ trait ArrayMultiQuerySortTrait
 
     /**
      * @param array<int, array{values:array<array-key, mixed>, desc:bool, options:int, collator:?Collator}> $criteria
+     * @throws \RuntimeException
      */
     private static function compareByManyCriteria(int|string $leftKey, int|string $rightKey, array $criteria): int
     {
@@ -901,6 +907,7 @@ trait ArrayMultiQuerySortTrait
 
     /**
      * Compare two values according to PHP sort options.
+     * @throws \RuntimeException
      */
     private static function compareSortValues(mixed $left, mixed $right, int $options, ?Collator $collator): int
     {
@@ -924,7 +931,10 @@ trait ArrayMultiQuerySortTrait
         };
     }
 
-    /** @param array<array-key, mixed> $array */
+    /**
+     * @param array<array-key, mixed> $array
+     * @throws \RuntimeException
+     */
     private static function sortLevel(array &$array, int $options, bool $descending): void
     {
         $collator = self::localeCollator($options);
@@ -946,6 +956,9 @@ trait ArrayMultiQuerySortTrait
         }
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function localeCollator(int $options): ?Collator
     {
         if (($options & ~\SORT_FLAG_CASE) !== self::SORT_LOCALE) {
@@ -971,6 +984,9 @@ trait ArrayMultiQuerySortTrait
         return new Collator($identifier);
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function compareLocale(string $left, string $right, ?Collator $collator): int
     {
         if ($collator === null) {
@@ -1102,6 +1118,7 @@ trait ArrayMultiQuerySortTrait
     /**
      * PHP comparisons may recursively walk unbounded object graphs. Object
      * values therefore fall outside the guarded sort's supported domain.
+     * @throws \RuntimeException
      */
     private static function hasUnsafeSortObject(mixed $value, bool $throwOnTooDeep): bool
     {
@@ -1155,6 +1172,7 @@ trait ArrayMultiQuerySortTrait
      * @param array<array-key, mixed> $array
      * @param array<int, array<int, mixed>> $criteria
      * @return array<int, array{values:array<array-key, mixed>, desc:bool, options:int, collator:?Collator}>
+     * @throws \RuntimeException
      */
     private static function prepareSortByManyCriteria(array $array, array $criteria): array
     {
@@ -1177,6 +1195,9 @@ trait ArrayMultiQuerySortTrait
         return $prepared;
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     private static function requireArrayKey(mixed $value, string $operation): int|string
     {
         if (is_int($value) || is_string($value)) {
@@ -1190,6 +1211,7 @@ trait ArrayMultiQuerySortTrait
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \RuntimeException
      */
     private static function reserveSortNodes(
         array $array,
@@ -1305,6 +1327,7 @@ trait ArrayMultiQuerySortTrait
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     private static function sortRecursiveWithGuards(
         array $array,

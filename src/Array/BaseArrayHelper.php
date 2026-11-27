@@ -254,6 +254,7 @@ class BaseArrayHelper
      * @param int $end The ending number of the sequence.
      * @param int $step The increment between each number in the sequence. Defaults to 1.
      * @return array<int, int> An array containing the sequence of numbers.
+     * @throws \InvalidArgumentException
      */
     public static function range(int $start, int $end, int $step = 1): array
     {

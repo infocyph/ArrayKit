@@ -26,7 +26,9 @@ final class ArraySharedOps
         }
 
         if (is_array($value)) {
-            return json_encode($value) ?: '';
+            $encoded = json_encode($value);
+
+            return $encoded === false ? '' : $encoded;
         }
 
         return '';
@@ -99,7 +101,7 @@ final class ArraySharedOps
      */
     public static function skipUntil(array $array, callable $callback): array
     {
-        return self::skipWhile($array, fn($value, $key) => !$callback($value, $key));
+        return self::skipWhile($array, static fn(mixed $value, int|string $key): bool => !$callback($value, $key));
     }
 
     /**

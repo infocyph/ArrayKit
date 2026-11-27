@@ -12,7 +12,7 @@ use InvalidArgumentException;
 use OutOfBoundsException;
 use RuntimeException;
 use UnexpectedValueException;
-use UnitEnum as TEnum;
+use UnitEnum as TConfigEnum;
 
 /** @internal */
 trait BaseConfigTrait
@@ -180,9 +180,10 @@ trait BaseConfigTrait
     /**
      * Get an enum instance from a scalar stored config value.
      *
-     * @template TEnum of \UnitEnum
+     * @template TConfigEnum of \UnitEnum
      *
-     * @param class-string<TEnum> $enumClass
+     * @param class-string<TConfigEnum> $enumClass
+     * @throws \InvalidArgumentException
      */
     public function getEnum(string|int $key, string $enumClass, ?\UnitEnum $default = null): ?\UnitEnum
     {
@@ -200,7 +201,8 @@ trait BaseConfigTrait
                 return $default;
             }
 
-            if (get_debug_type($value) !== new \ReflectionEnum($enumClass)->getBackingType()?->getName()) {
+            $backingType = new \ReflectionEnum($enumClass)->getBackingType();
+            if (!$backingType instanceof \ReflectionNamedType || get_debug_type($value) !== $backingType->getName()) {
                 return $default;
             }
 
@@ -260,6 +262,7 @@ trait BaseConfigTrait
      * Get a required configuration value or throw when missing.
      *
      * @param string|int|array<int, int|string> $key
+     * @throws \OutOfBoundsException
      */
     public function getOrFail(string|int|array $key): mixed
     {
@@ -364,6 +367,7 @@ trait BaseConfigTrait
      *
      * @param string $path The file path to load
      * @return bool True if loaded successfully, false if already loaded or file missing
+     * @throws \UnexpectedValueException
      */
     public function loadFile(string $path): bool
     {
@@ -461,6 +465,7 @@ trait BaseConfigTrait
      * Reload configuration from an array or file path, replacing existing data.
      *
      * @param array<array-key, mixed>|string $source
+     * @throws \UnexpectedValueException
      */
     public function reload(array|string $source): bool
     {
@@ -546,6 +551,9 @@ trait BaseConfigTrait
         return true;
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     protected function assertWritable(): void
     {
         if ($this->readOnly) {
@@ -663,6 +671,9 @@ trait BaseConfigTrait
         return is_int($key) ? 'i:' . $key : 's:' . $key;
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     protected function writeCacheFile(string $path, string $contents): bool
     {
         try {
@@ -697,6 +708,7 @@ trait BaseConfigTrait
 
     /**
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     private function arrayValueForMutation(string $key): array
     {
@@ -718,6 +730,7 @@ trait BaseConfigTrait
      * @param array<string, true> $activeReferences
      * @param array<int, true> $activeObjects
      * @return array<array-key, mixed>
+     * @throws \UnexpectedValueException
      */
     private function materializeCacheArray(array $value, array &$activeReferences, array &$activeObjects): array
     {
@@ -758,6 +771,7 @@ trait BaseConfigTrait
     /**
      * @param array<string, true> $activeReferences
      * @param array<int, true> $activeObjects
+     * @throws \UnexpectedValueException
      */
     private function materializeCacheValueRecursive(
         mixed $value,

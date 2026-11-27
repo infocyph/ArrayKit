@@ -26,6 +26,10 @@ final readonly class RunwireLazyBinding
 
     private bool $yieldEnabled;
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     */
     public function __construct(
         public RuntimeContext $runtime,
         private ?RequestContext $request = null,
@@ -55,6 +59,11 @@ final readonly class RunwireLazyBinding
             && $runtime->supports(RuntimeCapability::RUNWIRE_COROUTINES);
     }
 
+    /**
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
+     */
     public function checkpoint(): void
     {
         $this->assertActive();
@@ -70,6 +79,10 @@ final readonly class RunwireLazyBinding
         $this->scopeCancellation?->throwIfCancelled();
     }
 
+    /**
+     * @throws \LogicException
+     * @throws \Throwable
+     */
     private function assertActive(): void
     {
         if ($this->request?->completed()) {

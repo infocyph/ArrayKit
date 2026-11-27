@@ -14,6 +14,7 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function chunk(array $array, int $size, bool $preserveKeys = false): array
     {
@@ -331,6 +332,7 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $matrix
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function transpose(array $matrix): array
     {
@@ -537,6 +539,9 @@ class ArrayMulti
         return $depth === 1 ? array_values($array) : static::flatten($array, $depth - 1);
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function handleTraversalLimit(bool $throwOnTooDeep, string $message): void
     {
         if ($throwOnTooDeep) {
@@ -625,6 +630,7 @@ class ArrayMulti
     /**
      * @param list<array-key> $keys
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     private static function validatedMatrixRow(mixed $row, array $keys): array
     {

@@ -85,6 +85,7 @@ trait LazyFileConfigCacheTrait
 
     /**
      * @param string|array<int, string>|null $namespaces
+     * @throws \RuntimeException
      */
     public function warmNamespaceCache(string|array|null $namespaces = null): static
     {
@@ -245,6 +246,7 @@ trait LazyFileConfigCacheTrait
 
     /**
      * @return array<array-key, mixed>
+     * @throws \UnexpectedValueException
      */
     protected function namespaceCacheWarmValue(string $namespace): array
     {
@@ -305,6 +307,10 @@ trait LazyFileConfigCacheTrait
         return array_values(array_unique($resolved));
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \Throwable
+     */
     private function activateGeneration(string $stage): void
     {
         $root = $this->namespaceCacheDirectory;
@@ -372,6 +378,7 @@ trait LazyFileConfigCacheTrait
 
     /**
      * @param array<string, true> $excluded
+     * @throws \RuntimeException
      */
     private function copyActiveNamespaceCacheFiles(string $stage, array $excluded): void
     {
@@ -394,6 +401,9 @@ trait LazyFileConfigCacheTrait
         }
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private function createGenerationStage(): string
     {
         $root = $this->namespaceCacheDirectory;
@@ -510,6 +520,7 @@ trait LazyFileConfigCacheTrait
 
     /**
      * @param string[]|null $namespaces
+     * @throws \Throwable
      */
     private function publishFlushGeneration(?array $namespaces): void
     {
@@ -533,6 +544,7 @@ trait LazyFileConfigCacheTrait
 
     /**
      * @param string[] $namespaces
+     * @throws \Throwable
      */
     private function publishWarmGeneration(array $namespaces): void
     {
@@ -577,7 +589,8 @@ trait LazyFileConfigCacheTrait
 
     private function removeGenerationDirectory(string $directory): void
     {
-        foreach (scandir($directory) ?: [] as $entry) {
+        $entries = scandir($directory);
+        foreach ($entries === false ? [] : $entries as $entry) {
             if ($entry === '.' || $entry === '..') {
                 continue;
             }
@@ -598,6 +611,9 @@ trait LazyFileConfigCacheTrait
         return $path !== null && is_file($path) && is_readable($path) ? $path : null;
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private function withNamespaceCacheLock(\Closure $operation): static
     {
         $directory = $this->namespaceCacheDirectory;
@@ -624,6 +640,9 @@ trait LazyFileConfigCacheTrait
         return $this;
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private function writeGenerationFlatIndex(string $directory): void
     {
         $index = $this->buildFlatLeafIndexFromDirectory($directory);
@@ -635,6 +654,9 @@ trait LazyFileConfigCacheTrait
         }
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private function writeGenerationPointer(string $generation): void
     {
         $path = $this->generationPointerPath();

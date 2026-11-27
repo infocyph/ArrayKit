@@ -310,6 +310,7 @@ final class DotNotationPathOps
 
     /**
      * @phpstan-impure
+     * @throws \RuntimeException
      */
     private static function consumeTraversalNode(
         int &$visitedNodes,
@@ -328,6 +329,9 @@ final class DotNotationPathOps
         return false;
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function handleTraversalLimit(object $missing, bool $throwOnTooDeep, string $message): mixed
     {
         if ($throwOnTooDeep) {

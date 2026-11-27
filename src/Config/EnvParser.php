@@ -69,6 +69,9 @@ final class EnvParser
         return EnvValueResolver::restoreLiteralDollars(EnvLineParser::parseContents($contents));
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     private static function assertSafeContents(string $contents, string $path): void
     {
         if (str_starts_with($contents, "\xEF\xBB\xBF")) {
@@ -80,6 +83,9 @@ final class EnvParser
         }
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     private static function readFile(string $path): string
     {
         if (!is_file($path) || !is_readable($path)) {
@@ -99,6 +105,7 @@ final class EnvParser
     /**
      * @param iterable<int, string> $lines
      * @return \Generator<int, string>
+     * @throws \UnexpectedValueException
      */
     private static function safeLines(iterable $lines): \Generator
     {

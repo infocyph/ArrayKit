@@ -43,6 +43,8 @@ final readonly class ModuleProxy
      * @param-out array<array-key, mixed> $array
      * @param array<int, int|string>|int|string|null $keys
      * @param array<array-key, mixed>|null $target Native dot-module named argument
+     * @throws \InvalidArgumentException
+     * @throws \ArgumentCountError
      */
     public function forget(?array &$array = null, array|string|int|null $keys = null, ?array &$target = null): void
     {
@@ -104,6 +106,7 @@ final readonly class ModuleProxy
 
     /**
      * @param array<int, mixed> $arguments
+     * @throws \BadMethodCallException
      */
     private function invoke(string $method, array $arguments): mixed
     {
@@ -116,6 +119,7 @@ final readonly class ModuleProxy
 
     /**
      * @param array<int, mixed> $arguments
+     * @throws \UnexpectedValueException
      */
     private function invokeBool(string $method, array $arguments): bool
     {

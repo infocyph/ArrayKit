@@ -45,6 +45,7 @@ class LazyFileConfig extends Config
     #[\Override]
     /**
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     public function all(): array
     {
@@ -88,6 +89,8 @@ class LazyFileConfig extends Config
     #[\Override]
     /**
      * @param string|int|array<int, string|int>|null $key
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function get(string|int|array|null $key = null, mixed $default = null): mixed
     {
@@ -245,6 +248,7 @@ class LazyFileConfig extends Config
     #[\Override]
     /**
      * @param string|array<array-key, mixed>|null $key
+     * @throws \RuntimeException
      */
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
@@ -314,6 +318,9 @@ class LazyFileConfig extends Config
         return DotNotation::has($this->items[$namespace], $rest);
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     protected function loadNamespace(string $namespace): void
     {
         if (isset($this->loadedNamespaces[$namespace])) {
@@ -352,6 +359,9 @@ class LazyFileConfig extends Config
         }
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     protected function normalizeNamespace(string $namespace): string
     {
         $trimmed = trim($namespace);
@@ -453,6 +463,7 @@ class LazyFileConfig extends Config
 
     /**
      * @return array{0: string, 1: string|null}
+     * @throws \InvalidArgumentException
      */
     protected function splitPath(string $path): array
     {
@@ -522,7 +533,10 @@ class LazyFileConfig extends Config
         return $changed;
     }
 
-    /** @param string|array<array-key, mixed> $key */
+    /**
+     * @param string|array<array-key, mixed> $key
+     * @throws \InvalidArgumentException
+     */
     private function writePaths(string|array $key, mixed $value, bool $overwrite, string $operation): void
     {
         if (is_string($key)) {

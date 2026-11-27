@@ -351,6 +351,7 @@ class Pipeline
 
     /**
      * Return every n-th element, using ArraySingle::nth.
+     * @throws \InvalidArgumentException
      */
     public function nth(int $step, int $offset = 0): Collection
     {
@@ -392,6 +393,7 @@ class Pipeline
 
     /**
      * "Paginate" the array by slicing it into a smaller segment, using ArraySingle::paginate.
+     * @throws \InvalidArgumentException
      */
     public function paginate(int $page, int $perPage): Collection
     {

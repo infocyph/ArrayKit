@@ -10,6 +10,9 @@ class DotNotation
 {
     use DotNotationPublicApiTrait;
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function canResolveSafeKey(int $visitedNodes, int $maxNodes, bool $throwOnTooDeep): bool
     {
         if ($maxNodes <= 0 || $visitedNodes < $maxNodes) {
@@ -170,6 +173,9 @@ class DotNotation
         }
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     private static function hasWritableObjectProperty(object $target, string $propertyName): bool
     {
         $propertyExists = property_exists($target, $propertyName);

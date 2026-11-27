@@ -21,7 +21,10 @@ final class DTOGraphGuard
         self::traverse($value, $maxDepth, $maxNodes, false);
     }
 
-    /** @return array<array-key, mixed> */
+    /**
+     * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
+     */
     public static function export(object $value, int $maxDepth, int $maxNodes): array
     {
         $result = self::traverse($value, $maxDepth, $maxNodes, true);
@@ -32,6 +35,9 @@ final class DTOGraphGuard
         return $result;
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function assertNodeWithinLimits(
         int $depth,
         int &$visitedNodes,
@@ -48,6 +54,9 @@ final class DTOGraphGuard
         }
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     private static function isStandardExporter(object $value): bool
     {
         if (!is_callable([$value, 'toArrayDeep']) && !is_callable([$value, 'toArray'])) {
@@ -67,6 +76,9 @@ final class DTOGraphGuard
         return true;
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     private static function traverse(mixed $value, int $maxDepth, int $maxNodes, bool $export): mixed
     {
         if ($maxDepth < 1) {
@@ -142,6 +154,7 @@ final class DTOGraphGuard
      * @param array<array-key, mixed> $value
      * @param array<int, true> $activeObjects
      * @param array<string, true> $activeReferences
+     * @throws \RuntimeException
      */
     private static function walkArray(
         array $value,
@@ -206,6 +219,7 @@ final class DTOGraphGuard
     /**
      * @param array<int, true> $activeObjects
      * @param array<string, true> $activeReferences
+     * @throws \RuntimeException
      */
     private static function walkObject(
         object $value,

@@ -12,6 +12,9 @@ use UnexpectedValueException;
  */
 class ResilientLazyFileConfig extends LazyFileConfig
 {
+    /**
+     * @throws \UnexpectedValueException
+     */
     #[\Override]
     protected function loadNamespace(string $namespace): void
     {

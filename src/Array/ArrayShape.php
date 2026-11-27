@@ -14,6 +14,7 @@ final class ArrayShape
      * @param array<array-key, mixed> $row
      * @param array<string, string> $shape
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function require(array $row, array $shape): array
     {

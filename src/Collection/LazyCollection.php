@@ -99,6 +99,7 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return self<int, array<int|string, TValue>>
+     * @throws \InvalidArgumentException
      */
     public function chunkLazy(int $size, bool $preserveKeys = false): self
     {
@@ -161,6 +162,7 @@ final readonly class LazyCollection implements IteratorAggregate
     /**
      * @return Traversable<TKey, TValue>
      */
+    #[\Override]
     public function getIterator(): Traversable
     {
         return $this->cursor();
@@ -187,6 +189,7 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return self<TKey, TValue>
+     * @throws \InvalidArgumentException
      */
     public function take(int $limit): self
     {
@@ -292,7 +295,15 @@ final readonly class LazyCollection implements IteratorAggregate
             $advancePending = false;
         }
 
-        return $sourceCursor->valid() ? [$sourceCursor->key(), $sourceCursor->current()] : null;
+        if (!$sourceCursor->valid()) {
+            return null;
+        }
+
+        // A valid generator has a current value of its declared yielded type, including null when allowed.
+        /** @var TSourceValue $value */
+        $value = $sourceCursor->current();
+
+        return [$sourceCursor->key(), $value];
     }
 
     /**
@@ -336,6 +347,7 @@ final readonly class LazyCollection implements IteratorAggregate
      * @param list<array{0: TSourceKey, 1: TSourceValue}> $cache
      * @param Generator<TSourceKey, TSourceValue>|null $sourceCursor
      * @return Generator<TSourceKey, TSourceValue>
+     * @throws \Throwable
      */
     private static function replayCursor(
         iterable $source,
@@ -416,14 +428,9 @@ final readonly class LazyCollection implements IteratorAggregate
         $binding?->checkpoint();
 
         $factory = $this->factory;
-        $iterable = $factory($binding);
-        $iterator = (static function () use ($iterable): Generator {
-            yield from $iterable;
-        })();
-
         $processed = 0;
-        while ($iterator->valid()) {
-            yield $iterator->key() => $iterator->current();
+        foreach ($factory($binding) as $key => $value) {
+            yield $key => $value;
             $processed++;
 
             if (
@@ -433,7 +440,6 @@ final readonly class LazyCollection implements IteratorAggregate
                 $binding->checkpoint();
             }
 
-            $iterator->next();
         }
     }
 }

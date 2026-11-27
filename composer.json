@@ -20,7 +20,9 @@
     ],
     "require": {
         "php": ">=8.4",
-        "ext-hash": "*"
+        "ext-filter": "*",
+        "ext-hash": "*",
+        "ext-tokenizer": "*"
     },
     "require-dev": {
         "ext-intl": "*",
