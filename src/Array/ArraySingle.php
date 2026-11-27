@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Array;
 
 use InvalidArgumentException;
-use Random\Engine\Mt19937;
+use Random\Engine\Xoshiro256StarStar;
 use Random\Randomizer;
 
 /** @api */
@@ -803,20 +803,15 @@ class ArraySingle
     }
 
     /**
-     * Shuffle values, using isolated deterministic state when a seed is given.
+     * Shuffle values with a secure randomizer by default.
+     * A supplied seed selects an isolated, reproducible, non-cryptographic engine.
      *
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
      */
     public static function shuffle(array $array, ?int $seed = null): array
     {
-        if ($seed === null) {
-            shuffle($array);
-
-            return $array;
-        }
-
-        return new Randomizer(new Mt19937($seed))->shuffleArray($array);
+        return new Randomizer($seed === null ? null : new Xoshiro256StarStar($seed))->shuffleArray($array);
     }
 
     /**

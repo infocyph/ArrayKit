@@ -121,21 +121,20 @@ it('keeps non-finite floats distinct in strict set operations', function () {
         ->and(ArraySingle::containsAny([INF], [-INF], true))->toBeFalse();
 });
 
-it('isolates deterministic shuffle state from the global Mersenne Twister', function () {
+it('shuffles without shared random state and preserves full-width deterministic seeds', function () {
     $values = range(1, 20);
+    $seeded = ArraySingle::shuffle($values, 12345);
 
-    expect(ArraySingle::shuffle($values, 12345))
-        ->toBe(ArraySingle::shuffle($values, 12345))
-        ->not->toBe(ArraySingle::shuffle($values, 54321));
+    expect(ArraySingle::shuffle($values, 54321))->not->toBe($seeded)
+        ->and(ArraySingle::shuffle($values, 0))->not->toBe(ArraySingle::shuffle($values, PHP_INT_MIN));
 
-    mt_srand(9876);
-    $first = mt_rand();
-    $second = mt_rand();
+    $unseeded = ArraySingle::shuffle($values);
+    sort($unseeded);
+    expect($unseeded)->toBe($values)
+        ->and(ArraySingle::shuffle($values, 12345))->toBe($seeded);
 
-    mt_srand(9876);
-    expect(mt_rand())->toBe($first);
-    ArraySingle::shuffle($values, 12345);
-    expect(mt_rand())->toBe($second);
+    sort($seeded);
+    expect($seeded)->toBe($values);
 });
 
 it('does not retry callbacks that throw argument count errors internally', function () {

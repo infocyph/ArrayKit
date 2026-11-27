@@ -93,8 +93,12 @@ Behavior Changes
 
 - ``wrap()`` now treats only ``null`` as absence. Falsey non-null scalars are
   wrapped instead of being discarded.
-- Seeded ``ArraySingle::shuffle()`` uses an isolated randomizer and no longer
-  reseeds or advances PHP's global Mersenne Twister state.
+- ``ArraySingle::shuffle()`` uses a secure randomizer when no seed is provided.
+  Seeded shuffles use an isolated Xoshiro256StarStar engine, avoiding the
+  former Mersenne Twister engine's 32-bit seed truncation. Identical seeds
+  remain reproducible, but the exact seeded order changes from older releases.
+  Seeded shuffles are non-cryptographic and neither mode advances PHP's global
+  Mersenne Twister state.
 - ``groupBy()``, ``keyBy()`` / ``indexBy()``, and ``countBy()`` skip rows whose
   derived field is missing. Present values must produce integer or string keys;
   ``null`` and other invalid key types now throw ``InvalidArgumentException``.

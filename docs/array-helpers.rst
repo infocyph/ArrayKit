@@ -368,3 +368,11 @@ Behavior Notes
 - ``BaseArrayHelper::random()`` throws ``InvalidArgumentException`` when requested count exceeds array size.
 - Recursive/reference-containing arrays are outside the supported input contract
   for unguarded equality, fingerprint, flatten, and recursive-sort helpers.
+
+Randomized and Reproducible Shuffling
+-------------------------------------
+
+``ArraySingle::shuffle($values)`` uses PHP's secure randomizer. Passing an
+integer seed instead selects an isolated Xoshiro256StarStar engine for
+reproducible, non-cryptographic shuffles. Do not use seeded output for secrets.
+The exact seeded permutation is not stable across engine changes.
