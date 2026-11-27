@@ -13,6 +13,7 @@ use Infocyph\Runwire\Runtime\RuntimeEnvironment;
 use Infocyph\Runwire\RuntimeContext;
 use Infocyph\Runwire\RuntimeOptions;
 
+/** @throws InvalidArgumentException */
 function batchFRuntime(RuntimeDriver $driver): RuntimeContext
 {
     $environment = new RuntimeEnvironment(

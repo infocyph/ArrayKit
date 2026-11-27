@@ -12,6 +12,7 @@ use Infocyph\Runwire\Runtime\Enum\RuntimeDriver;
 use Infocyph\Runwire\RuntimeCapabilities;
 use Infocyph\Runwire\RuntimeContext;
 
+/** @throws InvalidArgumentException */
 function batchERuntime(bool $coroutines = false): RuntimeContext
 {
     return RuntimeContext::fromCapabilities(
@@ -33,6 +34,8 @@ function batchERuntime(bool $coroutines = false): RuntimeContext
  * @template TValue
  * @param LazyCollection<TKey, TValue> $collection
  * @return LazyCollection<TKey, TValue>
+ * @throws InvalidArgumentException
+ * @throws LogicException
  */
 function batchEForwardBinding(
     LazyCollection $collection,
@@ -77,7 +80,11 @@ PHP;
     fclose($pipes[1]);
     fclose($pipes[2]);
 
-    expect(proc_close($process))->toBe(0, $stdout . $stderr);
+    $exit = proc_close($process);
+    if ($stdout === false || $stderr === false) {
+        throw new RuntimeException('Unable to read fixture process output.');
+    }
+    expect($exit)->toBe(0, $stdout . $stderr);
 });
 
 it('keeps installed but unbound lazy collections on the ordinary path', function () {

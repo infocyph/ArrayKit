@@ -18,6 +18,7 @@ final class DTOGraphGuard
 {
     /**
      * @throws \InvalidArgumentException
+     * @throws \RuntimeException
      */
     public static function assertWithinLimits(mixed $value, int $maxDepth, int $maxNodes): void
     {
@@ -27,6 +28,7 @@ final class DTOGraphGuard
     /**
      * @return array<array-key, mixed>
      * @throws \InvalidArgumentException
+     * @throws \RuntimeException
      */
     public static function export(object $value, int $maxDepth, int $maxNodes): array
     {

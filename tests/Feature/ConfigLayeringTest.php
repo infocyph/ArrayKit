@@ -31,7 +31,9 @@ function configLayeringRemove(string $path): void
         return;
     }
 
-    foreach (scandir($path) ?: [] as $entry) {
+    $entries = scandir($path);
+
+    foreach ($entries === false ? [] : $entries as $entry) {
         if ($entry === '.' || $entry === '..') {
             continue;
         }
@@ -178,5 +180,5 @@ it('does not hide invalid source configuration behind resilient cache behavior',
         namespaceCacheDirectory: $this->layerCachePath,
     );
 
-    expect(fn () => $config->get('db.host'))->toThrow(UnexpectedValueException::class);
+    expect(static fn(): mixed => $config->get('db.host'))->toThrow(UnexpectedValueException::class);
 });

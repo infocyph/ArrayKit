@@ -2,10 +2,17 @@
 
 declare(strict_types=1);
 
+namespace Infocyph\ArrayKit\Tests\Feature;
+
 use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
 use Infocyph\ArrayKit\Config\Support\Environment;
 use Infocyph\ArrayKit\Tests\Fixtures\ConfigMode;
+use Closure;
+use InvalidArgumentException;
+use RuntimeException;
+use stdClass;
+use UnexpectedValueException;
 
 function batchBRemoveDirectory(string $path): void
 {
@@ -19,7 +26,9 @@ function batchBRemoveDirectory(string $path): void
         return;
     }
 
-    foreach (scandir($path) ?: [] as $entry) {
+    $entries = scandir($path);
+
+    foreach ($entries === false ? [] : $entries as $entry) {
         if ($entry === '.' || $entry === '..') {
             continue;
         }
@@ -59,7 +68,8 @@ it('does not memoize scalar reads through externally mutable objects or referenc
     $object->name = 'after';
     $referenced = 'after';
 
-    expect($config->get('object.name'))->toBe('after')
+    expect($referenced)->toBe('after')
+        ->and($config->get('object.name'))->toBe('after')
         ->and($config->get('reference.name'))->toBe('after');
 });
 
@@ -203,6 +213,9 @@ it('rejects unsupported compiled-cache values without replacing the last valid a
         expect(fn () => $invalid->exportCache($cache))
             ->toThrow(UnexpectedValueException::class);
 
+        if (!is_file($cache)) {
+            throw new RuntimeException('Expected existing cache file.');
+        }
         expect(include $cache)->toBe(['app' => ['name' => 'stable']]);
     } finally {
         if (is_file($cache)) {
@@ -415,8 +428,11 @@ it('round-trips supported compiled-cache values including nulls and enums', func
             ],
         ]);
 
-        expect($config->exportCache($cache))->toBeTrue()
-            ->and(include $cache)->toBe([
+        expect($config->exportCache($cache))->toBeTrue();
+        if (!is_file($cache)) {
+            throw new RuntimeException('Expected exported config cache.');
+        }
+        expect(include $cache)->toBe([
                 'app' => [
                     'enabled' => true,
                     'mode' => ConfigMode::Prod,
@@ -446,7 +462,6 @@ it('rejects resources named objects and cyclic compiled-cache graphs', function 
                 return $cycle;
             })(),
             'closure-cycle' => (static function (): Closure {
-                $closure = null;
                 $closure = static function () use (&$closure): Closure {
                     return $closure;
                 };

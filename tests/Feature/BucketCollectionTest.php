@@ -13,6 +13,7 @@ it('serializes arrayable input only once', function () {
     $source = new class implements JsonSerializable {
         public int $calls = 0;
 
+        #[Override]
         public function jsonSerialize(): mixed
         {
             $this->calls++;
@@ -33,11 +34,11 @@ it('supports array access', function () {
 
 it('supports iteration', function () {
     $collection = new Collection(['a' => 1, 'b' => 2]);
-    $keys = [];
+    $items = [];
     foreach ($collection as $key => $val) {
-        $keys[] = $key;
+        $items[$key] = $val;
     }
-    expect($keys)->toBe(['a', 'b']);
+    expect($items)->toBe(['a' => 1, 'b' => 2]);
 });
 
 it('supports nested iteration without pointer side effects', function () {

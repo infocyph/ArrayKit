@@ -23,7 +23,11 @@ if (!is_string($root) || !is_string($workload) || !is_numeric($operations) || !i
     );
 }
 
-require rtrim($root, DIRECTORY_SEPARATOR) . '/vendor/autoload.php';
+$autoload = rtrim($root, DIRECTORY_SEPARATOR) . '/vendor/autoload.php';
+if (!is_file($autoload) || !is_readable($autoload)) {
+    throw new RuntimeException('Workload autoload file is not readable.');
+}
+require $autoload;
 
 $operations = max(1, (int) $operations);
 $warmup = max(0, (int) $warmup);
@@ -79,7 +83,7 @@ fwrite(STDOUT, json_encode([
     'elapsed_seconds' => $elapsedSeconds,
     'latencies_ms' => $latencies,
     'cpu_seconds' => max(0.0, $cpuSeconds),
-    'cpu_percent' => max(0.0, ($cpuSeconds / $elapsedSeconds) * 100),
+    'cpu_percent' => max(0.0, ($cpuSeconds / (float) $elapsedSeconds) * 100.0),
     'memory_initial_mb' => $memoryBefore / 1_048_576,
     'memory_final_mb' => $memoryAfter / 1_048_576,
     'memory_peak_mb' => memory_get_peak_usage(true) / 1_048_576,
@@ -230,6 +234,7 @@ function releaseLazyArrayWorkload(): \Closure
 /**
  * @param list<string> $temporaryDirectories
  * @return \Closure(): void
+ * @throws RuntimeException
  */
 function releaseLazyFileColdWorkload(array &$temporaryDirectories): \Closure
 {
@@ -251,6 +256,7 @@ function releaseLazyFileColdWorkload(array &$temporaryDirectories): \Closure
  * @param list<string> $temporaryDirectories
  * @return \Closure(): void
  * @throws \RuntimeException
+ * @throws \InvalidArgumentException
  */
 function releaseLazyFileGeneratedWorkload(array &$temporaryDirectories): \Closure
 {
@@ -303,7 +309,9 @@ function releaseRemoveDirectory(string $directory): void
         return;
     }
 
-    foreach (scandir($directory) ?: [] as $entry) {
+    $entries = scandir($directory);
+
+    foreach ($entries === false ? [] : $entries as $entry) {
         if ($entry === '.' || $entry === '..') {
             continue;
         }

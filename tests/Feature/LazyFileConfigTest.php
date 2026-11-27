@@ -114,6 +114,10 @@ afterEach(function () {
 it('preserves per-match default callbacks through the protected namespace reader', function () {
     lazyConfigWriteArrayFile($this->configPath, 'app', ['rows' => [[], []]]);
     $config = new class($this->configPath) extends LazyFileConfig {
+        /**
+         * @throws InvalidArgumentException
+         * @throws UnexpectedValueException
+         */
         public function readPath(string $path, mixed $default): mixed
         {
             return $this->getPath($path, $default);
@@ -516,9 +520,6 @@ PHP;
         }
         throw new RuntimeException('Failed to start cache fixture workers.');
     }
-
-    expect(is_resource($warm))->toBeTrue()
-        ->and(is_resource($flush))->toBeTrue();
 
     $warmError = stream_get_contents($warmPipes[2]);
     $flushError = stream_get_contents($flushPipes[2]);

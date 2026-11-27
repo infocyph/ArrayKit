@@ -158,6 +158,7 @@ class DotNotation
      *
      * @param array<array-key, mixed> $target
      * @param array<int, string> $segments
+     * @throws \InvalidArgumentException
      */
     private static function handleWildcardSet(
         array &$target,
@@ -302,6 +303,7 @@ class DotNotation
      *
      * @param array<array-key, mixed> &$target
      * @param array<int, string> $segments
+     * @throws \InvalidArgumentException
      */
     private static function setValueArray(
         array &$target,
@@ -371,6 +373,7 @@ class DotNotation
      * Sets a value in a target that is not an array or object.
      *
      * @param array<int, string> $segments
+     * @throws \InvalidArgumentException
      */
     private static function setValueFallback(
         mixed &$target,

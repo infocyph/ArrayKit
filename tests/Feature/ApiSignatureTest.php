@@ -117,8 +117,10 @@ it('keeps documented public signatures aligned with reflection', function () {
     };
 
     $document = file_get_contents(__DIR__ . '/../../docs/rule-reference.rst');
-    expect($document)->not->toBeFalse();
-    $lines = preg_split('/\R/', (string) $document);
+    if ($document === false) {
+        throw new RuntimeException('Unable to read API reference.');
+    }
+    $lines = preg_split('/\R/', $document);
     if ($lines === false) {
         throw new RuntimeException('Unable to split API reference into lines.');
     }
@@ -136,6 +138,9 @@ it('keeps documented public signatures aligned with reflection', function () {
 
         if (preg_match('/^\s+function Infocyph\\\\ArrayKit\\\\(?<name>[A-Za-z_][A-Za-z0-9_]*)\((?<parameters>.*)\)(?:: (?<return>[^\/]+))?/', $line, $functionMatches) === 1) {
             $functionName = 'Infocyph\\ArrayKit\\' . $functionMatches['name'];
+            if (!function_exists($functionName)) {
+                throw new RuntimeException('Documented function does not exist: ' . $functionName);
+            }
             $function = new ReflectionFunction($functionName);
             $documentedFunctions[$functionName] = true;
             $documentedParameters = trim($functionMatches['parameters']) === ''
@@ -185,7 +190,7 @@ it('keeps documented public signatures aligned with reflection', function () {
             $actualDefault = null;
             if ($actual->isDefaultValueAvailable()) {
                 if ($actual->isDefaultValueConstant()) {
-                    $constantName = ltrim((string) $actual->getDefaultValueConstantName(), '\\');
+                    $constantName = ltrim($actual->getDefaultValueConstantName(), '\\');
                     $actualDefault = basename(str_replace('\\', '/', $constantName));
                 } elseif ($actual->getDefaultValue() === null) {
                     $actualDefault = 'null';

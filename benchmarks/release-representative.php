@@ -26,7 +26,11 @@ $workloadSpecs = [
 $root = dirname(__DIR__);
 $worker = __DIR__ . '/release-workload.php';
 $buildDirectory = $root . '/build';
-$baselineDirectory = sys_get_temp_dir() . '/arraykit-release-baseline-' . getmypid();
+$pid = getmypid();
+if ($pid === false) {
+    throw new RuntimeException('Unable to determine benchmark process ID.');
+}
+$baselineDirectory = sys_get_temp_dir() . '/arraykit-release-baseline-' . $pid;
 
 if (!is_dir($buildDirectory) && !mkdir($buildDirectory, 0777, true)) {
     throw new RuntimeException('Unable to create release benchmark build directory.');
@@ -70,6 +74,7 @@ try {
  * @param array<string, mixed> $environment
  * @param list<array{name:string,operations:int,warmup:int}> $specs
  * @return array{schema_version:int,generated_at:string,environment:array<string,mixed>,workloads:list<array<string,mixed>>}
+ * @throws RuntimeException
  */
 function releaseBenchmarkDocument(
     string $root,
@@ -106,6 +111,8 @@ function releaseBenchmarkDocument(
  * @param array{name:string,operations:int,warmup:int} $spec
  * @return array<string, mixed>
  * @throws \RuntimeException
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
  */
 function releaseBenchmarkWorkload(
     string $root,
@@ -176,7 +183,7 @@ function releaseBenchmarkWorkload(
             'error_rate' => $attempted > 0 ? $failed / $attempted : 0.0,
             'latency_ms' => [
                 'minimum' => $latencies === [] ? null : min($latencies),
-                'average' => $latencies === [] ? null : array_sum($latencies) / count($latencies),
+                'average' => $latencies === [] ? null : (float) array_sum($latencies) / (float) count($latencies),
                 'p50' => releasePercentile($latencies, 50),
                 'p95' => releasePercentile($latencies, 95),
                 'p99' => releasePercentile($latencies, 99),
@@ -382,7 +389,7 @@ function releaseEnvironment(): array
         'php_sapi' => PHP_SAPI,
         'operating_system' => $operatingSystem,
         'cpu_model' => $cpuModel,
-        'memory_limit' => (string) ini_get('memory_limit'),
+        'memory_limit' => ini_get('memory_limit'),
         'opcache' => 'cli-enabled',
         'jit' => false,
         'xdebug' => extension_loaded('xdebug'),
@@ -394,7 +401,7 @@ function releaseEnvironment(): array
 /** @param list<float> $values */
 function releaseAverage(array $values): ?float
 {
-    return $values === [] ? null : array_sum($values) / count($values);
+    return $values === [] ? null : (float) array_sum($values) / (float) count($values);
 }
 
 /** @param list<float> $values */
@@ -405,10 +412,10 @@ function releasePercentile(array $values, int $percentile): ?float
     }
 
     sort($values, SORT_NUMERIC);
-    $index = (int) ceil(($percentile / 100) * count($values)) - 1;
+    $index = (int) ceil(((float) $percentile / 100.0) * (float) count($values)) - 1;
     $index = max(0, min(count($values) - 1, $index));
 
-    return (float) $values[$index];
+    return $values[$index];
 }
 
 /**
@@ -417,6 +424,8 @@ function releasePercentile(array $values, int $percentile): ?float
  * @throws \Symfony\Component\Process\Exception\RuntimeException
  * @throws \Symfony\Component\Process\Exception\ProcessTimedOutException
  * @throws \Symfony\Component\Process\Exception\ProcessSignaledException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
+ * @throws RuntimeException
  */
 function releasePrepareBaseline(string $root, string $baselineDirectory): void
 {
@@ -508,7 +517,9 @@ function releaseRemoveDirectory(string $directory): void
         return;
     }
 
-    foreach (scandir($directory) ?: [] as $entry) {
+    $entries = scandir($directory);
+
+    foreach ($entries === false ? [] : $entries as $entry) {
         if ($entry === '.' || $entry === '..') {
             continue;
         }

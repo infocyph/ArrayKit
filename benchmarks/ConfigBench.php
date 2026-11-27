@@ -10,6 +10,10 @@ use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\ParamProviders;
 use PhpBench\Attributes\Revs;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(1)]
 #[Iterations(3)]
 #[BeforeMethods('setUp')]
@@ -23,6 +27,12 @@ final class ConfigBench
     private int $reads = 1;
 
     private Config $uncached;
+
+    public function __construct()
+    {
+        $this->cached = new Config();
+        $this->uncached = new Config();
+    }
 
     /**
      * @param array{path:string, reads:int} $params

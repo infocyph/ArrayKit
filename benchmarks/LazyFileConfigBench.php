@@ -10,6 +10,10 @@ use PhpBench\Attributes\BeforeMethods;
 use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\Revs;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(1)]
 #[Iterations(3)]
 #[BeforeMethods('setUp')]
@@ -18,19 +22,19 @@ final class LazyFileConfigBench
 {
     private string $cacheDirectory = '';
 
-    private LazyFileConfig $flatConfig;
+    private ?LazyFileConfig $flatConfig = null;
 
-    private LazyFileConfig $loadedConfig;
+    private ?LazyFileConfig $loadedConfig = null;
 
-    private LazyFileConfig $missingConfig;
+    private ?LazyFileConfig $missingConfig = null;
 
-    private LazyFileConfig $namespaceCacheConfig;
+    private ?LazyFileConfig $namespaceCacheConfig = null;
 
-    private LazyFileConfig $sourceConfig;
+    private ?LazyFileConfig $sourceConfig = null;
 
     private string $sourceDirectory = '';
 
-    private LazyFileConfig $warmConfig;
+    private ?LazyFileConfig $warmConfig = null;
 
     /**
      * @throws \RuntimeException
@@ -39,7 +43,11 @@ final class LazyFileConfigBench
      */
     public function setUp(): void
     {
-        $base = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'arraykit-lazy-bench-' . getmypid();
+        $pid = getmypid();
+        if ($pid === false) {
+            throw new \RuntimeException('Unable to determine benchmark process ID.');
+        }
+        $base = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'arraykit-lazy-bench-' . $pid;
         $this->sourceDirectory = $base . DIRECTORY_SEPARATOR . 'source';
         $this->cacheDirectory = $base . DIRECTORY_SEPARATOR . 'cache';
         mkdir($this->sourceDirectory, 0777, true);
@@ -66,44 +74,52 @@ final class LazyFileConfigBench
         self::removePath(dirname($this->sourceDirectory));
     }
 
+    /** @throws \LogicException */
     public function benchAlreadyLoadedNamespace(): void
     {
-        $this->loadedConfig->get('app.nested.value');
+        ($this->loadedConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('app.nested.value');
     }
 
     /**
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
      */
     public function benchCacheWarm(): void
     {
-        $this->warmConfig->warmNamespaceCache('app');
+        ($this->warmConfig ?? throw new \LogicException('Benchmark setup was not run.'))->warmNamespaceCache('app');
     }
 
+    /** @throws \LogicException */
     public function benchFlatLeafHit(): void
     {
-        $this->flatConfig->get('app.nested.value');
+        ($this->flatConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('app.nested.value');
     }
 
+    /** @throws \LogicException */
     public function benchMissingNamespace(): void
     {
-        $this->missingConfig->get('missing.value');
+        ($this->missingConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('missing.value');
     }
 
+    /** @throws \LogicException */
     public function benchNamespaceCacheLoad(): void
     {
-        $this->namespaceCacheConfig->get('app');
+        ($this->namespaceCacheConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('app');
     }
 
+    /** @throws \LogicException */
     public function benchRepeatedMissingLookup(): void
     {
         for ($index = 0; $index < 100; $index++) {
-            $this->missingConfig->get('missing.value');
+            ($this->missingConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('missing.value');
         }
     }
 
+    /** @throws \LogicException */
     public function benchSourceLoad(): void
     {
-        $this->sourceConfig->get('app.nested.value');
+        ($this->sourceConfig ?? throw new \LogicException('Benchmark setup was not run.'))->get('app.nested.value');
     }
 
     private static function removePath(string $path): void

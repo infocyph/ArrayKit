@@ -30,7 +30,9 @@ function batchARemoveDirectory(string $path): void
         return;
     }
 
-    foreach (scandir($path) ?: [] as $entry) {
+    $entries = scandir($path);
+
+    foreach ($entries === false ? [] : $entries as $entry) {
         if ($entry === '.' || $entry === '..') {
             continue;
         }
@@ -48,7 +50,7 @@ it('bounds guarded traversal work across flat and wildcard inputs', function () 
         throwOnTooDeep: true,
     ))->toThrow(RuntimeException::class);
 
-    expect(fn () => DotNotation::getSafe(
+    expect(static fn(): mixed => DotNotation::getSafe(
         ['rows' => range(1, 10000)],
         'rows.*',
         maxNodes: 2,
@@ -83,7 +85,7 @@ it('advances guarded depth across wildcard traversal', function () {
         $value = [$value];
     }
 
-    expect(fn () => DotNotation::getSafe(
+    expect(static fn(): mixed => DotNotation::getSafe(
         ['rows' => [$value]],
         'rows.*.*.*.*.*.*.*.*.*.*.*.*',
         maxDepth: 2,
@@ -143,8 +145,11 @@ it('materializes known layered namespaces before exporting compiled config', fun
     try {
         $config = new LayeredLazyFileConfig($directory, namespaces: ['app']);
 
-        expect($config->exportCache($cache))->toBeTrue()
-            ->and(include $cache)->toBe(['app' => ['name' => 'source']]);
+        expect($config->exportCache($cache))->toBeTrue();
+        if (!is_file($cache)) {
+            throw new RuntimeException('Expected exported config cache.');
+        }
+        expect(include $cache)->toBe(['app' => ['name' => 'source']]);
     } finally {
         batchARemoveDirectory($directory);
         if (is_file($cache)) {
@@ -226,7 +231,7 @@ it('shares safe dot budgets across multiple requested paths', function () {
     ))->toBe([
         'a.value' => 1,
         'b.value' => 'missing',
-    ])->and(fn () => DotNotation::getSafe(
+    ])->and(static fn(): mixed => DotNotation::getSafe(
         $data,
         ['a.value', 'b.value'],
         'missing',

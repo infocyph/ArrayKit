@@ -13,6 +13,10 @@ use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\Revs;
 use PhpBench\Attributes\Subject;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(500)]
 #[Iterations(5)]
 #[BeforeMethods('setUp')]
@@ -40,6 +44,11 @@ final class CoreBench
 
     /** @var list<array{id:int,payload:string}> */
     private array $uniqueNestedLarge = [];
+
+    public function __construct()
+    {
+        $this->config = new Config();
+    }
 
     /**
      * @throws \RuntimeException

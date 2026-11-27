@@ -7,18 +7,30 @@ namespace Infocyph\ArrayKit\Tests\Feature;
 use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
 use Infocyph\ArrayKit\Tests\Fixtures\DTOTraitUser;
 
+final class TestPersonDto
+{
+    use DTOTrait;
+
+    public string $name = '';
+
+    public int $age = 0;
+}
+
+final class TestVisibilityDto
+{
+    use DTOTrait;
+
+    public static string $shared = 'original';
+
+    public ?string $nickname = 'before';
+
+    protected string $protectedValue = 'protected';
+
+    private string $privateValue = 'private';
+}
+
 it('can create a DTO from an array', function () {
-    // Define a quick test class inline
-    $dtoClass = new class
-    {
-        use DTOTrait;
-
-        public string $name = '';
-
-        public int $age = 0;
-    };
-
-    $dto = $dtoClass::create(['name' => 'Alice', 'age' => 30, 'extra' => 'ignored']);
+    $dto = TestPersonDto::create(['name' => 'Alice', 'age' => 30, 'extra' => 'ignored']);
 
     // Cast to array using ->toArray()
     $data = $dto->toArray();
@@ -29,14 +41,7 @@ it('can create a DTO from an array', function () {
 });
 
 it('can hydrate an existing DTO instance from an array', function () {
-    $dto = new class
-    {
-        use DTOTrait;
-
-        public string $name = '';
-
-        public int $age = 0;
-    };
+    $dto = new TestPersonDto();
 
     $dto->fromArray(['name' => 'Bob', 'age' => 28, 'ignored' => true]);
 
@@ -47,14 +52,7 @@ it('can hydrate an existing DTO instance from an array', function () {
 });
 
 it('supports hydrate mapping and scalar coercion', function () {
-    $dto = new class
-    {
-        use DTOTrait;
-
-        public string $name = '';
-
-        public int $age = 0;
-    };
+    $dto = new TestPersonDto();
 
     $dto->hydrate(['full_name' => 'Carol', 'age' => '33'], ['full_name' => 'name'], true);
 
@@ -74,18 +72,7 @@ it('supports nested DTO hydration and deep export', function () {
 });
 
 it('hydrates and exports only public instance properties', function () {
-    $dto = new class
-    {
-        use DTOTrait;
-
-        public static string $shared = 'original';
-
-        public ?string $nickname = 'before';
-
-        protected string $protectedValue = 'protected';
-
-        private string $privateValue = 'private';
-    };
+    $dto = new TestVisibilityDto();
 
     $dto->hydrate([
         'shared' => 'changed',

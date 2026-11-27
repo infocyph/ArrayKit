@@ -12,6 +12,10 @@ use PhpBench\Attributes\ParamProviders;
 use PhpBench\Attributes\RetryThreshold;
 use PhpBench\Attributes\Revs;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(3)]
 #[Iterations(5)]
 #[RetryThreshold(100)]

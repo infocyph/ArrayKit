@@ -215,6 +215,7 @@ class LayeredLazyFileConfig extends Config
     /**
      * @param string|array<int, string>|null $namespaces
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function warmNamespaceCache(string|array|null $namespaces = null): static
     {

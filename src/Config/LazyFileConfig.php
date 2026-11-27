@@ -42,22 +42,22 @@ class LazyFileConfig extends Config
         $this->syncLoadedNamespacesFromItems();
     }
 
-    #[\Override]
     /**
      * @return array<array-key, mixed>
      * @throws \RuntimeException
      */
+    #[\Override]
     public function all(): array
     {
         throw new RuntimeException('LazyFileConfig does not support full config retrieval. At least one key is required.');
     }
 
-    #[\Override]
     /**
      * @param string|array<array-key, mixed> $key
      * @throws \RuntimeException
      * @throws \InvalidArgumentException
      */
+    #[\Override]
     public function fill(string|array $key, mixed $value = null): bool
     {
         $this->assertWritable();
@@ -68,12 +68,12 @@ class LazyFileConfig extends Config
         return true;
     }
 
-    #[\Override]
     /**
      * @param string|int|array<int, string|int> $key
      * @throws \RuntimeException
      * @throws \InvalidArgumentException
      */
+    #[\Override]
     public function forget(string|int|array $key): bool
     {
         $this->assertWritable();
@@ -90,12 +90,12 @@ class LazyFileConfig extends Config
         return true;
     }
 
-    #[\Override]
     /**
      * @param string|int|array<int, string|int>|null $key
      * @throws \RuntimeException
      * @throws \InvalidArgumentException
      */
+    #[\Override]
     public function get(string|int|array|null $key = null, mixed $default = null): mixed
     {
         if ($key === null) {
@@ -122,10 +122,10 @@ class LazyFileConfig extends Config
         return $this->getResolvedValue($key, $default);
     }
 
-    #[\Override]
     /**
      * @param string|array<int, string> $keys
      */
+    #[\Override]
     public function has(string|array $keys): bool
     {
         $keys = (array) $keys;
@@ -136,10 +136,10 @@ class LazyFileConfig extends Config
         return array_all($keys, fn($path) => $this->hasResolvedValue($path));
     }
 
-    #[\Override]
     /**
      * @param string|array<int, string> $keys
      */
+    #[\Override]
     public function hasAny(string|array $keys): bool
     {
         $keys = (array) $keys;
@@ -159,10 +159,10 @@ class LazyFileConfig extends Config
         return isset($this->loadedNamespaces[$this->normalizeNamespace($namespace)]);
     }
 
-    #[\Override]
     /**
      * @param array<array-key, mixed> $resource
      */
+    #[\Override]
     public function loadArray(array $resource): bool
     {
         return $this->syncLoadedNamespacesAfter(parent::loadArray($resource));
@@ -191,10 +191,10 @@ class LazyFileConfig extends Config
         return $this->syncLoadedNamespacesAfter(parent::loadFile($path));
     }
 
-    #[\Override]
     /**
      * @param array<array-key, mixed> $items
      */
+    #[\Override]
     public function merge(array $items): bool
     {
         $changed = parent::merge($items);
@@ -225,11 +225,11 @@ class LazyFileConfig extends Config
         return $this;
     }
 
-    #[\Override]
     /**
      * @param array<array-key, mixed>|string $source
      * @throws \RuntimeException
      */
+    #[\Override]
     public function reload(array|string $source): bool
     {
         $this->assertWritable();
@@ -237,11 +237,11 @@ class LazyFileConfig extends Config
         return $this->syncLoadedNamespacesAfter(parent::reload($source));
     }
 
-    #[\Override]
     /**
      * @param array<array-key, mixed> $items
      * @throws \RuntimeException
      */
+    #[\Override]
     public function replace(array $items): bool
     {
         $this->assertWritable();
@@ -255,12 +255,12 @@ class LazyFileConfig extends Config
         return $this->syncLoadedNamespacesAfter(parent::restore($name));
     }
 
-    #[\Override]
     /**
      * @param string|array<array-key, mixed>|null $key
      * @throws \RuntimeException
      * @throws \InvalidArgumentException
      */
+    #[\Override]
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
         $this->assertWritable();

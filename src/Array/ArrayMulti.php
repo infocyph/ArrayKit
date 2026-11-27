@@ -70,6 +70,7 @@ class ArrayMulti
      * Safe depth calculation with recursion/node guards.
      *
      * @param array<array-key, mixed> $array
+     * @throws \RuntimeException
      */
     public static function depthGuarded(
         array $array,
@@ -169,6 +170,7 @@ class ArrayMulti
      *
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     public static function flattenGuarded(
         array $array,
@@ -465,6 +467,7 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $item
      * @param array<int, mixed> $result
+     * @throws \RuntimeException
      */
     private static function flattenNestedGuarded(
         array $item,

@@ -12,6 +12,10 @@ use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\ParamProviders;
 use PhpBench\Attributes\Revs;
 
+/**
+ * PhpBench discovers this benchmark through its attributes.
+ * @api
+ */
 #[Revs(1)]
 #[Iterations(3)]
 #[BeforeMethods('setUp')]
@@ -21,9 +25,9 @@ final class RunwireLazyCollectionBench
     /** @var array<int, int> */
     private array $data = [];
 
-    private RequestContext $request;
+    private ?RequestContext $request = null;
 
-    private RuntimeContext $runtime;
+    private ?RuntimeContext $runtime = null;
 
     /**
      * @param array{size:int} $params
@@ -44,7 +48,11 @@ final class RunwireLazyCollectionBench
     public function benchBoundRequestMapFilter(): void
     {
         LazyCollection::from($this->data)
-            ->withRunwire($this->runtime, $this->request, checkpointEvery: 256)
+            ->withRunwire(
+                $this->runtime ?? throw new \LogicException('Benchmark setup was not run.'),
+                $this->request ?? throw new \LogicException('Benchmark setup was not run.'),
+                checkpointEvery: 256,
+            )
             ->mapLazy(static fn(int $value): int => $value * 2)
             ->filterLazy(static fn(int $value): bool => ($value % 3) === 0)
             ->all();
@@ -57,7 +65,11 @@ final class RunwireLazyCollectionBench
     public function benchBoundRequestMaterialization(): void
     {
         LazyCollection::from($this->data)
-            ->withRunwire($this->runtime, $this->request, checkpointEvery: 256)
+            ->withRunwire(
+                $this->runtime ?? throw new \LogicException('Benchmark setup was not run.'),
+                $this->request ?? throw new \LogicException('Benchmark setup was not run.'),
+                checkpointEvery: 256,
+            )
             ->all();
     }
 

@@ -34,6 +34,7 @@ final class Release530PersistentWorkerSoak
 
     /**
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function __construct()
     {
@@ -49,6 +50,11 @@ final class Release530PersistentWorkerSoak
         $this->runtime = $this->runtime();
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     */
     public function run(): void
     {
         $this->installSignalHandlers();
@@ -92,7 +98,8 @@ final class Release530PersistentWorkerSoak
             return;
         }
 
-        foreach (scandir($directory) ?: [] as $entry) {
+        $entries = scandir($directory);
+        foreach ($entries === false ? [] : $entries as $entry) {
             if ($entry === '.' || $entry === '..') {
                 continue;
             }
@@ -208,7 +215,8 @@ final class Release530PersistentWorkerSoak
         }
 
         $active = trim((string) file_get_contents($pointer));
-        foreach (glob($this->cacheDirectory . '/.arraykit-gen-*', GLOB_ONLYDIR) ?: [] as $directory) {
+        $directories = glob($this->cacheDirectory . '/.arraykit-gen-*', GLOB_ONLYDIR);
+        foreach ($directories === false ? [] : $directories as $directory) {
             if (basename($directory) !== $active) {
                 $this->removeDirectory($directory);
             }
@@ -217,6 +225,7 @@ final class Release530PersistentWorkerSoak
 
     /**
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     private function refreshGeneratedCache(int $cycle): void
     {
