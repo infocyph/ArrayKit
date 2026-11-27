@@ -8,13 +8,18 @@ use Infocyph\ArrayKit\Array\ArraySharedOps;
 use Infocyph\ArrayKit\Array\ArraySingle;
 use Infocyph\ArrayKit\Array\ArraySingleOps;
 use Infocyph\ArrayKit\Array\ArrayValueSetOps;
+use Collator;
 use InvalidArgumentException;
+use RuntimeException;
 
 use function Infocyph\ArrayKit\compare;
 
 /** @internal */
 trait ArrayMultiQuerySortTrait
 {
+    /** Locale sorting option; retains the legacy integer flag without referencing the deprecated PHP constant. */
+    public const int SORT_LOCALE = 5;
+
     private const int ROW_MEMBERSHIP_LOOKUP_MIN_VALUES = 256;
 
     /**
@@ -365,6 +370,7 @@ trait ArrayMultiQuerySortTrait
         bool $desc = false,
         int $options = \SORT_REGULAR,
     ): array {
+        $collator = self::localeCollator($options);
         if (!is_string($by)) {
             $scores = [];
             foreach ($array as $key => $row) {
@@ -373,11 +379,12 @@ trait ArrayMultiQuerySortTrait
 
             uksort(
                 $array,
-                static function (int|string $leftKey, int|string $rightKey) use ($scores, $desc, $options): int {
+                static function (int|string $leftKey, int|string $rightKey) use ($scores, $desc, $options, $collator): int {
                     $comparison = self::compareSortValues(
                         $scores[$leftKey] ?? null,
                         $scores[$rightKey] ?? null,
                         $options,
+                        $collator,
                     );
 
                     return self::applySortDirection($comparison, $desc);
@@ -387,12 +394,12 @@ trait ArrayMultiQuerySortTrait
             return $array;
         }
 
-        uasort($array, function ($a, $b) use ($by, $desc, $options) {
+        uasort($array, static function (mixed $a, mixed $b) use ($by, $desc, $options, $collator): int {
             $valA = is_array($a) ? ($a[$by] ?? null) : null;
             $valB = is_array($b) ? ($b[$by] ?? null) : null;
 
             return self::applySortDirection(
-                self::compareSortValues($valA, $valB, $options),
+                self::compareSortValues($valA, $valB, $options, $collator),
                 $desc,
             );
         });
@@ -454,18 +461,7 @@ trait ArrayMultiQuerySortTrait
         }
         unset($value);
 
-        if (ArraySingle::isAssoc($array)) {
-            $descending
-                ? krsort($array, $options)
-                : ksort($array, $options);
-        } else {
-            usort(
-                $array,
-                static fn(mixed $left, mixed $right): int => $descending
-                    ? -self::compareSortValues($left, $right, $options)
-                    : self::compareSortValues($left, $right, $options),
-            );
-        }
+        self::sortLevel($array, $options, $descending);
 
         return $array;
     }
@@ -887,14 +883,14 @@ trait ArrayMultiQuerySortTrait
     }
 
     /**
-     * @param array<int, array{values:array<array-key, mixed>, desc:bool, options:int}> $criteria
+     * @param array<int, array{values:array<array-key, mixed>, desc:bool, options:int, collator:?Collator}> $criteria
      */
     private static function compareByManyCriteria(int|string $leftKey, int|string $rightKey, array $criteria): int
     {
         foreach ($criteria as $criterion) {
             $leftValue = $criterion['values'][$leftKey];
             $rightValue = $criterion['values'][$rightKey];
-            $comparison = self::compareSortValues($leftValue, $rightValue, $criterion['options']);
+            $comparison = self::compareSortValues($leftValue, $rightValue, $criterion['options'], $criterion['collator']);
             if ($comparison !== 0) {
                 return self::applySortDirection($comparison, $criterion['desc']);
             }
@@ -906,7 +902,7 @@ trait ArrayMultiQuerySortTrait
     /**
      * Compare two values according to PHP sort options.
      */
-    private static function compareSortValues(mixed $left, mixed $right, int $options): int
+    private static function compareSortValues(mixed $left, mixed $right, int $options, ?Collator $collator): int
     {
         if ($left === $right) {
             return 0;
@@ -923,9 +919,70 @@ trait ArrayMultiQuerySortTrait
             \SORT_NATURAL => $caseInsensitive
                 ? strnatcasecmp(self::asString($left), self::asString($right))
                 : strnatcmp(self::asString($left), self::asString($right)),
-            \SORT_LOCALE_STRING => strcoll(self::asString($left), self::asString($right)),
+            self::SORT_LOCALE => self::compareLocale(self::asString($left), self::asString($right), $collator),
             default => $left <=> $right,
         };
+    }
+
+    /** @param array<array-key, mixed> $array */
+    private static function sortLevel(array &$array, int $options, bool $descending): void
+    {
+        $collator = self::localeCollator($options);
+        $locale = ($options & ~\SORT_FLAG_CASE) === self::SORT_LOCALE;
+        if (ArraySingle::isAssoc($array) && !$locale) {
+            $descending ? krsort($array, $options) : ksort($array, $options);
+
+            return;
+        }
+
+        $compare = static fn(mixed $left, mixed $right): int => self::applySortDirection(
+            self::compareSortValues($left, $right, $options, $collator),
+            $descending,
+        );
+        if (ArraySingle::isAssoc($array)) {
+            uksort($array, $compare);
+        } else {
+            usort($array, $compare);
+        }
+    }
+
+    private static function localeCollator(int $options): ?Collator
+    {
+        if (($options & ~\SORT_FLAG_CASE) !== self::SORT_LOCALE) {
+            return null;
+        }
+
+        $locale = setlocale(\LC_COLLATE, '0');
+        if ($locale === false) {
+            throw new RuntimeException('Unable to determine the active collation locale.');
+        }
+        if (in_array($locale, ['C', 'POSIX', 'C.UTF-8', 'C.utf8'], true)) {
+            return null;
+        }
+        if (!class_exists(Collator::class)) {
+            throw new RuntimeException('Non-C locale sorting requires ext-intl.');
+        }
+
+        $identifier = preg_replace('/\.[^@]+/', '', $locale);
+        if ($identifier === null) {
+            throw new RuntimeException('Unable to normalize the active collation locale.');
+        }
+
+        return new Collator($identifier);
+    }
+
+    private static function compareLocale(string $left, string $right, ?Collator $collator): int
+    {
+        if ($collator === null) {
+            return strcmp($left, $right);
+        }
+
+        $result = $collator->compare($left, $right);
+        if ($result === false) {
+            throw new RuntimeException('Locale comparison failed: ' . $collator->getErrorMessage());
+        }
+
+        return $result;
     }
 
     private static function extractComparableValue(mixed $row, string|callable $keyOrCallback, int|string $key): float|int|null
@@ -1097,7 +1154,7 @@ trait ArrayMultiQuerySortTrait
      *
      * @param array<array-key, mixed> $array
      * @param array<int, array<int, mixed>> $criteria
-     * @return array<int, array{values:array<array-key, mixed>, desc:bool, options:int}>
+     * @return array<int, array{values:array<array-key, mixed>, desc:bool, options:int, collator:?Collator}>
      */
     private static function prepareSortByManyCriteria(array $array, array $criteria): array
     {
@@ -1113,6 +1170,7 @@ trait ArrayMultiQuerySortTrait
                 'values' => $values,
                 'desc' => $criterion['desc'],
                 'options' => $criterion['options'],
+                'collator' => self::localeCollator($criterion['options']),
             ];
         }
 
@@ -1303,19 +1361,7 @@ trait ArrayMultiQuerySortTrait
         }
         unset($value);
 
-        if (ArraySingle::isAssoc($array)) {
-            $descending
-                ? krsort($array, $options)
-                : ksort($array, $options);
-        } else {
-            usort(
-                $array,
-                static fn(mixed $left, mixed $right): int => self::applySortDirection(
-                    self::compareSortValues($left, $right, $options),
-                    $descending,
-                ),
-            );
-        }
+        self::sortLevel($array, $options, $descending);
 
         return $array;
     }

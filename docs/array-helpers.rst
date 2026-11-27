@@ -356,6 +356,7 @@ Behavior Notes
 - ``ArrayMulti::whereIn()`` / ``whereNotIn()`` treat ``null`` as a real value when the key exists.
 - ``ArrayMulti::where()`` / ``firstWhere()`` distinguish explicit ``null`` from
   the two-argument shorthand form.
+- Use ``ArrayMulti::SORT_LOCALE`` instead of PHP's deprecated locale sort flag. The legacy integer value is unchanged. C/POSIX collation uses bytewise comparisons; other locales use ICU via ``ext-intl`` and can differ from historical libc ordering. Missing ICU support fails explicitly for non-C locales.
 - ``ArrayMulti::flatten($array, 0)`` returns unchanged top-level values.
 - Use ``depthGuarded()``, ``flattenGuarded()``, and ``sortRecursiveGuarded()`` when processing untrusted/deep inputs.
 - Guarded recursive sorting accepts scalar/array values only. It refuses object values, including objects nested inside arrays, because PHP sorting may compare arbitrarily deep public object graphs outside a traversal budget. Normalize object data before guarded sorting, or use ordinary ``sortRecursive()`` only for trusted inputs.

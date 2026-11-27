@@ -793,3 +793,23 @@ it('handles closed resources through strict scan fallback', function () {
         ['value' => $resource],
     ], 'value', true))->toHaveCount(1);
 });
+
+it('sorts with the legacy locale option without deprecated PHP APIs', function () {
+    $previous = setlocale(LC_COLLATE, '0');
+    if ($previous === false || setlocale(LC_COLLATE, 'C') === false) {
+        throw new RuntimeException('The C collation locale must be available.');
+    }
+
+    try {
+        $rows = ['z' => ['name' => 'z'], 'a' => ['name' => 'A'], 'b' => ['name' => 'a']];
+        expect(array_keys(ArrayMulti::sortBy($rows, 'name', options: ArrayMulti::SORT_LOCALE)))
+            ->toBe(['a', 'b', 'z'])
+            ->and(array_keys(ArrayMulti::sortByMany($rows, [['name', 'desc', ArrayMulti::SORT_LOCALE]])))
+            ->toBe(['z', 'b', 'a'])
+            ->and(ArrayMulti::sortRecursive(['z', 'A', 'a'], ArrayMulti::SORT_LOCALE))->toBe(['A', 'a', 'z'])
+            ->and(array_keys(ArrayMulti::sortRecursiveGuarded(['z' => 1, 'A' => 2, 'a' => 3], ArrayMulti::SORT_LOCALE)))
+            ->toBe(['A', 'a', 'z']);
+    } finally {
+        setlocale(LC_COLLATE, $previous);
+    }
+});

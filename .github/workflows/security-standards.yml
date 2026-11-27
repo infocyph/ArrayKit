@@ -22,6 +22,7 @@ jobs:
     if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
     uses: infocyph/phpforge/.github/workflows/security-standards.yml@main
     with:
+      php_extensions: 'intl'
       integration_services: '[]'
       service_topologies: '{}'
       benchmark_composer_script: "benchmark:representative"
@@ -67,7 +68,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           tools: composer:v2
-          extensions: opcache
+          extensions: opcache, intl
           ini-values: opcache.enable_cli=1
           coverage: none
       - name: Install exact Runwire 4.0.1
@@ -115,7 +116,7 @@ jobs:
         with:
           php-version: "8.5"
           tools: composer:v2
-          extensions: opcache
+          extensions: opcache, intl
           ini-values: opcache.enable_cli=1
           coverage: none
       - name: Install acceptance dependencies

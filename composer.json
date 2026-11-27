@@ -23,10 +23,12 @@
         "ext-hash": "*"
     },
     "require-dev": {
+        "ext-intl": "*",
         "infocyph/phpforge": "dev-main@dev",
         "infocyph/runwire": "^4.0.1"
     },
     "suggest": {
+        "ext-intl": "Required for locale-aware sorting outside the C/POSIX collation locale.",
         "infocyph/runwire": "Optional LazyCollection cancellation and cooperative-yield integration; integration targets Runwire 4.0.1 or later in the 4.x series."
     },
     "minimum-stability": "stable",
