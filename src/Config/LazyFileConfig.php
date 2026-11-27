@@ -361,10 +361,7 @@ class LazyFileConfig extends Config
             return;
         }
 
-        $loaded = include $file;
-        if (!is_array($loaded)) {
-            throw new UnexpectedValueException("Config file [{$file}] must return an array.");
-        }
+        $loaded = $this->readNamespaceFile($file);
 
         $this->loadedNamespaces[$namespace] = true;
         $this->loadedNamespaceOrigins[$namespace] = $cachedFile !== null ? 'cache' : 'source';
@@ -393,6 +390,24 @@ class LazyFileConfig extends Config
         }
 
         return $trimmed;
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     * @throws UnexpectedValueException
+     */
+    protected function readNamespaceFile(string $file): array
+    {
+        if (!is_file($file) || !is_readable($file)) {
+            throw new UnexpectedValueException("Config file [{$file}] is no longer readable.");
+        }
+
+        $loaded = include $file;
+        if (!is_array($loaded)) {
+            throw new UnexpectedValueException("Config file [{$file}] must return an array.");
+        }
+
+        return $loaded;
     }
 
     protected function resolveCachedNamespaceFile(string $namespace): ?string

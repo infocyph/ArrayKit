@@ -41,7 +41,7 @@ final class ArrayValueSetBench
     {
         $seen = [];
         foreach ($this->values as $value) {
-            $seen[ArraySingleOps::fingerprint($value, true)] = true;
+            $seen[ArraySingleOps::fingerprint($value)] = true;
         }
 
         return $seen;
@@ -52,7 +52,7 @@ final class ArrayValueSetBench
     {
         $buckets = [];
         foreach ($this->values as $value) {
-            $fingerprint = ArraySingleOps::fingerprint($value, true);
+            $fingerprint = ArraySingleOps::fingerprint($value);
             $digest = hash('xxh128', $fingerprint, true);
             if (!isset($buckets[$digest])) {
                 $buckets[$digest] = [$fingerprint];

@@ -89,11 +89,9 @@ final class ArrayValueSetOps
         return $duplicates;
     }
 
-    public static function fingerprint(mixed $value, bool $strict = true): string
+    public static function fingerprint(mixed $value): string
     {
-        return $strict
-            ? self::fingerprintStrict($value)
-            : self::fingerprintLoose($value);
+        return self::fingerprintStrict($value);
     }
 
     /**
@@ -396,19 +394,6 @@ final class ArrayValueSetOps
     /**
      * @param array<array-key, mixed> $value
      */
-    private static function fingerprintArrayLoose(array $value): string
-    {
-        $parts = [];
-        foreach ($value as $key => $item) {
-            $parts[] = self::fingerprintLoose($key) . '=>' . self::fingerprintLoose($item);
-        }
-
-        return implode('|', $parts);
-    }
-
-    /**
-     * @param array<array-key, mixed> $value
-     */
     private static function fingerprintArrayStrict(array $value): string
     {
         $parts = [];
@@ -439,18 +424,6 @@ final class ArrayValueSetOps
         return $value == 0.0
             ? 'float:zero'
             : 'float:' . bin2hex(pack('E', $value));
-    }
-
-    private static function fingerprintLoose(mixed $value): string
-    {
-        return match (true) {
-            is_int($value), is_float($value), is_bool($value), $value === null => sprintf('numeric:%s', (float) $value),
-            is_string($value) => is_numeric($value) ? sprintf('numeric:%s', (float) $value) : 'string:' . $value,
-            is_array($value) => 'array:' . self::fingerprintArrayLoose($value),
-            is_object($value) => 'object-value:' . self::fingerprintArrayLoose(get_object_vars($value)),
-            is_resource($value) => 'resource:' . get_resource_type($value) . ':' . (int) $value,
-            default => 'unknown:' . get_debug_type($value),
-        };
     }
 
     private static function fingerprintStrict(mixed $value): string

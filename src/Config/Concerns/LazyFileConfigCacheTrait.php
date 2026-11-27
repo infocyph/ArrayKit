@@ -266,22 +266,12 @@ trait LazyFileConfigCacheTrait
 
         $sourceFile = $this->resolveNamespaceFile($namespace);
         if ($sourceFile !== null) {
-            $value = include $sourceFile;
-            if (!is_array($value)) {
-                throw new UnexpectedValueException("Config file [{$sourceFile}] must return an array.");
-            }
-
-            return $value;
+            return $this->readNamespaceFile($sourceFile);
         }
 
         $cachedFile = $this->warmNamespaceCacheFile($namespace);
         if ($cachedFile !== null) {
-            $value = include $cachedFile;
-            if (!is_array($value)) {
-                throw new UnexpectedValueException("Config file [{$cachedFile}] must return an array.");
-            }
-
-            return $value;
+            return $this->readNamespaceFile($cachedFile);
         }
 
         if (array_key_exists($namespace, $this->items) && is_array($this->items[$namespace])) {
@@ -366,14 +356,12 @@ trait LazyFileConfigCacheTrait
 
         foreach ($this->namespaceCacheEntries($directory, false) as [$namespace, $path]) {
             try {
-                $loaded = include $path;
+                $loaded = $this->readNamespaceFile($path);
             } catch (\Throwable) {
                 continue;
             }
 
-            if (is_array($loaded)) {
-                $this->collectFlatLeafIndex($namespace, $loaded, $index);
-            }
+            $this->collectFlatLeafIndex($namespace, $loaded, $index);
         }
 
         return $index;

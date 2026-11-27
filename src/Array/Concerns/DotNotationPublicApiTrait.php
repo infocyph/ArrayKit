@@ -390,9 +390,7 @@ trait DotNotationPublicApiTrait
             self::forget($staged, $from);
             self::set($staged, $to, $value, $overwrite);
         } catch (\Throwable $error) {
-            foreach ($originals as $id => $original) {
-                $references[$id] = $original;
-            }
+            DotNotationPathOps::restoreMutationReferences($references, $originals);
 
             throw $error;
         }

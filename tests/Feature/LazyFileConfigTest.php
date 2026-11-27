@@ -557,3 +557,22 @@ it('can resolve exact scalar paths from the flat index when namespace structure 
         ->and($fresh->get('db.options', 'missing'))->toBe('missing')
         ->and($fresh->get('db', 'missing'))->toBe('missing');
 });
+
+it('reports a namespace disappearing after resolution without marking it loaded', function () {
+    lazyConfigWriteArrayFile($this->configPath, 'app', ['value' => 1]);
+    $config = new class($this->configPath) extends LazyFileConfig {
+        #[Override]
+        protected function resolveNamespaceFile(string $namespace): ?string
+        {
+            $file = parent::resolveNamespaceFile($namespace);
+            if ($file !== null) {
+                unlink($file);
+            }
+
+            return $file;
+        }
+    };
+
+    expect(static fn(): mixed => $config->get('app.value'))->toThrow(UnexpectedValueException::class, 'no longer readable');
+    expect($config->isLoaded('app'))->toBeFalse();
+});

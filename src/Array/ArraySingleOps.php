@@ -93,9 +93,9 @@ final class ArraySingleOps
     /**
      * Build a comparable fingerprint for a value.
      */
-    public static function fingerprint(mixed $value, bool $strict = true): string
+    public static function fingerprint(mixed $value): string
     {
-        return ArrayValueSetOps::fingerprint($value, $strict);
+        return ArrayValueSetOps::fingerprint($value);
     }
 
     /**

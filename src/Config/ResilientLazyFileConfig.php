@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\Config;
 
-use UnexpectedValueException;
-
 /**
  * Lazy file configuration that treats generated namespace-cache corruption as
  * a cache miss while keeping source configuration failures visible.
@@ -37,10 +35,7 @@ class ResilientLazyFileConfig extends LazyFileConfig
                 return;
             }
 
-            $loaded = include $source;
-            if (!is_array($loaded)) {
-                throw new UnexpectedValueException("Config file [{$source}] must return an array.");
-            }
+            $loaded = $this->readNamespaceFile($source);
         }
 
         $this->loadedNamespaces[$namespace] = true;
@@ -65,11 +60,9 @@ class ResilientLazyFileConfig extends LazyFileConfig
     private function loadCachedNamespace(string $cache): ?array
     {
         try {
-            $loaded = include $cache;
+            return $this->readNamespaceFile($cache);
         } catch (\Throwable) {
             return null;
         }
-
-        return is_array($loaded) ? $loaded : null;
     }
 }

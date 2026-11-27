@@ -109,6 +109,18 @@ final class DotNotationPathOps
     }
 
     /**
+     * Restore original values through the captured reference cells.
+     * @param array<string, mixed> $references
+     * @param array<string, mixed> $originals
+     */
+    public static function restoreMutationReferences(array &$references, array $originals): void
+    {
+        foreach ($originals as $id => $original) {
+            $references[$id] = $original;
+        }
+    }
+
+    /**
      * Retrieve a value from an array using an exact key path.
      */
     public static function segmentExact(mixed $array, string $path, mixed $default): mixed
