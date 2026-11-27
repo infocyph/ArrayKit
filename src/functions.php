@@ -68,6 +68,7 @@ if (!function_exists('array_set')) {
      * @param mixed $value The value to set.
      * @param bool $overwrite If true, overwrite existing values. If false, existing values are preserved.
      * @return bool True on success
+     * @throws \InvalidArgumentException
      */
     function array_set(array &$array, string|array|null $key, mixed $value = null, bool $overwrite = true): bool
     {

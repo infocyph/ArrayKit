@@ -126,6 +126,7 @@ trait BaseCollectionTrait
 
     /**
      * Convert the collection to a JSON string when treated as a string.
+     * @throws \InvalidArgumentException
      */
     public function __toString(): string
     {
