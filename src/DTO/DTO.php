@@ -10,6 +10,7 @@ use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
  * Optional abstract base for DTOs that expose their own public value properties.
  *
  * @phpstan-consistent-constructor
+ * @psalm-consistent-constructor
  */
 abstract class DTO
 {

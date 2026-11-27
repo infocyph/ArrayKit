@@ -12,7 +12,6 @@ use InvalidArgumentException;
 use OutOfBoundsException;
 use RuntimeException;
 use UnexpectedValueException;
-use UnitEnum as TConfigEnum;
 
 /** @internal */
 trait BaseConfigTrait
@@ -54,6 +53,8 @@ trait BaseConfigTrait
      * @param string $key The dot-notation key referencing an array
      * @param mixed $value The value to append
      * @return bool True on success
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function append(string $key, mixed $value): bool
     {
@@ -78,6 +79,9 @@ trait BaseConfigTrait
         return $this->snapshots[$snapshot] !== $this->items;
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     public function exportCache(string $path): bool
     {
         $directory = dirname($path);
@@ -95,6 +99,7 @@ trait BaseConfigTrait
      *
      * @param string|array<array-key, mixed> $key Dot-notation key or multiple [key => value]
      * @param mixed|null $value The value to set if missing
+     * @throws \RuntimeException
      */
     public function fill(string|array $key, mixed $value = null): bool
     {
@@ -118,6 +123,7 @@ trait BaseConfigTrait
      */
     /**
      * @param string|int|array<int, string|int> $key
+     * @throws \RuntimeException
      */
     public function forget(string|int|array $key): bool
     {
@@ -329,6 +335,7 @@ trait BaseConfigTrait
      *
      * @param array<array-key, mixed> $resource The array containing config items
      * @return bool True if loaded successfully, false if already loaded
+     * @throws \RuntimeException
      */
     public function loadArray(array $resource): bool
     {
@@ -344,11 +351,17 @@ trait BaseConfigTrait
         return false;
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     public function loadCache(string $path): bool
     {
         return $this->loadFile($path);
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function loadEnvFile(string $path): bool
     {
         $this->assertWritable();
@@ -366,6 +379,7 @@ trait BaseConfigTrait
      * @param string $path The file path to load
      * @return bool True if loaded successfully, false if already loaded or file missing
      * @throws \UnexpectedValueException
+     * @throws \RuntimeException
      */
     public function loadFile(string $path): bool
     {
@@ -390,6 +404,7 @@ trait BaseConfigTrait
      * Merge a config array into current items.
      *
      * @param array<array-key, mixed> $items
+     * @throws \RuntimeException
      */
     public function merge(array $items): bool
     {
@@ -422,6 +437,8 @@ trait BaseConfigTrait
      * @param string $key The dot-notation key referencing an array
      * @param mixed $value The value to prepend
      * @return bool True on success
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function prepend(string $key, mixed $value): bool
     {
@@ -464,6 +481,7 @@ trait BaseConfigTrait
      *
      * @param array<array-key, mixed>|string $source
      * @throws \UnexpectedValueException
+     * @throws \RuntimeException
      */
     public function reload(array|string $source): bool
     {
@@ -489,6 +507,7 @@ trait BaseConfigTrait
      * Replace the entire configuration storage with a new array.
      *
      * @param array<array-key, mixed> $items
+     * @throws \RuntimeException
      */
     public function replace(array $items): bool
     {
@@ -502,6 +521,7 @@ trait BaseConfigTrait
 
     /**
      * Restore configuration from a named snapshot.
+     * @throws \RuntimeException
      */
     public function restore(string $name = 'default'): bool
     {
@@ -528,6 +548,7 @@ trait BaseConfigTrait
      * @param mixed|null $value The value to set
      * @param bool $overwrite Overwrite existing? Default true.
      * @return bool True on success
+     * @throws \RuntimeException
      */
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
@@ -614,6 +635,9 @@ trait BaseConfigTrait
         return $cursor === null || is_scalar($cursor);
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     protected function materializeCacheValue(mixed $value): mixed
     {
         $activeReferences = [];

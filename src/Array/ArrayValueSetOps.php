@@ -187,7 +187,6 @@ final class ArrayValueSetOps
     public static function unique(array $array, bool $strict): array
     {
         if (!$strict) {
-            /** @var array<array-key, mixed> $unique */
             $unique = array_unique($array, \SORT_REGULAR);
 
             return $unique;

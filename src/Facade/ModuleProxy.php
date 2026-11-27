@@ -23,6 +23,7 @@ final readonly class ModuleProxy
 
     /**
      * @param array<int, mixed> $arguments
+     * @throws \BadMethodCallException
      */
     public function __call(string $method, array $arguments): mixed
     {
@@ -32,6 +33,7 @@ final readonly class ModuleProxy
     /**
      * @param array<array-key, mixed> $array
      * @param array<array-key, mixed>|string $keys
+     * @throws \BadMethodCallException
      */
     public function fill(array &$array, array|string $keys, mixed $value = null): void
     {
@@ -45,6 +47,7 @@ final readonly class ModuleProxy
      * @param array<array-key, mixed>|null $target Native dot-module named argument
      * @throws \InvalidArgumentException
      * @throws \ArgumentCountError
+     * @throws \BadMethodCallException
      */
     public function forget(?array &$array = null, array|string|int|null $keys = null, ?array &$target = null): void
     {
@@ -65,6 +68,7 @@ final readonly class ModuleProxy
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \UnexpectedValueException
      */
     public function move(array &$array, string $from, string $to, bool $overwrite = true): bool
     {
@@ -73,6 +77,7 @@ final readonly class ModuleProxy
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \BadMethodCallException
      */
     public function offsetSet(array &$array, string $key, mixed $value): void
     {
@@ -81,6 +86,7 @@ final readonly class ModuleProxy
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \BadMethodCallException
      */
     public function offsetUnset(array &$array, string $key): void
     {
@@ -89,6 +95,7 @@ final readonly class ModuleProxy
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \UnexpectedValueException
      */
     public function rename(array &$array, string $from, string $to, bool $overwrite = true): bool
     {
@@ -98,6 +105,7 @@ final readonly class ModuleProxy
     /**
      * @param array<array-key, mixed> $array
      * @param array<array-key, mixed>|string|null $keys
+     * @throws \UnexpectedValueException
      */
     public function set(array &$array, array|string|null $keys = null, mixed $value = null, bool $overwrite = true): bool
     {
@@ -120,6 +128,7 @@ final readonly class ModuleProxy
     /**
      * @param array<int, mixed> $arguments
      * @throws \UnexpectedValueException
+     * @throws \BadMethodCallException
      */
     private function invokeBool(string $method, array $arguments): bool
     {

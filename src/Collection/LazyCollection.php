@@ -251,6 +251,8 @@ final readonly class LazyCollection implements IteratorAggregate
      * Bind explicit Runwire runtime/request/scope instances to this collection.
      *
      * @return self<TKey, TValue>
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
      */
     public function withRunwire(
         RuntimeContext $runtime,
@@ -422,6 +424,9 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return Generator<TKey, TValue>
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
     private function sourceCursorWithBinding(?RunwireLazyBinding $binding): Generator
     {

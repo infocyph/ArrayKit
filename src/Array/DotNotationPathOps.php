@@ -192,6 +192,7 @@ final class DotNotationPathOps
      *
      * @param array<int, string> $segments
      * @param callable(mixed): mixed $defaultResolver
+     * @throws \RuntimeException
      */
     public static function traverseGet(
         mixed $target,
@@ -401,6 +402,7 @@ final class DotNotationPathOps
     /**
      * @param array<int, string> $segments
      * @param callable(mixed): mixed $defaultResolver
+     * @throws \RuntimeException
      */
     private static function resolveWildcardItem(
         mixed $item,
@@ -447,6 +449,7 @@ final class DotNotationPathOps
      *
      * @param array<int, string> $segments
      * @param callable(mixed): mixed $defaultResolver
+     * @throws \RuntimeException
      */
     private static function traverseWildcard(
         mixed $target,

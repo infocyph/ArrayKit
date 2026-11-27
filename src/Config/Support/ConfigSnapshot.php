@@ -21,6 +21,7 @@ final class ConfigSnapshot
      *
      * @param array<array-key, mixed> $items
      * @return array<array-key, mixed>
+     * @throws \UnexpectedValueException
      */
     public static function detach(array $items): array
     {

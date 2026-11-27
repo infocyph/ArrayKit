@@ -145,6 +145,7 @@ trait DTOTrait
      * configured cycle, depth and node limits.
      *
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public function toArrayDeepGuarded(int $maxDepth = 64, int $maxNodes = 100000): array
     {
@@ -235,7 +236,7 @@ trait DTOTrait
         }
 
         $className = $type->getName();
-        if (is_callable([$className, 'create'])) {
+        if (class_exists($className) && is_callable([$className, 'create'])) {
             return $className::create($value);
         }
 

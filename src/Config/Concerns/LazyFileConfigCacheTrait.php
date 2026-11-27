@@ -35,6 +35,7 @@ trait LazyFileConfigCacheTrait
 
     /**
      * @param string|array<int, string>|null $namespaces
+     * @throws \RuntimeException
      */
     public function flushNamespaceCache(string|array|null $namespaces = null): static
     {
@@ -292,6 +293,7 @@ trait LazyFileConfigCacheTrait
     /**
      * @param string|array<int, string>|null $namespaces
      * @return string[]
+     * @throws \InvalidArgumentException
      */
     protected function resolveWarmNamespaces(string|array|null $namespaces): array
     {

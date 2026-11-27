@@ -15,6 +15,7 @@ final class EnvParser
 
     /**
      * @return array<string, string|null>
+     * @throws \UnexpectedValueException
      */
     public static function parse(string $contents): array
     {
@@ -25,6 +26,7 @@ final class EnvParser
 
     /**
      * @return array<string, string|null>
+     * @throws \InvalidArgumentException
      */
     public static function parseFile(string $path): array
     {
@@ -33,6 +35,7 @@ final class EnvParser
 
     /**
      * @return array<string, string|null>
+     * @throws \InvalidArgumentException
      */
     public static function parseFileRaw(string $path): array
     {
@@ -42,6 +45,7 @@ final class EnvParser
     /**
      * @param iterable<int, string> $lines
      * @return array<string, string|null>
+     * @throws \UnexpectedValueException
      */
     public static function parseLines(iterable $lines): array
     {
@@ -51,6 +55,7 @@ final class EnvParser
     /**
      * @param iterable<int, string> $lines
      * @return array<string, string|null>
+     * @throws \UnexpectedValueException
      */
     public static function parseLinesRaw(iterable $lines): array
     {
@@ -61,6 +66,7 @@ final class EnvParser
      * Parse values without expanding variable references.
      *
      * @return array<string, string|null>
+     * @throws \UnexpectedValueException
      */
     public static function parseRaw(string $contents): array
     {
@@ -85,6 +91,7 @@ final class EnvParser
 
     /**
      * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
      */
     private static function readFile(string $path): string
     {

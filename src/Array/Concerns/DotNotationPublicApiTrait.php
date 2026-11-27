@@ -147,6 +147,7 @@ trait DotNotationPublicApiTrait
      *
      * @param array<array-key, mixed> $array
      * @param array<int, int|string>|int|string|null $keys
+     * @throws \RuntimeException
      */
     public static function getSafe(
         array $array,
@@ -291,6 +292,7 @@ trait DotNotationPublicApiTrait
      * Move a dot path from one key to another.
      *
      * @param array<array-key, mixed> $array
+     * @throws \Throwable
      */
     public static function move(array &$array, string $from, string $to, bool $overwrite = true): bool
     {

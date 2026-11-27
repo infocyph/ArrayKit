@@ -16,6 +16,9 @@ use UnitEnum;
 /** @internal */
 final class DTOGraphGuard
 {
+    /**
+     * @throws \InvalidArgumentException
+     */
     public static function assertWithinLimits(mixed $value, int $maxDepth, int $maxNodes): void
     {
         self::traverse($value, $maxDepth, $maxNodes, false);
@@ -108,6 +111,7 @@ final class DTOGraphGuard
     /**
      * @param array<int, true> $activeObjects
      * @param array<string, true> $activeReferences
+     * @throws \RuntimeException
      */
     private static function walk(
         mixed $value,

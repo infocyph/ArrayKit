@@ -15,6 +15,7 @@ final class EnvLineParser
 
     /**
      * @return array<string, string|null>
+     * @throws \UnexpectedValueException
      */
     public static function parseContents(string $contents): array
     {

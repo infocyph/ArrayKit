@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Random\Engine\Mt19937;
 use Random\Randomizer;
 
+/** @api */
 class ArraySingle
 {
     /**
@@ -129,6 +130,7 @@ class ArraySingle
      *
      * @param array<array-key, mixed> $array
      * @return array<int|string, int>
+     * @throws \InvalidArgumentException
      */
     public static function countBy(array $array, ?callable $by = null): array
     {
@@ -206,7 +208,6 @@ class ArraySingle
      */
     public static function except(array $array, array|string $keys): array
     {
-        /** @var array<int, int|string> $keyList */
         $keyList = (array) $keys;
 
         return array_diff_key($array, array_flip($keyList));
@@ -506,7 +507,7 @@ class ArraySingle
      */
     public static function negative(array $array): array
     {
-        return static::where($array, static fn($value) => is_numeric($value) && $value < 0);
+        return static::where($array, static fn(mixed $value): bool => is_numeric($value) && $value < 0);
     }
 
     /**
@@ -568,7 +569,6 @@ class ArraySingle
      */
     public static function only(array $array, array|string $keys): array
     {
-        /** @var array<int, int|string> $keyList */
         $keyList = (array) $keys;
 
         return array_intersect_key($array, array_flip($keyList));
@@ -639,7 +639,7 @@ class ArraySingle
      */
     public static function positive(array $array): array
     {
-        return static::where($array, static fn($value) => is_numeric($value) && $value > 0);
+        return static::where($array, static fn(mixed $value): bool => is_numeric($value) && $value > 0);
     }
 
     /**
@@ -719,6 +719,7 @@ class ArraySingle
      * @param array<array-key, mixed> $array
      * @param array<array-key, int|string>|callable $mapper
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function rekey(array $array, array|callable $mapper): array
     {
@@ -1001,10 +1002,6 @@ class ArraySingle
         return $callback($value, $key);
     }
 
-    private static function normalizeArrayKey(mixed $value): int|string
-    {
-        return ArraySharedOps::normalizeArrayKey($value);
-    }
 
     /**
      * @throws \InvalidArgumentException

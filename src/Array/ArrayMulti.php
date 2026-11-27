@@ -7,6 +7,7 @@ namespace Infocyph\ArrayKit\Array;
 use Infocyph\ArrayKit\Array\Concerns\ArrayMultiQuerySortTrait;
 use InvalidArgumentException;
 
+/** @api */
 class ArrayMulti
 {
     use ArrayMultiQuerySortTrait;
@@ -231,7 +232,6 @@ class ArrayMulti
     public static function only(array $array, array|string $keys): array
     {
         $result = [];
-        /** @var array<int, int|string> $pickKeys */
         $pickKeys = (array) $keys;
         $pick = array_flip($pickKeys);
 
@@ -380,6 +380,7 @@ class ArrayMulti
 
     /**
      * @phpstan-impure
+     * @throws \RuntimeException
      */
     private static function consumeTraversalNode(
         int &$visitedNodes,
@@ -489,7 +490,7 @@ class ArrayMulti
 
         foreach (self::flattenIntoGuarded(
             $item,
-            $depth - 1,
+            (is_int($depth) ? $depth - 1 : $depth - 1.0),
             $currentDepth + 1,
             $visitedNodes,
             $maxDepth,
@@ -536,7 +537,7 @@ class ArrayMulti
      */
     private static function flattenValues(array $array, float|int $depth): array
     {
-        return $depth === 1 ? array_values($array) : static::flatten($array, $depth - 1);
+        return $depth === 1 ? array_values($array) : static::flatten($array, (is_int($depth) ? $depth - 1 : $depth - 1.0));
     }
 
     /**
@@ -613,6 +614,9 @@ class ArrayMulti
         return $maxNodes > 0 && $visitedNodes >= $maxNodes;
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function traversalDepthAllowed(
         int $currentDepth,
         int $maxDepth,

@@ -11,6 +11,7 @@ namespace Infocyph\ArrayKit\Config;
  * Namespace materialization is used deliberately so exact-path reads always
  * match reads against the fully merged configuration, including list/scalar
  * shadowing semantics.
+  * @api
  */
 class LayeredLazyFileConfig extends Config
 {
@@ -206,6 +207,7 @@ class LayeredLazyFileConfig extends Config
 
     /**
      * @param string|array<int, string>|null $namespaces
+     * @throws \RuntimeException
      */
     public function warmNamespaceCache(string|array|null $namespaces = null): static
     {

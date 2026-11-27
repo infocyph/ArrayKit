@@ -6,6 +6,7 @@ namespace Infocyph\ArrayKit\Array;
 
 use Infocyph\ArrayKit\Array\Concerns\DotNotationPublicApiTrait;
 
+/** @api */
 class DotNotation
 {
     use DotNotationPublicApiTrait;
@@ -110,6 +111,9 @@ class DotNotation
         return self::resolveValue($target, $key, $default);
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private static function getValueSafe(
         mixed $target,
         int|string $key,
@@ -392,6 +396,7 @@ class DotNotation
      * Sets a value in an object using dot-notation segments.
      *
      * @param array<int, string> $segments
+     * @throws \InvalidArgumentException
      */
     private static function setValueObject(
         object &$target,

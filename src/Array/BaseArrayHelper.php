@@ -7,6 +7,7 @@ namespace Infocyph\ArrayKit\Array;
 use ArrayAccess;
 use InvalidArgumentException;
 
+/** @api */
 class BaseArrayHelper
 {
     /**

@@ -55,6 +55,8 @@ class LazyFileConfig extends Config
     #[\Override]
     /**
      * @param string|array<array-key, mixed> $key
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function fill(string|array $key, mixed $value = null): bool
     {
@@ -69,6 +71,7 @@ class LazyFileConfig extends Config
     #[\Override]
     /**
      * @param string|int|array<int, string|int> $key
+     * @throws \RuntimeException
      */
     public function forget(string|int|array $key): bool
     {
@@ -148,6 +151,7 @@ class LazyFileConfig extends Config
 
     /**
      * Returns true if the namespace has already been resolved (file found or missing).
+     * @throws \InvalidArgumentException
      */
     public function isLoaded(string $namespace): bool
     {
@@ -207,6 +211,8 @@ class LazyFileConfig extends Config
      * Preload one or multiple top-level config namespaces.
      *
      * @param string|array<int, string> $namespaces Namespace (e.g. "db") or list of namespaces.
+     * @throws \UnexpectedValueException
+     * @throws \InvalidArgumentException
      */
     public function preload(string|array $namespaces): static
     {
@@ -220,6 +226,7 @@ class LazyFileConfig extends Config
     #[\Override]
     /**
      * @param array<array-key, mixed>|string $source
+     * @throws \RuntimeException
      */
     public function reload(array|string $source): bool
     {
@@ -231,6 +238,7 @@ class LazyFileConfig extends Config
     #[\Override]
     /**
      * @param array<array-key, mixed> $items
+     * @throws \RuntimeException
      */
     public function replace(array $items): bool
     {
@@ -249,6 +257,7 @@ class LazyFileConfig extends Config
     /**
      * @param string|array<array-key, mixed>|null $key
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function set(string|array|null $key = null, mixed $value = null, bool $overwrite = true): bool
     {
@@ -264,6 +273,10 @@ class LazyFileConfig extends Config
         return true;
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     protected function forgetPath(string $path): void
     {
         [$namespace, $rest] = $this->splitPath($path);
@@ -290,6 +303,10 @@ class LazyFileConfig extends Config
         $this->markNamespaceRuntime($namespace);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     protected function getPath(string $path, mixed $default): mixed
     {
         [$namespace, $rest] = $this->splitPath($path);
@@ -298,6 +315,10 @@ class LazyFileConfig extends Config
         return $this->resolveLoadedNamespaceValue($namespace, $rest, $default);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     protected function hasPath(string $path): bool
     {
         [$namespace, $rest] = $this->splitPath($path);
@@ -383,6 +404,10 @@ class LazyFileConfig extends Config
         return $path;
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     protected function resolveLazyRawValue(string $path): mixed
     {
         [$namespace, $rest] = $this->splitPath($path);
@@ -437,6 +462,10 @@ class LazyFileConfig extends Config
         return $this->cacheResolvedValue($cacheKey, $this->resolveLazyRawValue($key));
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     protected function setPath(string $path, mixed $value, bool $overwrite): void
     {
         [$namespace, $rest] = $this->splitPath($path);

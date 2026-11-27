@@ -50,6 +50,7 @@ trait ArrayMultiQuerySortTrait
      *
      * @param array<array-key, mixed> $array
      * @return array<int|string, int>
+     * @throws \InvalidArgumentException
      */
     public static function countBy(array $array, string|callable $groupBy): array
     {
@@ -142,6 +143,7 @@ trait ArrayMultiQuerySortTrait
      *
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function groupBy(array $array, string|callable $groupBy, bool $preserveKeys = false): array
     {
@@ -182,6 +184,7 @@ trait ArrayMultiQuerySortTrait
      *
      * @param array<array-key, mixed> $array
      * @return array<int|string, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function keyBy(array $array, string|callable $keyBy): array
     {
@@ -294,6 +297,7 @@ trait ArrayMultiQuerySortTrait
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function pluck(array $array, string $column, ?string $indexBy = null): array
     {
@@ -657,6 +661,7 @@ trait ArrayMultiQuerySortTrait
      *
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     public static function whereLike(array $array, string $key, string $pattern, bool $caseSensitive = false): array
     {
@@ -1057,10 +1062,6 @@ trait ArrayMultiQuerySortTrait
         return $default;
     }
 
-    private static function formatNumericResult(float|int|null $value): float|int|null
-    {
-        return $value;
-    }
 
     /**
      * PHP comparisons may recursively walk unbounded object graphs. Object
