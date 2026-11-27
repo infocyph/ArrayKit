@@ -75,7 +75,7 @@ it('exposes array modules through one facade', function () {
 });
 
 it('does not expose private module methods through the facade', function () {
-    expect(fn () => ArrayKit::single()->__call('toNumericOrNull', [1]))
+    expect(static fn(): mixed => ArrayKit::single()->__call('toNumericOrNull', [1]))
         ->toThrow(BadMethodCallException::class);
 });
 

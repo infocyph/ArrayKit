@@ -20,18 +20,25 @@ final class CoreBench
 {
     private Config $config;
 
+    /** @var array<string, mixed> */
     private array $dot = [];
 
+    /** @var list<array{id:int,name:string,scores:list<int>}> */
     private array $nested = [];
 
+    /** @var list<array{id:int,role?:string|null}> */
     private array $queryRows = [];
 
+    /** @var list<array{id:int,group:string,role:string|null}> */
     private array $queryRowsLarge = [];
 
+    /** @var list<int> */
     private array $single = [];
 
+    /** @var array<string,int> */
     private array $singleAssoc = [];
 
+    /** @var list<array{id:int,payload:string}> */
     private array $uniqueNestedLarge = [];
 
     public function setUp(): void

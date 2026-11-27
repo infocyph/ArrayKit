@@ -69,7 +69,7 @@ try {
 /**
  * @param array<string, mixed> $environment
  * @param list<array{name:string,operations:int,warmup:int}> $specs
- * @return array<string, mixed>
+ * @return array{schema_version:int,generated_at:string,environment:array<string,mixed>&array{release:string},workloads:list<array<string,mixed>>}
  */
 function releaseBenchmarkDocument(
     string $root,
@@ -150,7 +150,7 @@ function releaseBenchmarkWorkload(
 
     $medianRpm = releasePercentile($rpms, 50);
     $spread = $medianRpm > 0
-        ? ((max($rpms) - min($rpms)) / $medianRpm) * 100
+        ? ((max($rpms) - min($rpms)) / $medianRpm) * 100.0
         : 100.0;
 
     return [
@@ -183,12 +183,12 @@ function releaseBenchmarkWorkload(
             ],
             'cpu' => [
                 'average_percent' => releaseAverage($cpuAverages),
-                'peak_percent' => $cpuPeaks === [] ? null : max($cpuPeaks),
+                'peak_percent' => max($cpuPeaks),
             ],
             'memory' => [
                 'average_mb' => releaseAverage($memoryAverages),
-                'peak_mb' => $memoryPeaks === [] ? null : max($memoryPeaks),
-                'growth_mb' => $memoryGrowth === [] ? null : max($memoryGrowth),
+                'peak_mb' => max($memoryPeaks),
+                'growth_mb' => max($memoryGrowth),
             ],
             'stability' => [
                 'status' => $failed === 0 && $spread <= RELEASE_STABILITY_SPREAD_PERCENT
@@ -258,7 +258,7 @@ function releaseBenchmarkTrial(
             throw new RuntimeException('Release benchmark worker returned invalid JSON.');
         }
 
-        $results[] = $decoded;
+        $results[] = releaseValidateWorkerResult($decoded);
     }
 
     $elapsedSeconds = max((hrtime(true) - $startedAt) / 1_000_000_000, 0.000001);
@@ -273,18 +273,15 @@ function releaseBenchmarkTrial(
     $memoryPeak = [];
 
     foreach ($results as $result) {
-        $attempted += (int) ($result['attempted'] ?? 0);
-        $successful += (int) ($result['successful'] ?? 0);
-        $failed += (int) ($result['failed'] ?? 0);
-        $latencies = [
-            ...$latencies,
-            ...array_map('floatval', is_array($result['latencies_ms'] ?? null) ? $result['latencies_ms'] : []),
-        ];
-        $cpuSeconds += (float) ($result['cpu_seconds'] ?? 0.0);
-        $cpuPeaks[] = (float) ($result['cpu_percent'] ?? 0.0);
-        $memoryInitial[] = (float) ($result['memory_initial_mb'] ?? 0.0);
-        $memoryFinal[] = (float) ($result['memory_final_mb'] ?? 0.0);
-        $memoryPeak[] = (float) ($result['memory_peak_mb'] ?? 0.0);
+        $attempted += $result['attempted'];
+        $successful += $result['successful'];
+        $failed += $result['failed'];
+        $latencies = [...$latencies, ...$result['latencies_ms']];
+        $cpuSeconds += $result['cpu_seconds'];
+        $cpuPeaks[] = $result['cpu_percent'];
+        $memoryInitial[] = $result['memory_initial_mb'];
+        $memoryFinal[] = $result['memory_final_mb'];
+        $memoryPeak[] = $result['memory_peak_mb'];
     }
 
     $averageInitial = releaseAverage($memoryInitial) ?? 0.0;
@@ -294,14 +291,61 @@ function releaseBenchmarkTrial(
         'attempted' => $attempted,
         'successful' => $successful,
         'failed' => $failed,
-        'successful_rpm' => ($successful / $elapsedSeconds) * 60,
+        'successful_rpm' => ((float) $successful / $elapsedSeconds) * 60.0,
         'latencies_ms' => $latencies,
-        'cpu_average_percent' => ($cpuSeconds / $elapsedSeconds) * 100,
+        'cpu_average_percent' => ($cpuSeconds / $elapsedSeconds) * 100.0,
         'cpu_peak_percent' => $cpuPeaks === [] ? 0.0 : max($cpuPeaks),
         'memory_average_mb' => $averageFinal,
         'memory_peak_mb' => $memoryPeak === [] ? 0.0 : max($memoryPeak),
         'memory_growth_mb' => max(0.0, $averageFinal - $averageInitial),
     ];
+}
+
+/**
+ * @param array<array-key,mixed> $result
+ * @return array{attempted:int,successful:int,failed:int,latencies_ms:list<float>,cpu_seconds:float,cpu_percent:float,memory_initial_mb:float,memory_final_mb:float,memory_peak_mb:float}
+ * @throws RuntimeException
+ */
+function releaseValidateWorkerResult(array $result): array
+{
+    $attempted = $result['attempted'] ?? null;
+    $successful = $result['successful'] ?? null;
+    $failed = $result['failed'] ?? null;
+    $rawLatencies = $result['latencies_ms'] ?? null;
+    if (!is_int($attempted) || !is_int($successful) || !is_int($failed)
+        || $attempted < 0 || $successful < 0 || $failed < 0
+        || $attempted !== $successful + $failed
+        || !is_array($rawLatencies) || !array_is_list($rawLatencies)
+        || count($rawLatencies) !== $attempted
+    ) {
+        throw new RuntimeException('Release benchmark worker returned invalid operation counts or latency samples.');
+    }
+    $latencies = [];
+    foreach ($rawLatencies as $latency) {
+        $latencies[] = releaseMetric($latency);
+    }
+
+    return [
+        'attempted' => $attempted,
+        'successful' => $successful,
+        'failed' => $failed,
+        'latencies_ms' => $latencies,
+        'cpu_seconds' => releaseMetric($result['cpu_seconds'] ?? null),
+        'cpu_percent' => releaseMetric($result['cpu_percent'] ?? null),
+        'memory_initial_mb' => releaseMetric($result['memory_initial_mb'] ?? null),
+        'memory_final_mb' => releaseMetric($result['memory_final_mb'] ?? null),
+        'memory_peak_mb' => releaseMetric($result['memory_peak_mb'] ?? null),
+    ];
+}
+
+/** @throws RuntimeException */
+function releaseMetric(mixed $value): float
+{
+    if ((!is_int($value) && !is_float($value)) || !is_finite((float) $value) || $value < 0) {
+        throw new RuntimeException('Release benchmark worker returned an invalid numeric metric.');
+    }
+
+    return (float) $value;
 }
 
 /**
@@ -346,11 +390,13 @@ function releaseEnvironment(): array
     ];
 }
 
+/** @param list<float> $values */
 function releaseAverage(array $values): ?float
 {
     return $values === [] ? null : array_sum($values) / count($values);
 }
 
+/** @param list<float> $values */
 function releasePercentile(array $values, int $percentile): ?float
 {
     if ($values === []) {
@@ -396,6 +442,7 @@ function releasePrepareBaseline(string $root, string $baselineDirectory): void
     ], $baselineDirectory, 240);
 }
 
+/** @param list<string> $command */
 function releaseProcess(array $command, string $workingDirectory, int $timeout = 120): string
 {
     $process = new Process($command, $workingDirectory, ['XDEBUG_MODE' => 'off']);
@@ -426,13 +473,16 @@ function releaseRemoveBaseline(string $root, string $baselineDirectory): void
     $remove->setTimeout(60);
     $remove->run();
 
-    if (is_dir($baselineDirectory)) {
-        releaseRemoveDirectory($baselineDirectory);
-    }
+    clearstatcache(true, $baselineDirectory);
+    releaseRemoveDirectory($baselineDirectory);
 }
 
 function releaseRemoveDirectory(string $directory): void
 {
+    if (!is_dir($directory)) {
+        return;
+    }
+
     foreach (scandir($directory) ?: [] as $entry) {
         if ($entry === '.' || $entry === '..') {
             continue;

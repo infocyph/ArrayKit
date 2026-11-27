@@ -30,6 +30,7 @@ function batchBRemoveDirectory(string $path): void
     rmdir($path);
 }
 
+/** @param array<array-key, mixed> $value */
 function batchBWriteConfig(string $directory, string $namespace, array $value): void
 {
     if (!is_dir($directory)) {
@@ -452,6 +453,7 @@ it('rejects resources named objects and cyclic compiled-cache graphs', function 
 
                 return $closure;
             })(),
+            default => throw new InvalidArgumentException('Unknown fixture case: ' . $case),
         };
 
         $config = new Config();

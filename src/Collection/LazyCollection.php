@@ -439,7 +439,6 @@ final readonly class LazyCollection implements IteratorAggregate
             ) {
                 $binding->checkpoint();
             }
-
         }
     }
 }

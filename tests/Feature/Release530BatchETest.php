@@ -28,6 +28,12 @@ function batchERuntime(bool $coroutines = false): RuntimeContext
     );
 }
 
+/**
+ * @template TKey of array-key
+ * @template TValue
+ * @param LazyCollection<TKey, TValue> $collection
+ * @return LazyCollection<TKey, TValue>
+ */
 function batchEForwardBinding(
     LazyCollection $collection,
     RuntimeContext $runtime,
@@ -152,7 +158,7 @@ it('checks cancellation before advancing the source after a checkpoint boundary'
             }
         }
 
-        test()->fail('Traversal unexpectedly completed after request cancellation.');
+        \PHPUnit\Framework\Assert::fail('Traversal unexpectedly completed after request cancellation.');
     } catch (CancelledException) {
         expect($seen)->toBe([1, 2])
             ->and($consumed)->toBe(2);

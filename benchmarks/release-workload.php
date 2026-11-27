@@ -12,7 +12,11 @@ use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
 use RuntimeException;
 
-[$script, $root, $workload, $operations, $warmup] = $argv + [null, null, null, null, null];
+$arguments = $_SERVER['argv'] ?? [];
+if (!is_array($arguments)) {
+    throw new RuntimeException('CLI arguments are not available.');
+}
+[$script, $root, $workload, $operations, $warmup] = $arguments + [null, null, null, null, null];
 unset($script);
 
 if (!is_string($root) || !is_string($workload) || !is_numeric($operations) || !is_numeric($warmup)) {
@@ -110,12 +114,16 @@ function releaseArrayQueryWorkload(): \Closure
     };
 }
 
-function releaseCpuSeconds(array $usage): float
+/** @param array<string,int>|false $usage */
+function releaseCpuSeconds(array|false $usage): float
 {
-    $user = ((int) ($usage['ru_utime.tv_sec'] ?? 0))
-        + (((int) ($usage['ru_utime.tv_usec'] ?? 0)) / 1_000_000);
-    $system = ((int) ($usage['ru_stime.tv_sec'] ?? 0))
-        + (((int) ($usage['ru_stime.tv_usec'] ?? 0)) / 1_000_000);
+    if ($usage === false) {
+        throw new RuntimeException('Unable to read process CPU usage.');
+    }
+    $user = (float) ($usage['ru_utime.tv_sec'] ?? 0)
+        + ((float) ($usage['ru_utime.tv_usec'] ?? 0) / 1_000_000.0);
+    $system = (float) ($usage['ru_stime.tv_sec'] ?? 0)
+        + ((float) ($usage['ru_stime.tv_usec'] ?? 0) / 1_000_000.0);
 
     return $user + $system;
 }
@@ -182,7 +190,7 @@ function releaseDotConfigWorkload(): \Closure
         );
 
         if (
-            count($ids) !== 64
+            !is_array($ids) || count($ids) !== 64
             || $flat !== [1, 2, 3]
             || $config->get('app.nested.value') !== 42
         ) {

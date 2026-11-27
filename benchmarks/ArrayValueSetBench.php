@@ -36,15 +36,19 @@ final class ArrayValueSetBench
         }
     }
 
-    public function benchCanonicalFingerprintSet(): void
+    /** @return array<array-key, mixed> */
+    public function benchCanonicalFingerprintSet(): array
     {
         $seen = [];
         foreach ($this->values as $value) {
             $seen[ArraySingleOps::fingerprint($value, true)] = true;
         }
+
+        return $seen;
     }
 
-    public function benchDigestWithVerifiedBuckets(): void
+    /** @return array<array-key, mixed> */
+    public function benchDigestWithVerifiedBuckets(): array
     {
         $buckets = [];
         foreach ($this->values as $value) {
@@ -60,6 +64,8 @@ final class ArrayValueSetBench
                 $buckets[$digest][] = $fingerprint;
             }
         }
+
+        return $buckets;
     }
 
     public function benchLooseNestedUnique(): void
@@ -85,7 +91,8 @@ final class ArrayValueSetBench
         ], true);
     }
 
-    public function benchStrictNestedScan(): void
+    /** @return array<array-key, mixed> */
+    public function benchStrictNestedScan(): array
     {
         $seen = [];
         foreach ($this->values as $value) {
@@ -93,6 +100,8 @@ final class ArrayValueSetBench
                 $seen[] = $value;
             }
         }
+
+        return $seen;
     }
 
     public function benchStrictNestedUnique(): void

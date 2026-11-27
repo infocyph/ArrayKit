@@ -103,7 +103,7 @@ it('does not retain request-scoped config or cancellation state across repeated 
                     })
                     ->all();
 
-                test()->fail('Cancelled worker cycle unexpectedly completed.');
+                \PHPUnit\Framework\Assert::fail('Cancelled worker cycle unexpectedly completed.');
             } catch (CancelledException) {
                 expect($seen)->toBe([$tenant, $tenant]);
             }

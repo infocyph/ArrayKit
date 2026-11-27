@@ -14,7 +14,10 @@ use function Infocyph\ArrayKit\compare as ns_compare;
 it('autoloads only namespaced helper functions by default', function () {
     $composer = json_decode((string) file_get_contents(__DIR__.'/../../composer.json'), true, 512, JSON_THROW_ON_ERROR);
 
-    expect($composer['autoload']['files'])->toBe(['src/namespaced-functions.php']);
+    if (!is_array($composer) || !is_array($composer['autoload'] ?? null)) {
+        throw new RuntimeException('Invalid Composer autoload metadata.');
+    }
+    expect($composer['autoload']['files'] ?? null)->toBe(['src/namespaced-functions.php']);
 });
 
 it('keeps global helper declarations guarded in optional file', function () {
@@ -35,6 +38,6 @@ it('provides namespaced helper alternatives', function () {
     expect(ns_array_get($data, 'app.name'))->toBe('ArrayKit')
         ->and(ns_array_get($data, 'app.env'))->toBe('local')
         ->and(ns_compare(10, 5, '>'))->toBeTrue()
-        ->and(ns_collect([1, 2]))->toBeInstanceOf(Collection::class)
-        ->and(ns_chain([1, 2, 3]))->toBeInstanceOf(Pipeline::class);
+        ->and(get_class(ns_collect([1, 2])))->toBe(Collection::class)
+        ->and(get_class(ns_chain([1, 2, 3])))->toBe(Pipeline::class);
 });

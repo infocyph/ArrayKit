@@ -67,17 +67,21 @@ final class ArrayMultiBench
         ArrayMulti::keyBy($this->rows, 'id');
     }
 
-    public function benchKeyByNative(): void
+    /** @return array<array-key, mixed> */
+    public function benchKeyByNative(): array
     {
         $result = [];
         foreach ($this->rows as $row) {
             $result[$row['id']] = $row;
         }
+
+        return $result;
     }
 
-    public function benchPluck(): void
+    /** @return array<array-key, mixed> */
+    public function benchPluck(): array
     {
-        ArrayMulti::pluck($this->rows, 'score', 'id');
+        return ArrayMulti::pluck($this->rows, 'score', 'id');
     }
 
     public function benchSortBy(): void
@@ -103,9 +107,10 @@ final class ArrayMultiBench
         ArrayMulti::uniqueBy($this->rows, 'derived', true);
     }
 
-    public function benchWhere(): void
+    /** @return array<array-key, mixed> */
+    public function benchWhere(): array
     {
-        ArrayMulti::where($this->rows, 'score', '>=', 500);
+        return ArrayMulti::where($this->rows, 'score', '>=', 500);
     }
 
     public function benchWhereIn(): void
@@ -113,7 +118,8 @@ final class ArrayMultiBench
         ArrayMulti::whereIn($this->rows, 'score', $this->needles, true);
     }
 
-    public function benchWhereInNative(): void
+    /** @return array<array-key, mixed> */
+    public function benchWhereInNative(): array
     {
         $result = [];
         foreach ($this->rows as $key => $row) {
@@ -121,6 +127,8 @@ final class ArrayMultiBench
                 $result[$key] = $row;
             }
         }
+
+        return $result;
     }
 
     public function benchWhereNotIn(): void

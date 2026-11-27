@@ -58,29 +58,7 @@ final class LazyFileConfigBench
 
     public function tearDown(): void
     {
-        $remove = static function (string $path) use (&$remove): void {
-            if (is_file($path)) {
-                unlink($path);
-
-                return;
-            }
-
-            if (!is_dir($path)) {
-                return;
-            }
-
-            foreach (scandir($path) ?: [] as $entry) {
-                if ($entry === '.' || $entry === '..') {
-                    continue;
-                }
-
-                $remove($path . DIRECTORY_SEPARATOR . $entry);
-            }
-
-            rmdir($path);
-        };
-
-        $remove(dirname($this->sourceDirectory));
+        self::removePath(dirname($this->sourceDirectory));
     }
 
     public function benchAlreadyLoadedNamespace(): void
@@ -118,5 +96,29 @@ final class LazyFileConfigBench
     public function benchSourceLoad(): void
     {
         $this->sourceConfig->get('app.nested.value');
+    }
+
+    private static function removePath(string $path): void
+    {
+        if (is_file($path)) {
+            unlink($path);
+
+            return;
+        }
+
+        if (!is_dir($path)) {
+            return;
+        }
+
+        $entries = scandir($path);
+        foreach ($entries === false ? [] : $entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            self::removePath($path . DIRECTORY_SEPARATOR . $entry);
+        }
+
+        rmdir($path);
     }
 }

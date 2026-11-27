@@ -41,6 +41,7 @@ final class ArraySingleBench
         $this->needles = array_slice($this->data, 0, min(100, $params['size']));
     }
 
+    /** @param array{size:int} $params */
     public function benchContains(array $params): void
     {
         ArraySingle::contains($this->data, $params['size'] - 1, true);
@@ -51,14 +52,16 @@ final class ArraySingleBench
         ArraySingle::containsAll($this->data, $this->needles, true);
     }
 
+    /** @param array{size:int} $params */
     public function benchContainsAny(array $params): void
     {
         ArraySingle::containsAny($this->data, [$params['size'], $this->needles[0]], true);
     }
 
-    public function benchContainsNative(array $params): void
+    /** @param array{size:int} $params */
+    public function benchContainsNative(array $params): bool
     {
-        in_array($params['size'] - 1, $this->data, true);
+        return in_array($params['size'] - 1, $this->data, true);
     }
 
     public function benchDiff(): void
@@ -76,17 +79,21 @@ final class ArraySingleBench
         ArraySingle::map($this->data, static fn(int $value): int => $value + 1);
     }
 
-    public function benchMapArrayMap(): void
+    /** @return array<array-key, mixed> */
+    public function benchMapArrayMap(): array
     {
-        array_map(static fn(int $value): int => $value + 1, $this->data);
+        return array_map(static fn(int $value): int => $value + 1, $this->data);
     }
 
-    public function benchMapForeach(): void
+    /** @return array<array-key, mixed> */
+    public function benchMapForeach(): array
     {
         $result = [];
         foreach ($this->data as $key => $value) {
             $result[$key] = $value + 1;
         }
+
+        return $result;
     }
 
     public function benchMedian(): void
@@ -94,9 +101,10 @@ final class ArraySingleBench
         ArraySingle::median($this->data);
     }
 
-    public function benchMode(): void
+    /** @return array<array-key, mixed> */
+    public function benchMode(): array
     {
-        ArraySingle::mode($this->data);
+        return ArraySingle::mode($this->data);
     }
 
     public function benchNth(): void
@@ -144,7 +152,7 @@ final class ArraySingleBench
         ArraySingle::where($this->keyed, static fn(int $value): bool => ($value % 2) === 0);
     }
 
-    /** @return array<string, array{size:int}> */
+    /** @return array<int|string, array{size:int}> */
     public function provideSizes(): array
     {
         return [

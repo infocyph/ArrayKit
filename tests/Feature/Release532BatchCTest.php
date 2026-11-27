@@ -62,9 +62,9 @@ it('preserves finite averages across intermediate overflow and float-to-int boun
 it('forwards only callable public pipeline methods through collections', function () {
     $collection = Collection::make([3, 1, 2]);
 
-    expect(fn () => $collection->__call('numericAggregate', [null, true]))
+    expect(static fn(): mixed => $collection->__call('numericAggregate', [null, true]))
         ->toThrow(BadMethodCallException::class)
-        ->and(fn () => $collection->__call('unrecognizedInternalMethod', []))
+        ->and(static fn(): mixed => $collection->__call('unrecognizedInternalMethod', []))
         ->toThrow(BadMethodCallException::class)
         ->and($collection->values()->all())->toBe([3, 1, 2]);
 });

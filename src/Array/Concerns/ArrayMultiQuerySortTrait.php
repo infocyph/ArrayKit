@@ -906,6 +906,23 @@ trait ArrayMultiQuerySortTrait
     }
 
     /**
+     * @throws \RuntimeException
+     */
+    private static function compareLocale(string $left, string $right, ?Collator $collator): int
+    {
+        if ($collator === null) {
+            return strcmp($left, $right);
+        }
+
+        $result = $collator->compare($left, $right);
+        if ($result === false) {
+            throw new RuntimeException('Locale comparison failed: ' . $collator->getErrorMessage());
+        }
+
+        return $result;
+    }
+
+    /**
      * Compare two values according to PHP sort options.
      * @throws \RuntimeException
      */
@@ -929,76 +946,6 @@ trait ArrayMultiQuerySortTrait
             self::SORT_LOCALE => self::compareLocale(self::asString($left), self::asString($right), $collator),
             default => $left <=> $right,
         };
-    }
-
-    /**
-     * @param array<array-key, mixed> $array
-     * @throws \RuntimeException
-     */
-    private static function sortLevel(array &$array, int $options, bool $descending): void
-    {
-        $collator = self::localeCollator($options);
-        $locale = ($options & ~\SORT_FLAG_CASE) === self::SORT_LOCALE;
-        if (ArraySingle::isAssoc($array) && !$locale) {
-            $descending ? krsort($array, $options) : ksort($array, $options);
-
-            return;
-        }
-
-        $compare = static fn(mixed $left, mixed $right): int => self::applySortDirection(
-            self::compareSortValues($left, $right, $options, $collator),
-            $descending,
-        );
-        if (ArraySingle::isAssoc($array)) {
-            uksort($array, $compare);
-        } else {
-            usort($array, $compare);
-        }
-    }
-
-    /**
-     * @throws \RuntimeException
-     */
-    private static function localeCollator(int $options): ?Collator
-    {
-        if (($options & ~\SORT_FLAG_CASE) !== self::SORT_LOCALE) {
-            return null;
-        }
-
-        $locale = setlocale(\LC_COLLATE, '0');
-        if ($locale === false) {
-            throw new RuntimeException('Unable to determine the active collation locale.');
-        }
-        if (in_array($locale, ['C', 'POSIX', 'C.UTF-8', 'C.utf8'], true)) {
-            return null;
-        }
-        if (!class_exists(Collator::class)) {
-            throw new RuntimeException('Non-C locale sorting requires ext-intl.');
-        }
-
-        $identifier = preg_replace('/\.[^@]+/', '', $locale);
-        if ($identifier === null) {
-            throw new RuntimeException('Unable to normalize the active collation locale.');
-        }
-
-        return new Collator($identifier);
-    }
-
-    /**
-     * @throws \RuntimeException
-     */
-    private static function compareLocale(string $left, string $right, ?Collator $collator): int
-    {
-        if ($collator === null) {
-            return strcmp($left, $right);
-        }
-
-        $result = $collator->compare($left, $right);
-        if ($result === false) {
-            throw new RuntimeException('Locale comparison failed: ' . $collator->getErrorMessage());
-        }
-
-        return $result;
     }
 
     private static function extractComparableValue(mixed $row, string|callable $keyOrCallback, int|string $key): float|int|null
@@ -1136,6 +1083,34 @@ trait ArrayMultiQuerySortTrait
     private static function invokeRowCallback(callable $callback, mixed $row, int|string $key): mixed
     {
         return $callback($row, $key);
+    }
+
+    /**
+     * @throws \RuntimeException
+     */
+    private static function localeCollator(int $options): ?Collator
+    {
+        if (($options & ~\SORT_FLAG_CASE) !== self::SORT_LOCALE) {
+            return null;
+        }
+
+        $locale = setlocale(\LC_COLLATE, '0');
+        if ($locale === false) {
+            throw new RuntimeException('Unable to determine the active collation locale.');
+        }
+        if (in_array($locale, ['C', 'POSIX', 'C.UTF-8', 'C.utf8'], true)) {
+            return null;
+        }
+        if (!class_exists(Collator::class)) {
+            throw new RuntimeException('Non-C locale sorting requires ext-intl.');
+        }
+
+        $identifier = preg_replace('/\.[^@]+/', '', $locale);
+        if ($identifier === null) {
+            throw new RuntimeException('Unable to normalize the active collation locale.');
+        }
+
+        return new Collator($identifier);
     }
 
     /**
@@ -1326,6 +1301,31 @@ trait ArrayMultiQuerySortTrait
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \RuntimeException
+     */
+    private static function sortLevel(array &$array, int $options, bool $descending): void
+    {
+        $collator = self::localeCollator($options);
+        $locale = ($options & ~\SORT_FLAG_CASE) === self::SORT_LOCALE;
+        if (ArraySingle::isAssoc($array) && !$locale) {
+            $descending ? krsort($array, $options) : ksort($array, $options);
+
+            return;
+        }
+
+        $compare = static fn(mixed $left, mixed $right): int => self::applySortDirection(
+            self::compareSortValues($left, $right, $options, $collator),
+            $descending,
+        );
+        if (ArraySingle::isAssoc($array)) {
+            uksort($array, $compare);
+        } else {
+            usort($array, $compare);
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
      * @throws \RuntimeException
      */
@@ -1413,4 +1413,5 @@ trait ArrayMultiQuerySortTrait
 
         return $results;
     }
+
 }

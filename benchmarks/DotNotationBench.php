@@ -20,7 +20,7 @@ final class DotNotationBench
 
     private string $path = '';
 
-    /** @var array<array-key, mixed> */
+    /** @var array{plain?:int,one?:array{two:array{three:array{four:array{five:array{six:array{seven:array{eight:array{nine:array{ten:int}}}}}}}}},'service.name'?:string,users?:list<array{name:string,teams:list<array{name:string}>}>} */
     private array $target = [];
 
     /** @param array{path:string} $params */
@@ -57,9 +57,9 @@ final class DotNotationBench
         DotNotation::forget($target, 'users.*.teams.*.name');
     }
 
-    public function benchNativeNestedGet(): void
+    public function benchNativeNestedGet(): mixed
     {
-        $value = $this->target['one']['two']['three']['four']['five'] ?? null;
+        return $this->target['one']['two']['three']['four']['five'] ?? null;
     }
 
     public function benchSet(): void

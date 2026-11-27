@@ -6,6 +6,7 @@ use Infocyph\ArrayKit\Config\ConfigMerge;
 use Infocyph\ArrayKit\Config\LayeredLazyFileConfig;
 use Infocyph\ArrayKit\Config\ResilientLazyFileConfig;
 
+/** @param array<array-key, mixed> $values */
 function configLayeringWrite(string $directory, string $namespace, array $values): void
 {
     if (!is_dir($directory)) {

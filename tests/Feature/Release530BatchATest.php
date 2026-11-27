@@ -60,6 +60,9 @@ it('shares wildcard node budgets and stops default resolution after exhaustion',
         maxNodes: 3,
     );
 
+    if (!is_array($result)) {
+        throw new RuntimeException('Expected an array result.');
+    }
     expect(count($result))->toBeLessThanOrEqual(3)
         ->and($defaults)->toBeLessThanOrEqual(3);
 });
@@ -166,7 +169,7 @@ it('replays terminal lazy source failures instead of presenting truncated succes
     foreach ([1, 2] as $attempt) {
         try {
             $lazy->all();
-            test()->fail("Traversal {$attempt} unexpectedly succeeded.");
+            \PHPUnit\Framework\Assert::fail("Traversal {$attempt} unexpectedly succeeded.");
         } catch (RuntimeException $error) {
             expect($error->getMessage())->toBe('source failure');
         }
@@ -175,11 +178,9 @@ it('replays terminal lazy source failures instead of presenting truncated succes
 
 it('replays failures before the first lazy yield', function () {
     $lazy = LazyCollection::from((function () {
-        if (true) {
+        yield from (static function (): iterable {
             throw new RuntimeException('initial failure');
-        }
-
-        yield 1;
+        })();
     })());
 
     expect(fn () => $lazy->all())->toThrow(RuntimeException::class, 'initial failure')

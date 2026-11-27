@@ -99,7 +99,7 @@ it('hydrates typed nested DTOs through the guarded entry point', function () {
         'payload' => ['roles' => ['admin', 'editor']],
     ]);
 
-    expect($dto->address)->toBeInstanceOf(Release530BatchDAddress::class)
+    expect(get_class($dto->address))->toBe(Release530BatchDAddress::class)
         ->and($dto->address->city)->toBe('Dhaka')
         ->and($dto->payload)->toBe(['roles' => ['admin', 'editor']]);
 });
