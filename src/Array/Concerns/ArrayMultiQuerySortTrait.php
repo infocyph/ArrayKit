@@ -173,6 +173,7 @@ trait ArrayMultiQuerySortTrait
      *
      * @param array<array-key, mixed> $array
      * @return array<int|string, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function indexBy(array $array, string|callable $indexBy): array
     {

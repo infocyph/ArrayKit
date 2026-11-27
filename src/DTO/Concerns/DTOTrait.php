@@ -86,6 +86,7 @@ trait DTOTrait
      *
      * @param array<array-key, mixed> $values
      * @param array<string, string> $mapping
+     * @throws \InvalidArgumentException
      */
     public function hydrateNestedGuarded(
         array $values,

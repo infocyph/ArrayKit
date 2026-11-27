@@ -81,6 +81,7 @@ final class DTOGraphGuard
 
     /**
      * @throws \InvalidArgumentException
+     * @throws \RuntimeException
      */
     private static function traverse(mixed $value, int $maxDepth, int $maxNodes, bool $export): mixed
     {

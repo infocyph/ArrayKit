@@ -41,6 +41,9 @@ final class CoreBench
     /** @var list<array{id:int,payload:string}> */
     private array $uniqueNestedLarge = [];
 
+    /**
+     * @throws \RuntimeException
+     */
     public function setUp(): void
     {
         $this->single = [
@@ -131,12 +134,18 @@ final class CoreBench
         ArrayMulti::flatten([[[[1, 2], 3], [4, [5, [6]]]], 7]);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     #[Subject]
     public function benchArrayMultiKeyBy(): void
     {
         ArrayMulti::keyBy($this->nested, 'id');
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     #[Subject]
     public function benchArrayMultiKeyBy10k(): void
     {
@@ -171,12 +180,18 @@ final class CoreBench
         ArrayMulti::whereIn($this->queryRows, 'role', [null], true);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     #[Subject]
     public function benchArraySingleCountBy(): void
     {
         ArraySingle::countBy($this->single);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     #[Subject]
     public function benchArraySingleNth(): void
     {

@@ -107,6 +107,9 @@ final class ArraySingleBench
         return ArraySingle::mode($this->data);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchNth(): void
     {
         ArraySingle::nth($this->data, 10, 3);

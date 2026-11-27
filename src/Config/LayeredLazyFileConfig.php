@@ -67,6 +67,9 @@ class LayeredLazyFileConfig extends Config
         return parent::changed($snapshot);
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function clearNamespaceCache(): static
     {
         $this->source->flushNamespaceCache();
@@ -137,6 +140,9 @@ class LayeredLazyFileConfig extends Config
         return $this->source->namespaceCacheDirectory();
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     #[\Override]
     public function overlay(array $overlay): bool
     {

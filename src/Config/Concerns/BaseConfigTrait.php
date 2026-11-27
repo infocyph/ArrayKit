@@ -345,6 +345,7 @@ trait BaseConfigTrait
 
     /**
      * @throws \UnexpectedValueException
+     * @throws \RuntimeException
      */
     public function loadCache(string $path): bool
     {
@@ -353,6 +354,7 @@ trait BaseConfigTrait
 
     /**
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function loadEnvFile(string $path): bool
     {
@@ -407,6 +409,10 @@ trait BaseConfigTrait
         return true;
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
     public function mergeEnvFile(string $path): bool
     {
         return $this->merge(EnvParser::parseFile($path));
@@ -416,6 +422,7 @@ trait BaseConfigTrait
      * Overlay another config array on top of current items.
      *
      * @param array<array-key, mixed> $overlay
+     * @throws \RuntimeException
      */
     public function overlay(array $overlay): bool
     {
@@ -553,6 +560,7 @@ trait BaseConfigTrait
 
     /**
      * Save a named snapshot of current configuration.
+     * @throws \UnexpectedValueException
      */
     public function snapshot(string $name = 'default'): bool
     {
@@ -720,6 +728,21 @@ trait BaseConfigTrait
         return false;
     }
 
+    /** @param class-string<\BackedEnum> $enumClass */
+    private static function resolveBackedEnum(string $enumClass, mixed $value): ?\BackedEnum
+    {
+        $backingType = new \ReflectionEnum($enumClass)->getBackingType();
+        if (!$backingType instanceof \ReflectionNamedType) {
+            return null;
+        }
+
+        return match ($backingType->getName()) {
+            'int' => is_int($value) ? $enumClass::tryFrom($value) : null,
+            'string' => is_string($value) ? $enumClass::tryFrom($value) : null,
+            default => null,
+        };
+    }
+
     /**
      * @return array<array-key, mixed>
      * @throws \InvalidArgumentException
@@ -820,20 +843,5 @@ trait BaseConfigTrait
         throw new UnexpectedValueException(
             'Compiled configuration contains unsupported value type [' . get_debug_type($value) . '].',
         );
-    }
-
-    /** @param class-string<\BackedEnum> $enumClass */
-    private static function resolveBackedEnum(string $enumClass, mixed $value): ?\BackedEnum
-    {
-        $backingType = new \ReflectionEnum($enumClass)->getBackingType();
-        if (!$backingType instanceof \ReflectionNamedType) {
-            return null;
-        }
-
-        return match ($backingType->getName()) {
-            'int' => is_int($value) ? $enumClass::tryFrom($value) : null,
-            'string' => is_string($value) ? $enumClass::tryFrom($value) : null,
-            default => null,
-        };
     }
 }

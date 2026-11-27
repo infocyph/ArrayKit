@@ -32,6 +32,9 @@ final class Release530PersistentWorkerSoak
 
     private readonly string $sourceDirectory;
 
+    /**
+     * @throws \RuntimeException
+     */
     public function __construct()
     {
         $suffix = bin2hex(random_bytes(6));
@@ -114,6 +117,11 @@ final class Release530PersistentWorkerSoak
         clearstatcache(true, $path);
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     */
     private function runCycle(int $cycle): void
     {
         $tenant = 'tenant-' . $cycle;
@@ -207,6 +215,9 @@ final class Release530PersistentWorkerSoak
         }
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private function refreshGeneratedCache(int $cycle): void
     {
         $version = intdiv($cycle, 50) + 1;
@@ -252,6 +263,9 @@ final class Release530PersistentWorkerSoak
         }
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     private function runtime(): RuntimeContext
     {
         $environment = new RuntimeEnvironment(
@@ -277,6 +291,9 @@ final class Release530PersistentWorkerSoak
         );
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     private function writeSource(int $version): void
     {
         $source = sprintf(

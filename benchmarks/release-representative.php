@@ -105,6 +105,7 @@ function releaseBenchmarkDocument(
 /**
  * @param array{name:string,operations:int,warmup:int} $spec
  * @return array<string, mixed>
+ * @throws \RuntimeException
  */
 function releaseBenchmarkWorkload(
     string $root,
@@ -214,6 +215,8 @@ function releaseBenchmarkWorkload(
  *     memory_growth_mb:float
  * }
  * @throws RuntimeException
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
  */
 function releaseBenchmarkTrial(
     string $root,
@@ -408,6 +411,13 @@ function releasePercentile(array $values, int $percentile): ?float
     return (float) $values[$index];
 }
 
+/**
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\ProcessStartFailedException
+ * @throws \Symfony\Component\Process\Exception\RuntimeException
+ * @throws \Symfony\Component\Process\Exception\ProcessTimedOutException
+ * @throws \Symfony\Component\Process\Exception\ProcessSignaledException
+ */
 function releasePrepareBaseline(string $root, string $baselineDirectory): void
 {
     releaseRemoveBaseline($root, $baselineDirectory);
@@ -440,7 +450,16 @@ function releasePrepareBaseline(string $root, string $baselineDirectory): void
     ], $baselineDirectory, 240);
 }
 
-/** @param list<string> $command */
+/**
+ * @param list<string> $command
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
+ * @throws \Symfony\Component\Process\Exception\ProcessStartFailedException
+ * @throws \Symfony\Component\Process\Exception\RuntimeException
+ * @throws \Symfony\Component\Process\Exception\ProcessTimedOutException
+ * @throws \Symfony\Component\Process\Exception\ProcessSignaledException
+ * @throws \RuntimeException
+ */
 function releaseProcess(array $command, string $workingDirectory, int $timeout = 120): string
 {
     $process = new Process($command, $workingDirectory, ['XDEBUG_MODE' => 'off']);
@@ -458,6 +477,14 @@ function releaseProcess(array $command, string $workingDirectory, int $timeout =
     return $process->getOutput();
 }
 
+/**
+ * @throws \Symfony\Component\Process\Exception\LogicException
+ * @throws \Symfony\Component\Process\Exception\InvalidArgumentException
+ * @throws \Symfony\Component\Process\Exception\ProcessStartFailedException
+ * @throws \Symfony\Component\Process\Exception\RuntimeException
+ * @throws \Symfony\Component\Process\Exception\ProcessTimedOutException
+ * @throws \Symfony\Component\Process\Exception\ProcessSignaledException
+ */
 function releaseRemoveBaseline(string $root, string $baselineDirectory): void
 {
     if (!is_dir($baselineDirectory)) {
@@ -499,6 +526,7 @@ function releaseRemoveDirectory(string $directory): void
 
 /**
  * @param array<string, mixed> $document
+ * @throws \RuntimeException
  */
 function releaseWriteJson(string $path, array $document): void
 {

@@ -24,7 +24,10 @@ final class ConfigBench
 
     private Config $uncached;
 
-    /** @param array{path:string, reads:int} $params */
+    /**
+     * @param array{path:string, reads:int} $params
+     * @throws \RuntimeException
+     */
     public function setUp(array $params): void
     {
         $items = [
@@ -59,16 +62,25 @@ final class ConfigBench
         }
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function benchFill(): void
     {
         $this->cached->fill('one.two.added', 1);
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function benchForget(): void
     {
         $this->cached->forget('one.two.three');
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function benchSet(): void
     {
         $this->cached->set('one.two.value', 1);

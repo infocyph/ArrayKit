@@ -78,6 +78,7 @@ class Pipeline
      * Count items grouped by value/callback buckets.
      *
      * @return array<int|string, int>
+     * @throws \InvalidArgumentException
      */
     public function countBy(callable|string|null $groupBy = null): array
     {
@@ -256,6 +257,7 @@ class Pipeline
 
     /**
      * Key rows by a derived key (last write wins on duplicates).
+     * @throws \InvalidArgumentException
      */
     public function keyBy(string|callable $keyBy): Collection
     {
@@ -427,7 +429,10 @@ class Pipeline
         return $this->collection;
     }
 
-    /** Extract a column (optionally re-index) */
+    /**
+     * Extract a column (optionally re-index)
+     * @throws \InvalidArgumentException
+     */
     public function pluck(string $column, ?string $indexBy = null): Collection
     {
         $this->working = ArrayMulti::pluck($this->working, $column, $indexBy);
@@ -457,6 +462,7 @@ class Pipeline
      * Rename keys using a map or callback.
      *
      * @param array<array-key, int|string>|callable $mapper
+     * @throws \InvalidArgumentException
      */
     public function rekey(array|callable $mapper): Collection
     {
@@ -744,6 +750,7 @@ class Pipeline
 
     /**
      * Filter rows by SQL-like pattern matching.
+     * @throws \RuntimeException
      */
     public function whereLike(string $key, string $pattern, bool $caseSensitive = false): Collection
     {

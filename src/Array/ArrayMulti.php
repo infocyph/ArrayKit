@@ -284,6 +284,7 @@ class ArrayMulti
      * @param array<array-key, mixed> $array
      * @param array<int|string, int|string>|callable $mapper
      * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
      */
     public static function rekey(array $array, array|callable $mapper): array
     {
@@ -417,6 +418,7 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
+     * @throws \RuntimeException
      */
     private static function flattenIntoGuarded(
         array $array,
@@ -504,6 +506,7 @@ class ArrayMulti
     /**
      * @param array<array-key, mixed> $item
      * @param array<int, mixed> $result
+     * @throws \RuntimeException
      */
     private static function flattenOneLevelGuarded(
         array $item,
@@ -568,6 +571,7 @@ class ArrayMulti
 
     /**
      * @param array<array-key, mixed> $array
+     * @throws \RuntimeException
      */
     private static function measureDepthGuarded(
         array $array,

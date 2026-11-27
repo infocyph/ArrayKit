@@ -32,6 +32,11 @@ final class LazyFileConfigBench
 
     private LazyFileConfig $warmConfig;
 
+    /**
+     * @throws \RuntimeException
+     * @throws \UnexpectedValueException
+     * @throws \InvalidArgumentException
+     */
     public function setUp(): void
     {
         $base = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'arraykit-lazy-bench-' . getmypid();
@@ -66,6 +71,9 @@ final class LazyFileConfigBench
         $this->loadedConfig->get('app.nested.value');
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function benchCacheWarm(): void
     {
         $this->warmConfig->warmNamespaceCache('app');

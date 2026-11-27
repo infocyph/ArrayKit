@@ -27,6 +27,7 @@ final class EnvParser
     /**
      * @return array<string, string|null>
      * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
      */
     public static function parseFile(string $path): array
     {
@@ -36,6 +37,7 @@ final class EnvParser
     /**
      * @return array<string, string|null>
      * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
      */
     public static function parseFileRaw(string $path): array
     {

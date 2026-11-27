@@ -25,7 +25,11 @@ final class RunwireLazyCollectionBench
 
     private RuntimeContext $runtime;
 
-    /** @param array{size:int} $params */
+    /**
+     * @param array{size:int} $params
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     */
     public function setUp(array $params): void
     {
         $this->data = range(1, $params['size']);
@@ -33,6 +37,10 @@ final class RunwireLazyCollectionBench
         $this->request = RequestContext::create($this->runtime);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     */
     public function benchBoundRequestMapFilter(): void
     {
         LazyCollection::from($this->data)
@@ -42,6 +50,10 @@ final class RunwireLazyCollectionBench
             ->all();
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \LogicException
+     */
     public function benchBoundRequestMaterialization(): void
     {
         LazyCollection::from($this->data)

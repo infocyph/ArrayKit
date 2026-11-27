@@ -35,11 +35,17 @@ final class EnvParserBench
         $this->contents = implode("\n", $lines);
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     public function benchParse(): void
     {
         EnvParser::parse($this->contents);
     }
 
+    /**
+     * @throws \UnexpectedValueException
+     */
     public function benchParseRaw(): void
     {
         EnvParser::parseRaw($this->contents);

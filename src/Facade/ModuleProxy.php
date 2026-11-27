@@ -69,6 +69,7 @@ final readonly class ModuleProxy
     /**
      * @param array<array-key, mixed> $array
      * @throws \UnexpectedValueException
+     * @throws \BadMethodCallException
      */
     public function move(array &$array, string $from, string $to, bool $overwrite = true): bool
     {
@@ -96,6 +97,7 @@ final readonly class ModuleProxy
     /**
      * @param array<array-key, mixed> $array
      * @throws \UnexpectedValueException
+     * @throws \BadMethodCallException
      */
     public function rename(array &$array, string $from, string $to, bool $overwrite = true): bool
     {
@@ -106,6 +108,7 @@ final readonly class ModuleProxy
      * @param array<array-key, mixed> $array
      * @param array<array-key, mixed>|string|null $keys
      * @throws \UnexpectedValueException
+     * @throws \BadMethodCallException
      */
     public function set(array &$array, array|string|null $keys = null, mixed $value = null, bool $overwrite = true): bool
     {

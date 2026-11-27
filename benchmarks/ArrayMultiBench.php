@@ -42,6 +42,9 @@ final class ArrayMultiBench
         $this->needles = range(0, $params['needles'] - 1);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchCountBy(): void
     {
         ArrayMulti::countBy($this->rows, 'group');
@@ -57,11 +60,17 @@ final class ArrayMultiBench
         ArrayMulti::flatten($this->rows);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchGroupBy(): void
     {
         ArrayMulti::groupBy($this->rows, 'group');
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchKeyBy(): void
     {
         ArrayMulti::keyBy($this->rows, 'id');
@@ -78,17 +87,26 @@ final class ArrayMultiBench
         return $result;
     }
 
-    /** @return array<array-key, mixed> */
+    /**
+     * @return array<array-key, mixed>
+     * @throws \InvalidArgumentException
+     */
     public function benchPluck(): array
     {
         return ArrayMulti::pluck($this->rows, 'score', 'id');
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function benchSortBy(): void
     {
         ArrayMulti::sortBy($this->rows, 'score', true, SORT_NUMERIC);
     }
 
+    /**
+     * @throws \RuntimeException
+     */
     public function benchSortByMany(): void
     {
         ArrayMulti::sortByMany($this->rows, [

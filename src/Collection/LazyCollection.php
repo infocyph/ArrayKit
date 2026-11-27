@@ -409,6 +409,9 @@ final readonly class LazyCollection implements IteratorAggregate
 
     /**
      * @return Generator<TKey, TValue>
+     * @throws \LogicException
+     * @throws \Infocyph\Runwire\Exception\CancelledException
+     * @throws \Throwable
      */
     private function cursorWithBinding(?RunwireLazyBinding $binding): Generator
     {

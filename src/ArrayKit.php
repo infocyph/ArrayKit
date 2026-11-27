@@ -43,6 +43,7 @@ final class ArrayKit
 
     /**
      * @param array<array-key, mixed> $items
+     * @throws \RuntimeException
      */
     public static function config(array $items = []): Config
     {

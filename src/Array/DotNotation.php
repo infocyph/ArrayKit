@@ -328,6 +328,7 @@ class DotNotation
 
     /**
      * @param array<int, string> $segments
+     * @throws \InvalidArgumentException
      */
     private static function setValueBySegments(
         mixed &$target,
@@ -440,6 +441,7 @@ class DotNotation
      * Traverses the target array/object to retrieve a value using dot notation.
      *
      * @param array<int, string> $segments
+     * @throws \RuntimeException
      */
     private static function traverseGet(mixed $target, array $segments, mixed $default, object $missing): mixed
     {
@@ -454,6 +456,7 @@ class DotNotation
 
     /**
      * @param array<int, string> $segments
+     * @throws \RuntimeException
      */
     private static function traverseGetWithLimits(
         mixed $target,

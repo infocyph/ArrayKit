@@ -72,6 +72,7 @@ class LazyFileConfig extends Config
     /**
      * @param string|int|array<int, string|int> $key
      * @throws \RuntimeException
+     * @throws \InvalidArgumentException
      */
     public function forget(string|int|array $key): bool
     {
@@ -169,6 +170,7 @@ class LazyFileConfig extends Config
 
     /**
      * Alias of isLoaded().
+     * @throws \InvalidArgumentException
      */
     public function loaded(string $namespace): bool
     {
@@ -443,6 +445,10 @@ class LazyFileConfig extends Config
         return $file;
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
+     */
     #[\Override]
     protected function resolveRawValue(int|string $key): mixed
     {
@@ -565,6 +571,7 @@ class LazyFileConfig extends Config
     /**
      * @param string|array<array-key, mixed> $key
      * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
      */
     private function writePaths(string|array $key, mixed $value, bool $overwrite, string $operation): void
     {

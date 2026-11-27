@@ -136,6 +136,7 @@ function releaseCpuSeconds(array|false $usage): float
 
 /**
  * @return \Closure(): void
+ * @throws \RuntimeException
  */
 function releaseConfigSnapshotWorkload(): \Closure
 {
@@ -163,6 +164,7 @@ function releaseConfigSnapshotWorkload(): \Closure
 
 /**
  * @return \Closure(): void
+ * @throws \RuntimeException
  */
 function releaseDotConfigWorkload(): \Closure
 {
@@ -248,6 +250,7 @@ function releaseLazyFileColdWorkload(array &$temporaryDirectories): \Closure
 /**
  * @param list<string> $temporaryDirectories
  * @return \Closure(): void
+ * @throws \RuntimeException
  */
 function releaseLazyFileGeneratedWorkload(array &$temporaryDirectories): \Closure
 {
@@ -271,6 +274,7 @@ function releaseLazyFileGeneratedWorkload(array &$temporaryDirectories): \Closur
 /**
  * @param list<string> $temporaryDirectories
  * @return array{0:string,1:string}
+ * @throws \RuntimeException
  */
 function releaseLazyFileDirectories(array &$temporaryDirectories): array
 {

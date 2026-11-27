@@ -42,6 +42,9 @@ final class CollectionBench
         LazyCollection::from($this->data)->all();
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchLazyChunkMaterialization(): void
     {
         LazyCollection::fromFactory(fn(): array => $this->data)
@@ -71,6 +74,9 @@ final class CollectionBench
         LazyCollection::from($source)->all();
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function benchLazyMapFilterTake(): void
     {
         LazyCollection::fromFactory(fn(): array => $this->data)
