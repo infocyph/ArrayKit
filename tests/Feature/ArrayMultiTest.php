@@ -744,7 +744,7 @@ it('evaluates sortByMany criteria once per row with original keys', function () 
         function (array $row, string $key) use (&$calls): int {
             $calls[] = $key;
 
-            return $row['score'];
+            return arrayMultiFixtureInt($row, 'score');
         },
         'asc',
     ]]);

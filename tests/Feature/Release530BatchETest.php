@@ -68,7 +68,9 @@ PHP;
     $code = str_replace('__SOURCE__', $source, $code);
     $process = proc_open([PHP_BINARY, '-r', $code], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
 
-    expect(is_resource($process))->toBeTrue();
+    if (!is_resource($process)) {
+        throw new RuntimeException('Unable to start fixture process.');
+    }
 
     $stdout = stream_get_contents($pipes[1]);
     $stderr = stream_get_contents($pipes[2]);
@@ -294,7 +296,7 @@ it('honors request cancellation while an active coroutine scope is bound without
         public int $factoryCalls = 0;
     };
 
-    expect(fn () => $coroutines->run(
+    expect(static fn(): mixed => $coroutines->run(
         function (CoroutineScope $scope) use ($runtime, $request, $state): array {
             $scope->spawn(function () use ($request): void {
                 $request->cancel(CancellationReason::HOST_CANCELLED);

@@ -205,7 +205,7 @@ it('preserves large integer precision in numeric selection and accumulation', fu
         ->and(ArraySingle::sum([$high, -$low]))->toBe(1)
         ->and(ArraySingle::maxBy(
             [['score' => $low], ['score' => $high]],
-            static fn(array $row): int => $row['score'],
+            static fn(array $row): int => arraySingleFixtureInt($row, 'score'),
         ))->toBe(['score' => $high]);
 });
 

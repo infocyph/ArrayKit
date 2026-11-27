@@ -46,7 +46,7 @@ function lazyConfigDeleteDirectory(string $directory): void
 }
 
 /**
- * @return array<string, mixed>
+ * @return array<array-key, mixed>
  */
 function lazyConfigItems(LazyFileConfig $config): array
 {

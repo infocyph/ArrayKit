@@ -147,17 +147,17 @@ it('preserves by-reference mutations through facade proxies', function () {
     $data = ['app' => ['name' => 'old'], 'remove' => true];
 
     expect(ArrayKit::dot()->set($data, 'app.name', 'new'))->toBeTrue()
-        ->and($data['app']['name'])->toBe('new');
+        ->and($data)->toBe(['app' => ['name' => 'new'], 'remove' => true]);
 
     ArrayKit::helper()->forget($data, 'remove');
 
     expect($data)->not->toHaveKey('remove');
 
     ArrayKit::dot()->fill($data, 'app.debug', true);
-    expect($data['app']['debug'])->toBeTrue();
+    expect($data)->toBe(['app' => ['name' => 'new', 'debug' => true]]);
 
     expect(ArrayKit::dot()->rename($data, 'app.debug', 'app.enabled'))->toBeTrue()
-        ->and($data['app']['enabled'])->toBeTrue();
+        ->and($data)->toBe(['app' => ['name' => 'new', 'enabled' => true]]);
 });
 
 it('replays terminal lazy source failures instead of presenting truncated success', function () {
@@ -177,11 +177,13 @@ it('replays terminal lazy source failures instead of presenting truncated succes
 });
 
 it('replays failures before the first lazy yield', function () {
-    $lazy = LazyCollection::from((function () {
-        yield from (static function (): iterable {
+    $source = (static function (iterable $values): Generator {
+        foreach ($values as $value) {
             throw new RuntimeException('initial failure');
-        })();
-    })());
+        }
+        yield 1;
+    })([1]);
+    $lazy = LazyCollection::from($source);
 
     expect(fn () => $lazy->all())->toThrow(RuntimeException::class, 'initial failure')
         ->and(fn () => $lazy->all())->toThrow(RuntimeException::class, 'initial failure');

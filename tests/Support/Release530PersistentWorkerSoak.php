@@ -95,18 +95,23 @@ final class Release530PersistentWorkerSoak
             }
 
             $path = $directory . DIRECTORY_SEPARATOR . $entry;
-            if (is_dir($path)) {
+            if (!is_link($path) && is_dir($path)) {
                 $this->removeDirectory($path);
             } elseif (is_file($path) || is_link($path)) {
-                if (function_exists('opcache_invalidate')) {
-                    opcache_invalidate($path, true);
-                }
-                unlink($path);
-                clearstatcache(true, $path);
+                $this->removeCacheFile($path);
             }
         }
 
         rmdir($directory);
+    }
+
+    private function removeCacheFile(string $path): void
+    {
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($path, true);
+        }
+        unlink($path);
+        clearstatcache(true, $path);
     }
 
     private function runCycle(int $cycle): void
@@ -142,20 +147,7 @@ final class Release530PersistentWorkerSoak
         )->withRunwire($this->runtime, $request, checkpointEvery: 1);
 
         if (($cycle % 13) === 0) {
-            try {
-                $collection
-                    ->mapLazy(function (array $row) use ($request): array {
-                        if ($row['value'] === 2) {
-                            $request->cancel(CancellationReason::HOST_CANCELLED);
-                        }
-
-                        return $row;
-                    })
-                    ->all();
-
-                throw new RuntimeException('Cancelled worker cycle unexpectedly completed.');
-            } catch (CancelledException) {
-            }
+            $this->assertCancelledTraversal($collection, $request);
         } else {
             $rows = $collection->all();
             if (count($rows) !== 3 || array_unique(array_column($rows, 'tenant')) !== [$tenant]) {
@@ -173,6 +165,25 @@ final class Release530PersistentWorkerSoak
 
         if (($cycle % 100) === 0) {
             $this->retireInactiveGenerations();
+        }
+    }
+
+    /** @param LazyCollection<int, array{tenant: string, value: int}> $collection */
+    private function assertCancelledTraversal(LazyCollection $collection, RequestContext $request): void
+    {
+        try {
+            $collection
+                ->mapLazy(function (array $row) use ($request): array {
+                    if ($row['value'] === 2) {
+                        $request->cancel(CancellationReason::HOST_CANCELLED);
+                    }
+
+                    return $row;
+                })
+                ->all();
+
+            throw new RuntimeException('Cancelled worker cycle unexpectedly completed.');
+        } catch (CancelledException) {
         }
     }
 
