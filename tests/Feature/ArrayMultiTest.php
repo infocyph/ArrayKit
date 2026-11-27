@@ -196,8 +196,7 @@ it('returns the first item that matches the callback using first()', function ()
         ['a' => 2],
         ['a' => 3],
     ];
-    $result = ArrayMulti::first($data, static fn(array $row): bool => arrayMultiFixtureInt($row, 'a') > 1, 'default');
-    expect($result)->toBe(['a' => 2]);
+    expect(ArrayMulti::first($data, static fn(array $row): bool => arrayMultiFixtureInt($row, 'a') > 1, 'default'))->toBe(['a' => 2]);
 });
 
 // last()
@@ -216,8 +215,7 @@ it('returns the last item that matches the callback using last()', function () {
         ['a' => 2],
         ['a' => 3],
     ];
-    $result = ArrayMulti::last($data, static fn(array $row): bool => arrayMultiFixtureInt($row, 'a') < 3, 'default');
-    expect($result)->toBe(['a' => 2]);
+    expect(ArrayMulti::last($data, static fn(array $row): bool => arrayMultiFixtureInt($row, 'a') < 3, 'default'))->toBe(['a' => 2]);
 });
 
 // between()
@@ -242,8 +240,7 @@ it('filters a 2D array using whereCallback()', function () {
         ['a' => 2],
         ['a' => 3],
     ];
-    $result = ArrayMulti::whereCallback($data, static fn(array $row): bool => arrayMultiFixtureInt($row, 'a') > 1);
-    expect($result)->toBe([
+    expect(ArrayMulti::whereCallback($data, static fn(array $row): bool => arrayMultiFixtureInt($row, 'a') > 1))->toBe([
         1 => ['a' => 2],
         2 => ['a' => 3],
     ]);
@@ -316,8 +313,7 @@ it('reduces a 2D array to a single value using reduce()', function () {
         ['num' => 3],
         ['num' => 4],
     ];
-    $result = ArrayMulti::reduce($data, static fn(int $carry, array $row): int => $carry + arrayMultiFixtureInt($row, 'num'), 0);
-    expect($result)->toBe(9);
+    expect(ArrayMulti::reduce($data, static fn(int $carry, array $row): int => $carry + arrayMultiFixtureInt($row, 'num'), 0))->toBe(9);
 });
 
 // some()

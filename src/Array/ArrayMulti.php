@@ -258,7 +258,7 @@ class ArrayMulti
 
     /**
      * @param array<array-key, mixed> $array
-     * @return array<array-key, mixed>
+     * @return array{array<array-key, mixed>, array<array-key, mixed>}
      */
     public static function partition(array $array, callable $callback): array
     {
@@ -492,7 +492,7 @@ class ArrayMulti
 
         foreach (self::flattenIntoGuarded(
             $item,
-            --$depth,
+            ArraySharedOps::decrementDepth($depth),
             $currentDepth + 1,
             $visitedNodes,
             $maxDepth,
@@ -540,7 +540,7 @@ class ArrayMulti
      */
     private static function flattenValues(array $array, float|int $depth): array
     {
-        return $depth === 1 ? array_values($array) : static::flatten($array, --$depth);
+        return $depth === 1 ? array_values($array) : static::flatten($array, ArraySharedOps::decrementDepth($depth));
     }
 
     /**

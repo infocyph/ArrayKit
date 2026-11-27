@@ -443,9 +443,13 @@ class ArraySingle
 
         $left = $values[$mid - 1];
         $right = $values[$mid];
-        $sum = $left + $right;
+        $sum = ArraySingleOps::add($left, $right);
 
-        return is_finite((float) $sum) ? $sum / 2 : $left / 2 + $right / 2;
+        if (!is_finite((float) $sum)) {
+            return (float) $left / 2.0 + (float) $right / 2.0;
+        }
+
+        return is_int($sum) ? $sum / 2 : $sum / 2.0;
     }
 
     /**
@@ -920,7 +924,7 @@ class ArraySingle
                     continue;
                 }
 
-                $total += $numeric;
+                $total = ArraySingleOps::add($total, $numeric);
             }
 
             return $total;
@@ -933,7 +937,7 @@ class ArraySingle
                 continue;
             }
 
-            $total += $numeric;
+            $total = ArraySingleOps::add($total, $numeric);
         }
 
         return $total;

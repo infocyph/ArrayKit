@@ -34,6 +34,11 @@ final class ArraySharedOps
         return '';
     }
 
+    public static function decrementDepth(float|int $depth): float|int
+    {
+        return is_int($depth) ? $depth - 1 : $depth - 1.0;
+    }
+
     /**
      * @param array<array-key, mixed> $array
      * @return array<array-key, mixed>
@@ -68,7 +73,7 @@ final class ArraySharedOps
 
     /**
      * @param array<array-key, mixed> $array
-     * @return array<array-key, mixed>
+     * @return array{array<array-key, mixed>, array<array-key, mixed>}
      */
     public static function partition(array $array, callable $callback): array
     {

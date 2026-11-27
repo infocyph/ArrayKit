@@ -513,7 +513,7 @@ trait ArrayMultiQuerySortTrait
     {
         $total = 0;
         foreach ($array as $key => $row) {
-            $total += self::extractSummableValue($row, $keyOrCallback, $key);
+            $total = ArraySingleOps::add($total, self::extractSummableValue($row, $keyOrCallback, $key));
         }
 
         return $total;

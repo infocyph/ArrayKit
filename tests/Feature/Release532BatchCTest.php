@@ -80,6 +80,15 @@ it('keeps finite extreme averages inside the input range', function (int $count)
 
 it('retains small remainders when extreme finite values cancel during averaging', function (float $remainder) {
     $extremes = [PHP_FLOAT_MAX, PHP_FLOAT_MAX, -PHP_FLOAT_MAX, -PHP_FLOAT_MAX];
-    expect(ArraySingle::avg([...$extremes, $remainder]))->toBe($remainder / 5)
-        ->and(ArraySingle::avg([$remainder, ...$extremes]))->toBe($remainder / 5);
+    expect(ArraySingle::avg([...$extremes, $remainder]))->toBe($remainder / 5.0)
+        ->and(ArraySingle::avg([$remainder, ...$extremes]))->toBe($remainder / 5.0);
 })->with([1.0, 1e-100, 1e-300, -1.0, -1e-100, -1e-300]);
+
+it('preserves integer precision and native mixed numeric promotion', function () {
+    $integer = PHP_INT_MAX - 2;
+    expect(ArraySingle::sum([$integer, 1]))->toBe(PHP_INT_MAX - 1)
+        ->and(ArraySingle::sum([' 42 ', '2e1', 0.5]))->toBe(62.5)
+        ->and(ArraySingle::median([1, 3]))->toBe(2)
+        ->and(ArraySingle::median([1, 2.0]))->toBe(1.5)
+        ->and(\Infocyph\ArrayKit\Array\ArrayMulti::sum([['value' => $integer], ['value' => 1]], 'value'))->toBe(PHP_INT_MAX - 1);
+});

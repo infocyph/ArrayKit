@@ -400,7 +400,7 @@ class DotNotation
      * @throws \InvalidArgumentException
      */
     private static function setValueObject(
-        object &$target,
+        object $target,
         string $segment,
         array $segments,
         int $position,
