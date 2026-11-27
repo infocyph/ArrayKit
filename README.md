@@ -90,7 +90,7 @@ configuration or object models.
 
 * **PHP 8.4** or higher
 
-Runwire is optional. ArrayKit 5.3.2 qualifies its passed-instance lazy-runtime integration against `infocyph/runwire` 3.0 on PHP 8.4 and 8.5; ordinary ArrayKit installation has no Runwire runtime dependency.
+Runwire is optional. The current development line targets `infocyph/runwire` 4.0.1 for its passed-instance lazy-runtime integration on PHP 8.4, 8.5 and 8.6; ordinary ArrayKit installation has no Runwire runtime dependency.
 
 
 ## Installation

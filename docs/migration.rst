@@ -45,9 +45,9 @@ reference aliasing, and lazy config refresh against newly published source
 generations. It also fixes numeric namespace discovery, numeric and enum edge
 cases, median overflow and private pipeline method dispatch.
 
-Optional Runwire integration is qualified for Runwire 3.0 only. Production
+The current development line targets optional Runwire integration against Runwire 4.0.1 or later in the 4.x series. Production
 installation does not require Runwire; applications that explicitly bind a
-Runwire runtime must use a compatible 3.0 host instance.
+Runwire runtime must use a compatible 4.x host instance.
 
 Normal array/snapshot APIs retain their signatures. Snapshotting now visits
 nested arrays to detach external references; object values remain shallow.
