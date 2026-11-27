@@ -91,14 +91,6 @@ final class ArraySingleOps
     }
 
     /**
-     * Build a comparable fingerprint for a value.
-     */
-    public static function fingerprint(mixed $value): string
-    {
-        return ArrayValueSetOps::fingerprint($value);
-    }
-
-    /**
      * @param array<array-key, mixed> $array
      * @param array<array-key, mixed> $values
      * @return array<array-key, mixed>

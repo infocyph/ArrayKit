@@ -72,8 +72,8 @@ final class ArrayValueSetOps
         $duplicates = [];
 
         foreach ($array as $value) {
-            $fingerprint = self::fingerprintStrict($value);
-            if (!isset($strictLookup[$fingerprint])) {
+            $fingerprint = self::fingerprint($value);
+            if (!isset($strictCounts[$fingerprint])) {
                 $strictLookup[$fingerprint] = $value;
                 $strictCounts[$fingerprint] = 1;
 
@@ -91,7 +91,17 @@ final class ArrayValueSetOps
 
     public static function fingerprint(mixed $value): string
     {
-        return self::fingerprintStrict($value);
+        return match (true) {
+            $value === null => 'null:',
+            is_bool($value) => 'bool:' . ($value ? '1' : '0'),
+            is_int($value) => 'int:' . $value,
+            is_float($value) => self::fingerprintFloat($value),
+            is_string($value) => 'string:' . strlen($value) . ':' . $value,
+            is_array($value) => 'array:' . self::fingerprintArrayStrict($value),
+            is_object($value) => 'object:' . $value::class . ':' . spl_object_id($value),
+            is_resource($value) => 'resource:' . get_resource_type($value) . ':' . (int) $value,
+            default => 'unknown:' . get_debug_type($value),
+        };
     }
 
     /**
@@ -141,7 +151,7 @@ final class ArrayValueSetOps
     public static function strictLookupContains(array $lookup, mixed $value): bool
     {
         return self::isStrictHashable($value)
-            && isset($lookup[self::fingerprintStrict($value)]);
+            && isset($lookup[self::fingerprint($value)]);
     }
 
     /**
@@ -174,7 +184,7 @@ final class ArrayValueSetOps
         return self::fingerprintAlreadySeen(
             $seen,
             $digestBuckets,
-            self::fingerprintStrict($value),
+            self::fingerprint($value),
         );
     }
 
@@ -223,7 +233,7 @@ final class ArrayValueSetOps
                 return null;
             }
 
-            $lookup[self::fingerprintStrict($value)] = true;
+            $lookup[self::fingerprint($value)] = true;
         }
 
         return $lookup;
@@ -281,7 +291,7 @@ final class ArrayValueSetOps
     {
         $counts = [];
         foreach ($array as $value) {
-            $fingerprint = self::fingerprintStrict($value);
+            $fingerprint = self::fingerprint($value);
             $counts[$fingerprint] = ($counts[$fingerprint] ?? 0) + 1;
         }
 
@@ -332,7 +342,7 @@ final class ArrayValueSetOps
         foreach ($array as $key => $value) {
             $matches = $lookup === null
                 ? in_array($value, $values, $strict)
-                : isset($lookup[self::fingerprintStrict($value)]);
+                : isset($lookup[self::fingerprint($value)]);
 
             if ($matches === $keepMatches) {
                 $results[$key] = $value;
@@ -398,8 +408,8 @@ final class ArrayValueSetOps
     {
         $parts = [];
         foreach ($value as $key => $item) {
-            $keyFingerprint = self::fingerprintStrict($key);
-            $valueFingerprint = self::fingerprintStrict($item);
+            $keyFingerprint = self::fingerprint($key);
+            $valueFingerprint = self::fingerprint($item);
             $parts[] = strlen($keyFingerprint) . ':' . $keyFingerprint
                 . strlen($valueFingerprint) . ':' . $valueFingerprint;
         }
@@ -424,21 +434,6 @@ final class ArrayValueSetOps
         return $value == 0.0
             ? 'float:zero'
             : 'float:' . bin2hex(pack('E', $value));
-    }
-
-    private static function fingerprintStrict(mixed $value): string
-    {
-        return match (true) {
-            $value === null => 'null:',
-            is_bool($value) => 'bool:' . ($value ? '1' : '0'),
-            is_int($value) => 'int:' . $value,
-            is_float($value) => self::fingerprintFloat($value),
-            is_string($value) => 'string:' . strlen($value) . ':' . $value,
-            is_array($value) => 'array:' . self::fingerprintArrayStrict($value),
-            is_object($value) => 'object:' . $value::class . ':' . spl_object_id($value),
-            is_resource($value) => 'resource:' . get_resource_type($value) . ':' . (int) $value,
-            default => 'unknown:' . get_debug_type($value),
-        };
     }
 
     private static function isStrictHashable(mixed $value): bool

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Infocyph\ArrayKit\Benchmarks;
 
 use Infocyph\ArrayKit\Array\ArraySingle;
-use Infocyph\ArrayKit\Array\ArraySingleOps;
+use Infocyph\ArrayKit\Array\ArrayValueSetOps;
 use PhpBench\Attributes\BeforeMethods;
 use PhpBench\Attributes\Iterations;
 use PhpBench\Attributes\ParamProviders;
@@ -45,7 +45,7 @@ final class ArrayValueSetBench
     {
         $seen = [];
         foreach ($this->values as $value) {
-            $seen[ArraySingleOps::fingerprint($value)] = true;
+            $seen[ArrayValueSetOps::fingerprint($value)] = true;
         }
 
         return $seen;
@@ -56,7 +56,7 @@ final class ArrayValueSetBench
     {
         $buckets = [];
         foreach ($this->values as $value) {
-            $fingerprint = ArraySingleOps::fingerprint($value);
+            $fingerprint = ArrayValueSetOps::fingerprint($value);
             $digest = hash('xxh128', $fingerprint, true);
             if (!isset($buckets[$digest])) {
                 $buckets[$digest] = [$fingerprint];

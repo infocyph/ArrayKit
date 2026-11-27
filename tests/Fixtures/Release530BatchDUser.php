@@ -10,7 +10,12 @@ final class Release530BatchDUser
 {
     use DTOTrait;
 
+    public Release530BatchDAddress $address;
+
     public mixed $payload = null;
 
-    public function __construct(public Release530BatchDAddress $address = new Release530BatchDAddress()) {}
+    public function __construct()
+    {
+        $this->address = new Release530BatchDAddress();
+    }
 }

@@ -115,9 +115,9 @@ final class DotNotationPathOps
      */
     public static function restoreMutationReferences(array &$references, array $originals): void
     {
-        foreach ($originals as $id => $original) {
-            $references[$id] = $original;
-        }
+        array_walk($references, static function (mixed &$reference, string $id) use ($originals): void {
+            $reference = $originals[$id];
+        });
     }
 
     /**

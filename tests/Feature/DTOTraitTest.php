@@ -4,30 +4,9 @@ declare(strict_types=1);
 
 namespace Infocyph\ArrayKit\Tests\Feature;
 
-use Infocyph\ArrayKit\DTO\Concerns\DTOTrait;
 use Infocyph\ArrayKit\Tests\Fixtures\DTOTraitUser;
-
-final class TestPersonDto
-{
-    use DTOTrait;
-
-    public string $name = '';
-
-    public int $age = 0;
-}
-
-final class TestVisibilityDto
-{
-    use DTOTrait;
-
-    public static string $shared = 'original';
-
-    public ?string $nickname = 'before';
-
-    protected string $protectedValue = 'protected';
-
-    private string $privateValue = 'private';
-}
+use Infocyph\ArrayKit\Tests\Fixtures\TestPersonDto;
+use Infocyph\ArrayKit\Tests\Fixtures\TestVisibilityDto;
 
 it('can create a DTO from an array', function () {
     $dto = TestPersonDto::create(['name' => 'Alice', 'age' => 30, 'extra' => 'ignored']);

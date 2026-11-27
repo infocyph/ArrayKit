@@ -353,3 +353,10 @@ it('supports intersect, diff, symmetricDiff and same helpers', function () {
         ->and(ArraySingle::same([1, 2, 2], [2, 1, 2]))->toBeTrue()
         ->and(ArraySingle::same([1, 2], ['1', 2], true))->toBeFalse();
 });
+
+it('detects repeated nulls without conflating strictly distinct values', function () {
+    expect(ArraySingle::duplicates([null, false, 0, '', null, false, 0, '', null], true))
+        ->toBe([null, false, 0, ''])
+        ->and(ArraySingle::duplicates([null, [null], [null], null], true))
+        ->toBe([[null], null]);
+});
