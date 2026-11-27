@@ -149,7 +149,11 @@ it('materializes known layered namespaces before exporting compiled config', fun
         if (!is_file($cache)) {
             throw new RuntimeException('Expected exported config cache.');
         }
-        expect(include $cache)->toBe(['app' => ['name' => 'source']]);
+        $contents = include $cache;
+        if (!is_array($contents)) {
+            throw new RuntimeException('Exported config must contain an array.');
+        }
+        expect($contents)->toBe(['app' => ['name' => 'source']]);
     } finally {
         batchARemoveDirectory($directory);
         if (is_file($cache)) {

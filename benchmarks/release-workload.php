@@ -12,22 +12,19 @@ use Infocyph\ArrayKit\Config\Config;
 use Infocyph\ArrayKit\Config\LazyFileConfig;
 use RuntimeException;
 
-$root = $argv[1] ?? null;
-$workload = $argv[2] ?? null;
-$operations = $argv[3] ?? null;
-$warmup = $argv[4] ?? null;
+$workload = $argv[1] ?? null;
+$operations = $argv[2] ?? null;
+$warmup = $argv[3] ?? null;
 
-if (!is_string($root) || !is_string($workload) || !is_numeric($operations) || !is_numeric($warmup)) {
+if (!is_string($workload) || !is_numeric($operations) || !is_numeric($warmup)) {
     throw new RuntimeException(
-        'Usage: release-workload.php <root> <workload> <operations> <warmup>',
+        'Usage: php -d auto_prepend_file=<autoload> release-workload.php <workload> <operations> <warmup>',
     );
 }
 
-$autoload = rtrim($root, DIRECTORY_SEPARATOR) . '/vendor/autoload.php';
-if (!is_file($autoload) || !is_readable($autoload)) {
-    throw new RuntimeException('Workload autoload file is not readable.');
+if (!class_exists(ArrayMulti::class)) {
+    throw new RuntimeException('Benchmark runner must bootstrap ArrayKit before launching this worker.');
 }
-require $autoload;
 
 $operations = max(1, (int) $operations);
 $warmup = max(0, (int) $warmup);

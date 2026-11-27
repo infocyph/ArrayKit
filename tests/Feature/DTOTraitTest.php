@@ -16,7 +16,8 @@ it('can create a DTO from an array', function () {
     expect($data)->toBe([
         'name' => 'Alice',
         'age' => 30,
-    ]);
+    ])->and($dto->name)->toBe('Alice')
+        ->and($dto->age)->toBe(30);
 });
 
 it('can hydrate an existing DTO instance from an array', function () {
@@ -61,6 +62,7 @@ it('hydrates and exports only public instance properties', function () {
     ], coerce: true);
 
     expect($dto->toArray())->toBe(['nickname' => null])
+        ->and($dto->nickname)->toBeNull()
         ->and($dto::$shared)->toBe('original')
         ->and($dto->nonPublicValues())->toBe(['protected', 'private']);
 });

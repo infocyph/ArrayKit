@@ -36,6 +36,9 @@ it('supports iteration', function () {
     $collection = new Collection(['a' => 1, 'b' => 2]);
     $items = [];
     foreach ($collection as $key => $val) {
+        if (!is_int($val)) {
+            throw new UnexpectedValueException('Expected integer fixture value.');
+        }
         $items[$key] = $val;
     }
     expect($items)->toBe(['a' => 1, 'b' => 2]);
